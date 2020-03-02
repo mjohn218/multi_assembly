@@ -10,12 +10,15 @@ def preprocess(path: str, config: dict) -> dict:
     pyrosetta.init()
     objects = os.listdir('./obj/')
     if 'base_poses.pkl' in objects:
-        poses = pk.load('./obj/base_poses.pkl')
+        file = open('./obj/base_poses.pkl', 'r')
+        poses = pk.load(file)
     else:
+        file = open('./obj/base_poses.pkl', 'w')
         for pdb in config.keys():
             cleanATOM(path + pdb+'.pdb')
             pose = pose_from_pdb(path + pdb + '.clean.pdb')
             pyrosetta.rosetta.protocols.relax.relax_pose(pose=pose, scorefxn=get_fa_scorefxn(), tag='')
             poses[pdb] = pose
+        pk.dump(poses, file)
     return poses
 
