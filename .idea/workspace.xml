@@ -3,9 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="e14e6b58-6083-4801-a5ec-d89d30a3c3e2" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bind.py" beforeDir="false" afterPath="$PROJECT_DIR$/bind.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/network.py" beforeDir="false" afterPath="$PROJECT_DIR$/network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obj/base_poses.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/bind.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/obj/base_poses.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/obj/base_poses.pkl" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
