@@ -1,6 +1,3 @@
-from pyrosetta.toolbox import cleanATOM
-from pyrosetta import *
-from pyrosetta.rosetta.core.scoring import *
 import os
 import pickle as pk
 
@@ -16,5 +13,6 @@ class network:
         unused = network.keys()
         while len(unused) != 0:
             unit = unused.pop()
-            
+            for other in unused:
+
 

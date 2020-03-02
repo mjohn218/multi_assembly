@@ -10,10 +10,10 @@ def preprocess(path: str, config: dict) -> dict:
     pyrosetta.init()
     objects = os.listdir('./obj/')
     if 'base_poses.pkl' in objects:
-        file = open('./obj/base_poses.pkl', 'r')
+        file = open('./obj/base_poses.pkl', 'rb')
         poses = pk.load(file)
     else:
-        file = open('./obj/base_poses.pkl', 'w')
+        file = open('./obj/base_poses.pkl', 'wb')
         for pdb in config.keys():
             cleanATOM(path + pdb+'.pdb')
             pose = pose_from_pdb(path + pdb + '.clean.pdb')
