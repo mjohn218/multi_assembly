@@ -18,3 +18,4 @@ class network:
                 entry = bind((unit, self.poses[unit]), (other, self.poses[other]))
                 self.network.update(entry[0])
                 self.poses.update(entry[1])
+            unused = list(self.network.keys())
