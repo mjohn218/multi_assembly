@@ -1,7 +1,7 @@
 from pyrosetta.toolbox import cleanATOM
 from pyrosetta import init as rosetta_init
 from pyrosetta import pose_from_pdb
-from pyrosetta.rosetta.core.scoring import *
+from pyrosetta import get_fa_scorefxn
 import pyrosetta.rosetta.protocols.relax as relax
 import os
 import pickle as pk

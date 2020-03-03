@@ -1,6 +1,8 @@
 import os
 import sys
 from preprocess import preprocess
+from network import Network
+import pickle as pk
 
 subunit_dir = sys.argv[1]
 config_dir = sys.argv[2]
@@ -37,5 +39,9 @@ for line in mol_config:
             exit()
 
 poses = preprocess(subunit_dir, mol_struct)
-print(poses)
+net = Network(poses, mol_struct)
+net.build_network()
+f = open('./obj/network.pkl', 'wb')
+pk.dump(net.network)
+print(net.network)
 
