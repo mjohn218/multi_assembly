@@ -4,13 +4,6 @@
     <list default="true" id="e14e6b58-6083-4801-a5ec-d89d30a3c3e2" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/bind.py" beforeDir="false" afterPath="$PROJECT_DIR$/bind.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/network.py" beforeDir="false" afterPath="$PROJECT_DIR$/network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/subunits/monomers/A_.clean.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/subunits/A_.clean.pdb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/subunits/monomers/B_.clean.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/subunits/B_.clean.pdb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/subunits/monomers/M_.clean.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/subunits/M_.clean.pdb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/subunits/monomers/S_.clean.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/subunits/S_.clean.pdb" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

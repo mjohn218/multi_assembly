@@ -39,9 +39,14 @@ for line in mol_config:
             exit()
 
 poses = preprocess(subunit_dir, mol_struct)
-net = Network(poses, mol_struct)
-net.build_network()
-f = open('./obj/network.pkl', 'wb')
-pk.dump(net.network)
+try:
+    f = open('./obj/network.pkl', 'rb')
+    net = pk.load(f)
+except IOError:
+    net = Network(poses, mol_struct)
+    net.build_network()
+    f = open('./obj/network.pkl', 'wb')
+    pk.dump(net.network)
+
 print(net.network)
 
