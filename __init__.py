@@ -46,7 +46,6 @@ except IOError:
     net = Network(poses, mol_struct)
     net.build_network()
     f = open('./obj/network.pkl', 'wb')
-    pk.dump(net.network)
-
+    pk.dump(net, f)
 print(net.network)
 
