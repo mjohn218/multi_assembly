@@ -20,8 +20,8 @@ def bind(unit1: tuple, unit2: tuple): # returns tuple[dict[str: tuple[float, str
     #relax.relax_pose(pose=new_pose, scorefxn=get_fa_scorefxn(), tag='')
     new_score = scorefxn(new_pose)
     diff = og_score - new_score
-    return ({unit1[0]: (diff, new_str),
-            unit2[0]: (diff, new_str)},
+    return ({unit1[0]: (diff, new_str, unit2[0]),
+            unit2[0]: (diff, new_str, unit1[0])},
             {new_str: new_pose})
 
 

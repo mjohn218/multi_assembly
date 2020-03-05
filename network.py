@@ -1,5 +1,6 @@
 import os
 import pickle as pk
+import heapq
 from bind import bind
 
 
@@ -9,7 +10,7 @@ class Network:
         self.config = config
         self.network = {} # start_unit: (score, stop_unit)
         for unit in config.keys():
-            self.network[unit] = [(None, None)]
+            self.network[unit] = [(None, None, None)]
 
     def allowed_neighbor(self, unit_built_of, neighbor) -> bool:
         is_valid = False
@@ -36,7 +37,14 @@ class Network:
                     return False
         return is_valid
 
+
     def build_network(self):
+        """
+        Construct the network of all possible states.
+        To be stored in the network instance variable.
+        Format {start_node: (score, target)}
+        :return: The network dictionary
+        """
         unused = list(self.network.keys())
         is_change_made = True
         while is_change_made:
@@ -55,9 +63,12 @@ class Network:
                         entry = bind((unit, self.poses[unit]), (other, self.poses[other]))
                         for key in entry[0].keys():
                             if key in self.network:
-                                self.network[key].append(entry[0][key])
+                                if self.network[key][0][0] is None:
+                                    self.network[key] = [entry[0][key]] # remove None placeholder
+                                else:
+                                    self.network[key].append(entry[0][key])
                             if list(entry[1].keys())[0] not in self.network:
-                                self.network[list(entry[1].keys())[0]] = [(None, None)]
+                                self.network[list(entry[1].keys())[0]] = [(None, None, None)]
                             self.poses.update(entry[1])
             unused = list(self.network.keys())
         return self.network
