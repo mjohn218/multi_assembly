@@ -48,4 +48,6 @@ except IOError:
     f = open('./obj/network.pkl', 'wb')
     pk.dump(net, f)
 print(net.network)
+det_net = net.deterministic_network()
+print(det_net)
 

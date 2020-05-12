@@ -9,6 +9,7 @@ class Network:
         self.poses = poses
         self.config = config
         self.network = {} # start_unit: (score, stop_unit)
+        self.det_net = {}
         for unit in config.keys():
             self.network[unit] = [(None, None, None)]
 
@@ -36,6 +37,22 @@ class Network:
                 if entry[1] == target_name:
                     return False
         return is_valid
+
+    def determinify(self, state) -> list:
+        neighbor_states = []
+        if len(self.network[state]) == 1:
+            return [self.network[state][0:2]]
+        for path in self.network[state]:
+            neighbor_states = self.determinify(path[1])
+            self.det_net[(state, path[2])] = neighbor_states
+            for i in range(len(self.det_net[(state, path[2])])): # prepend scores
+                self.det_net[(state, path[2])][i] = [path[0], self.det_net[(state, path[2])][i]]
+        return neighbor_states
+
+    def deterministic_network(self):
+        for state in self.config.keys():
+            self.determinify(state)
+        return self.det_net
 
 
     def build_network(self):
