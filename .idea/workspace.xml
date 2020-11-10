@@ -1,129 +1,70 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e14e6b58-6083-4801-a5ec-d89d30a3c3e2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/network.py" beforeDir="false" afterPath="$PROJECT_DIR$/network.py" afterDir="false" />
+    <list default="true" id="a66dfb43-d8b2-4f2e-9081-59ceed3b4395" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/bondEnergyAnalysis.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/R_User_Library.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bind.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/complex.struct" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/network.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obj/base_poses.pkl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/obj/network.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_B_M_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_B_M_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_B_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_M_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_M_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/A_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/B_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/B_M_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/B_M_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/B_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/M_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/M_S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/S_.clean.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/monomers/A_.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/monomers/B_.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/monomers/M_.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/subunits/monomers/S_.pdb" beforeDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Python Script" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectId" id="1YXrtQkpHCXVLZpRgrnrEVkGaN8" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="JupyterTrust" id="32d90361-2a6d-4e0e-bf2a-4c8621d01125" />
+  <component name="ProjectId" id="1k5TVbtIDPHatPLNG2Z8rXxRiPG" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent">
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
-  <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/subunits" />
-      <recent name="$PROJECT_DIR$" />
-    </key>
-  </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
-  <component name="RunManager">
-    <configuration name="main" type="PythonConfigurationType" factoryName="Python">
-      <module name="bondEnergyAnalysis" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="/usr/local/anaconda3/envs/bondEnergy/bin/python3.7" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/__init__.py" />
-      <option name="PARAMETERS" value="./subunits/monomers/ ./complex.struct" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-  </component>
-  <component name="SvnConfiguration">
-    <configuration />
-  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="e14e6b58-6083-4801-a5ec-d89d30a3c3e2" name="Default Changelist" comment="" />
-      <created>1583099993790</created>
+      <changelist id="a66dfb43-d8b2-4f2e-9081-59ceed3b4395" name="Default Changelist" comment="" />
+      <created>1604989477122</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1583099993790</updated>
+      <updated>1604989477122</updated>
+      <workItem from="1604989478175" duration="65000" />
     </task>
     <servers />
   </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
-          </value>
-        </entry>
-      </map>
-    </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/network.py</url>
-          <line>53</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/network.py</url>
-          <line>44</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/network.py</url>
-          <line>45</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/network.py</url>
-          <line>47</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/network.py</url>
-          <line>76</line>
-          <option name="timeStamp" value="8" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
 </project>
