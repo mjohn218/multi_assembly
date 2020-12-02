@@ -2,16 +2,20 @@ from typing import Tuple, Dict, List, Union
 import numpy as np
 import re
 import sys
+from itertools import chain, combinations
 
+
+def powerset(inset):
+    return chain.from_iterable(combinations(inset, r) for r in range(len(inset)+1))
 
 class MetaAssembly:
     def __init__(self, bngl_path: str, dt: float, steps: int):
         self.bngl = open(bngl_path, 'r')
-        # {this, [pop, [neighbor, on_rate_const, off_rate_const]]
         self.units: Dict[frozenset, List[int, List[Union[frozenset, float, float]]]] = {}
-        self.parse_bngl(open(bngl_path, 'r'))
+        self.observable: Dict[frozenset, List[str, np.ndarray]] = {}
         self.steps = steps
         self.dt = dt
+        self.parse_bngl(open(bngl_path, 'r'))
 
     def match_maker(self, orig, next) -> List[Union[int, List[Union[frozenset, float, float]]]]:
         partners = []
@@ -20,6 +24,11 @@ class MetaAssembly:
                 # would not be sterically hindered addition
                 if n not in partners:
                     partners.append(n)
+        all_part = powerset(partners)
+        partners = []
+        for p in all_part:
+            if len(p) != 0:
+                partners.append(p[0])
         return partners
             # TODO: modify rates for trimerization
 
@@ -28,8 +37,16 @@ class MetaAssembly:
         prob = 1 - np.exp(-1*rate * self.dt)
         return prob
 
+    def _update_observables(self, time: int):
+        for mol in list(self.observable.keys()):
+            if mol in self.units:
+                self.observable[mol][1][time] = self.units[mol][0]
+            else:
+                self.observable[mol][1][time] = 0
+
     # search tree and write rules.
     def _resolve_tree(self):
+        # TODO: Split in to resolve tree and simulate methods
         for t in range(self.steps):
             keys = list(self.units.keys())
             for this in keys:
@@ -55,6 +72,7 @@ class MetaAssembly:
                             self.units[new_complex][0] -= 1
                             self.units[this][0] += 1
                             self.units[next][0] += 1
+            self._update_observables(t)
         return self.units
 
     def _place_into(self, unit: frozenset, n_info: List[Union[frozenset, float, float]]):
@@ -97,6 +115,16 @@ class MetaAssembly:
         self._place_into(frozenset([r_info[0]]), [frozenset(r_info[1]), k_on, k_off])
         self._place_into(frozenset([r_info[1]]), [frozenset(r_info[0]), k_on, k_off])
 
+    def parse_observables(self, line):
+        items = line.split()
+        descriptor = items[0]
+        obs_info = re.split('\\)|,|\\(|\\.', items[1])
+        mol = set()
+        for tkn in obs_info:
+            if frozenset(tkn) in self.units:
+                mol.add(tkn)
+        self.observable[frozenset(mol)] = [descriptor, np.empty(self.steps, dtype=np.int)]
+
     def parse_bngl(self, f):
         parameters = dict()
         cur_block = ''
@@ -109,6 +137,8 @@ class MetaAssembly:
                     cur_block = 'species'
                 elif "begin rules" in line:
                     cur_block = 'rules'
+                elif "begin observables" in line:
+                    cur_block = 'observables'
                 elif "end" in line:
                     cur_block = ' '
                 else:
@@ -119,6 +149,14 @@ class MetaAssembly:
                         self.parse_species(line, parameters)
                     elif cur_block == 'rules':
                         self.parse_rule(line, parameters)
+                    elif cur_block == 'observables':
+                        self.parse_observables(line)
+
+    def plot_observables(self):
+        from matplotlib import pyplot as plt
+        for mol in list(self.observable.keys()):
+            plt.scatter(np.arange(self.steps)*self.dt, self.observable[mol][1])
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -127,6 +165,7 @@ if __name__ == '__main__':
     iter = int(sys.argv[3])  # number of time steps to simulate
     m = MetaAssembly(sys.argv[1], dt, iter)
     m._resolve_tree()
+    m.plot_observables()
 
 
 

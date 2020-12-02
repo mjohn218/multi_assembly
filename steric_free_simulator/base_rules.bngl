@@ -3,7 +3,7 @@
 begin model
 
 begin parameters
-    init_pop    100
+    init_pop    10000
     kon .1
     koff .1
 end parameters
@@ -14,6 +14,14 @@ begin species
     C(a,b) init_pop
     D(a,b) init_pop
 end species
+
+begin observables
+    full_complex    A(a!1,b!1).B(a!1,b!1).C(a!1,b!1).D(a!1,b!1)
+    momomer_A   A(a,b)
+    monomer_B   B(a,b)
+    monomer_C   C(a,b)
+    monomer_D   D(a,b)
+end observables
 
 begin rules
     A(a)+B(b)<->A(a!1).B(a!1) kon, koff
