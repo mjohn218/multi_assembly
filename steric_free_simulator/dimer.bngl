@@ -1,0 +1,31 @@
+# bngl needs to specify only basic dimerization rules, rates, initial values.
+
+begin model
+
+begin parameters
+    init_pop    10000
+    kon .1
+    koff .1
+end parameters
+
+begin species
+    A(a,b) init_pop
+    B(a,b) init_pop
+    C(a,b) init_pop
+    D(a,b) init_pop
+end species
+
+begin observables
+    full_complex    A(a!1,b!1).B(a!1,b!1).C(a!1,b!1).D(a!1,b!1)
+    momomer_A   A(a,b)
+    monomer_B   B(a,b)
+    monomer_C   C(a,b)
+    monomer_D   D(a,b)
+end observables
+
+begin rules
+    A(a)+B(b)<->A(a!1).B(a!1) kon, koff
+    A(b)+C(a)<->A(b!1).C(a!1) kon, koff
+    B(b)+D(b)<->B(b!1).D(b!1) kon, koff
+    C(b)+D(a)<->C(b!1).D(a!1) kon, koff
+end rules

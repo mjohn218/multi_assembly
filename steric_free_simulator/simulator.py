@@ -1,15 +1,17 @@
 from reaction_network import ReactionNetwork
-import networkx as nx
 import numpy as np
-from typing import Tuple, Dict, List, Union
+from typing import Tuple
 
 
 class Simulator:
 
-    def __init__(self, net: ReactionNetwork, steps: int, dt: float):
+    def __init__(self, net: ReactionNetwork, steps: int, dt: float, obs=None):
         self.steps = steps
         self.dt = dt
         self.rn = net
+        self.obs_key = {}
+        for o in obs:
+            self.obs_key[o] = []
 
     def _possible_reactions(self, new_nodes: set, node_set: set):
         new_reactions = set()
@@ -36,14 +38,19 @@ class Simulator:
     def _reaction_prob(self, reactants: set) -> Tuple[float, ...]:
         prob = [0., 0.]
         data = self.rn.network.edges[min(reactants)]
-        rate = data['k_on']
-        edge = None
-        for edge in reactants:
-            rate *= self.rn.network.nodes[edge[0]]['copies']
+        kon = data['k_on']
         if len(reactants) == 1:
-            # rxn is intra molecular
-            rate *= self.rn.network.nodes[edge[0]]['copies']
-
+            edge = list(reactants)[0]
+            copies = self.rn.network.nodes[edge[0]]['copies']
+            # 1M = 1 mol / L = 6.02e23 copies / L
+            k_close = kon * data['lcf'] * 1
+            # rxn is intra molecular i.e. loop closure
+            rate = k_close * copies
+        else:
+            edge = None
+            rate = kon
+            for edge in reactants:
+                rate *= self.rn.network.nodes[edge[0]]['copies']
         prob[0] = float(1 - np.exp(-1 * rate * self.dt))
         offrate = data['k_off'] * self.rn.network.nodes[edge[1]]['copies']
         prob[1] = float(1 - np.exp(-1 * offrate * self.dt))
@@ -114,3 +121,6 @@ class Simulator:
                     for e in list(rxn):
                         if True in [n in newly_zero for n in e] and rxn in reactions:
                             reactions.remove(rxn)
+            # update observables
+            for obs in list(self.obs_key.keys()):
+                self.obs_key[obs].append(self.rn.network.nodes[obs]['copies'])
