@@ -4,11 +4,19 @@ import networkx as nx
 
 LOOP_COOP_DEFAULT = 1
 
+
 def _equal(n1, n2):
     nm = nx.algorithms.isomorphism.categorical_node_match("label", None)
     int_n1 = nx.convert_node_labels_to_integers(n1, label_attribute="label")
     int_n2 = nx.convert_node_labels_to_integers(n2, label_attribute="label")
     return nx.is_isomorphic(int_n1, int_n2, node_match=nm)
+
+
+def gtostr(g: nx.DiGraph)->str:
+    stout = ""
+    for n in g.nodes():
+        stout += str(n)
+    return stout
 
 
 class ReactionNetwork:
@@ -18,8 +26,12 @@ class ReactionNetwork:
         self._node_count = 0
         self._rxn_count = 0
         self.num_monomers = 0
+        # default observables are monomers and final complex
+        self.observables = dict()
+        # resolve graph
         self.parse_bngl(open(bngl_path, 'r'))
         self.resolve_tree()
+
 
     def parse_param(self, line):
         # Reserved Params
@@ -81,8 +93,7 @@ class ReactionNetwork:
                         self.parse_species(line, parameters)
                     elif cur_block == 'rules':
                         self.parse_rule(line, parameters)
-                    # elif cur_block == 'observables':
-                    #     self.parse_observables(line)
+
         # attach loop cooperativity param to rules (python 3.6+ only due to dict ordering changes)
         if "loop_coop" in parameters:
             if len(parameters['loop_coop']) != len(self.allowed_edges):
@@ -160,6 +171,12 @@ class ReactionNetwork:
                     new_nodes += self.match_maker(node, anode)
             # must also try internal bonds
             new_nodes += self.match_maker(node)
+
+        # add default observables
+        for i in range(self.num_monomers):
+            self.observables[i] = (gtostr(self.network.nodes[i]['struct']), [])
+        fin_dex = len(self.network.nodes) - 1
+        self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
 
 
 if __name__ == '__main__':

@@ -9,9 +9,6 @@ class Simulator:
         self.steps = steps
         self.dt = dt
         self.rn = net
-        self.obs_key = {}
-        for o in obs:
-            self.obs_key[o] = []
 
     def _possible_reactions(self, new_nodes: set, node_set: set):
         new_reactions = set()
@@ -43,7 +40,7 @@ class Simulator:
             edge = list(reactants)[0]
             copies = self.rn.network.nodes[edge[0]]['copies']
             # 1M = 1 mol / L = 6.02e23 copies / L
-            k_close = kon * data['lcf'] * 1
+            k_close = kon * data['lcf'] * 100
             # rxn is intra molecular i.e. loop closure
             rate = k_close * copies
         else:
@@ -122,5 +119,5 @@ class Simulator:
                         if True in [n in newly_zero for n in e] and rxn in reactions:
                             reactions.remove(rxn)
             # update observables
-            for obs in list(self.obs_key.keys()):
-                self.obs_key[obs].append(self.rn.network.nodes[obs]['copies'])
+            for obs in self.rn.observables.keys():
+                self.rn.observables[obs][1].append(self.rn.network.nodes[obs]['copies'])
