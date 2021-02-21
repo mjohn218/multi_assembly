@@ -11,22 +11,22 @@ import pickle
 
 print('begin')
 
-rn = ReactionNetwork('input_files/4loop.bngl')
+rn = ReactionNetwork('input_files/ap2.bngl')
 # with open("./saved_nets/arp23_net.pkl", 'wb') as f:
 #     pickle.dump(rn, f)
 # with open("./saved_nets/arp23_net.pkl", 'rb') as f:
 #     rn = pickle.load(f)
-steps = 1000
-dt = .001
+steps = 200000
 
-sim = Simulator(rn, steps, dt)
+sim = Simulator(rn, steps)
+print("found best dt to be " + str(sim.dt))
+dt = sim.dt
 # sim = Simulator(rn, 10000, .001, obs=[0, 1, 2, 3, 4, 5, 9])
 sim.simulate()
 
-# with open("./saved_nets/arp23_net_final.pkl", 'wb') as f:
-#     pickle.dump(sim, f)
+with open("./saved_nets/ap2_sim_uneven_assoc.pkl", 'wb') as f:
+    pickle.dump(sim, f)
 #
-
 
 #nx.draw(sim.rn.network)
 t = np.arange(steps)*dt

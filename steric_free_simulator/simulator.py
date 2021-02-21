@@ -1,14 +1,32 @@
+import math
+
 from reaction_network import ReactionNetwork
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Union
 
 
 class Simulator:
 
-    def __init__(self, net: ReactionNetwork, steps: int, dt: float, obs=None):
+    def __init__(self, net: ReactionNetwork, steps: int, dt: float = 1, obs=None, optimize_dt=True):
         self.steps = steps
         self.dt = dt
         self.rn = net
+        if optimize_dt:
+            self.optimize_step()
+
+    def optimize_step(self) -> float:
+        """
+        find the dt that is accurate while also efficient and return it
+        """
+        reactions = self._possible_reactions(
+            set(range(self.rn.num_monomers)), set(range(self.rn.num_monomers)))
+        for r in reactions:
+            prob = self._reaction_prob(set(r))
+            if len(r) > 1 and (prob[0] >= .99 or prob[1] >= .99):
+                self.dt /= 2
+                self.optimize_step()
+        return self.dt
+
 
     def _possible_reactions(self, new_nodes: set, node_set: set):
         new_reactions = set()
@@ -51,6 +69,10 @@ class Simulator:
         prob[0] = float(1 - np.exp(-1 * rate * self.dt))
         offrate = data['k_off'] * self.rn.network.nodes[edge[1]]['copies']
         prob[1] = float(1 - np.exp(-1 * offrate * self.dt))
+        if len(reactants) != 1 and (math.isclose(1, prob[0], abs_tol=.01) or
+                                    math.isclose(1, prob[1], abs_tol=.01)):
+            print("WARNING: Reaction probability seems to be saturated, "
+                  "consider reducing time step size.")
         return tuple(prob)
 
     def _forward(self, reaction: set, prob: float) -> Tuple[int, set]:

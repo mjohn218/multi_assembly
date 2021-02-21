@@ -12,16 +12,18 @@ def _equal(n1, n2):
     return nx.is_isomorphic(int_n1, int_n2, node_match=nm)
 
 
-def gtostr(g: nx.DiGraph)->str:
+def gtostr(g: nx.DiGraph) -> str:
     stout = ""
     for n in g.nodes():
         stout += str(n)
+    # make invarient
+    stout = ''.join(sorted(stout))
     return stout
 
 
 class ReactionNetwork:
     def __init__(self, bngl_path: str):
-        self.network: nx.Graph = nx.DiGraph()
+        self.network: nx.DiGraph() = nx.DiGraph()
         self.allowed_edges = {}
         self._node_count = 0
         self._rxn_count = 0
