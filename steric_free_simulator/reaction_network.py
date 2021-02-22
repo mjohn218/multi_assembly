@@ -34,6 +34,23 @@ class ReactionNetwork:
         self.parse_bngl(open(bngl_path, 'r'))
         self.resolve_tree()
 
+    def get_reactant_sets(self, node_id: int):
+        """
+        Returns a generator over coreactants for a given node (i.e. product)
+        :param node_id: the node to know reactant sets for
+        :return:
+        """
+        all_predecessors = set(self.network.in_edges(node_id, data=True))
+        while len(all_predecessors) > 0:
+            reactant = all_predecessors.pop()
+            predecessors = {reactant[0]}
+            # find complete reactant sets
+            for poss_coreactant in predecessors:
+                if reactant[1]['uid'] == poss_coreactant[1]['uid']:
+                    all_predecessors.remove(poss_coreactant)
+                    predecessors.add(poss_coreactant[0])
+            yield predecessors
+
 
     def parse_param(self, line):
         # Reserved Params
@@ -106,6 +123,12 @@ class ReactionNetwork:
                     raise ValueError('loop cooperativity factor must be between 0 and 1')
                 self.allowed_edges[keys[i]][2] = lcf
         self.num_monomers = self._node_count
+
+    def init_activation_energy(self):
+        """
+        Assign random activation energy scores to the network.
+        :return:
+        """
 
     def match_maker(self, n1, n2=None) -> list:
         """

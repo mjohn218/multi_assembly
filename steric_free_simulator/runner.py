@@ -5,24 +5,18 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 import pickle
+import sys
 
-# with open("./saved_nets/arp23_net_final.pkl", 'rb') as f:
-#     sim = pickle.load(f)
 
-print('begin')
+if __name__ == '__main__':
+    input_file = sys.argv[1]
+    runtime_s = int(sys.argv[2])
+    rn = ReactionNetwork(input_file)
 
-rn = ReactionNetwork('input_files/ap2.bngl')
-# with open("./saved_nets/arp23_net.pkl", 'wb') as f:
-#     pickle.dump(rn, f)
-# with open("./saved_nets/arp23_net.pkl", 'rb') as f:
-#     rn = pickle.load(f)
-steps = 200000
-
-sim = Simulator(rn, steps)
-print("found best dt to be " + str(sim.dt))
-dt = sim.dt
-# sim = Simulator(rn, 10000, .001, obs=[0, 1, 2, 3, 4, 5, 9])
-sim.simulate()
+    sim = Simulator(rn, runtime_s)
+    print("found best dt to be " + str(sim.dt))
+    dt = sim.dt
+    sim.simulate()
 
 with open("./saved_nets/ap2_sim_uneven_assoc.pkl", 'wb') as f:
     pickle.dump(sim, f)

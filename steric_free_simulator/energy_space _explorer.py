@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 from pyrosetta import rosetta
 from pyrosetta import pose_from_pdb
@@ -15,6 +15,7 @@ import os
 import pickle as pk
 import shutil
 import networkx
+import numpy as np
 
 
 def strip_pdb_ext(pdb_file: str) -> str:
@@ -55,7 +56,7 @@ class EnergyExplorer:
         score = self.scorefxn(new_pose)
         return new_pose, score
 
-    def score_reaction(self, reactant_ids: list):
+    def score_reaction(self, reactant_ids: Union[list, set]):
         names = [''.join(sorted(gtostr(self.net.network.nodes[rid]['struct']))) for rid in reactant_ids]
         prebound_score = sum([self.written[n][1] for n in names])
         new_pdb_str = ''
@@ -75,18 +76,31 @@ class EnergyExplorer:
         for node_id in self.net.network.nodes():
             name = gtostr(self.net.network.nodes[node_id]['struct'])
             name = ''.join(sorted(name))
-            predecessors = list(self.net.network.predecessors(node_id))
-            if name not in self.written:
-                # this pattern has not yet been processed.
-                r_score, p_score = self.score_reaction(predecessors)
-                self.net.network.nodes[node_id]['first'] = True # attribute to tell whether score is inherited from previous node with this pattern
-            else:
-                # we will write the score to every node, and tell whether is energetically meaningful with "first" attribute.
-                r_score = p_score = self.written[name][1]
-                self.net.network.nodes[node_id]['first'] = False
-            self.net.network.nodes[node_id]['score'] = p_score  # add score attribute
-            for n in predecessors:
-                self.net.network.edges[(n, node_id)]['rxn_score'] = p_score - r_score
+            self.net.network.nodes[node_id]['first'] = False
+            for predecessors in self.net.get_reactant_sets(node_id):
+                if name not in self.written:
+                    # this pattern has not yet been processed.
+                    r_score, pr_score = self.score_reaction(predecessors)
+                    self.net.network.nodes[node_id]['first'] = True  # attribute to tell whether score is inherited from previous node with this pattern
+                else:
+                    # we will write the score to every node, and tell whether is energetically meaningful with "first" attribute.
+                    r_score = pr_score = self.written[name][1]
+                self.net.network.nodes[node_id]['score'] = pr_score  # add score attribute
+                for n in predecessors:
+                    self.net.network.edges[(n, node_id)]['rxn_score'] = pr_score - r_score
+
+    def intialize_activations(self):
+        """
+        function to set and initialize activation energy parameters for reaction network.
+        :return:
+        """
+        # reaction rates may not match activation energies before sim start.
+        for node in self.net.network.nodes:
+            for reactant_set in self.net.get_reactant_sets(node):
+                activation_energy = np.random.rand()*10
+                for source in reactant_set:
+                    self.net.network.edges[(source, node)]['activation_energy'] = activation_energy
+
 
 
 
