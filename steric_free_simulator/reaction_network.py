@@ -40,15 +40,22 @@ class ReactionNetwork:
         :param node_id: the node to know reactant sets for
         :return:
         """
-        all_predecessors = set(self.network.in_edges(node_id, data=True))
+        all_predecessors = set(self.network.in_edges(node_id))
         while len(all_predecessors) > 0:
+            found = False
             reactant = all_predecessors.pop()
             predecessors = {reactant[0]}
+            reactant_data = self.network[reactant[0]][reactant[1]]
+            poss_coreactant = None
             # find complete reactant sets
-            for poss_coreactant in predecessors:
-                if reactant[1]['uid'] == poss_coreactant[1]['uid']:
-                    all_predecessors.remove(poss_coreactant)
-                    predecessors.add(poss_coreactant[0])
+            for poss_coreactant in all_predecessors:
+                poss_coreactant_data = self.network[poss_coreactant[0]][poss_coreactant[1]]
+                if reactant_data['uid'] == poss_coreactant_data['uid']:
+                    found = True
+                    break
+            if found:
+                all_predecessors.remove(poss_coreactant)
+                predecessors.add(poss_coreactant[0])
             yield predecessors
 
 
