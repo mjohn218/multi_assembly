@@ -15,13 +15,19 @@ if __name__ == '__main__':
     input_file = sys.argv[1]
     runtime_s = int(sys.argv[2])
 
-    rn = ReactionNetwork(input_file)
-
     if sys.argv[3] is not None:
-        subunit_dir = sys.argv[3]
-        En = EnergyExplorer(rn, subunit_dir)
-        En.explore_network()
-        En.intialize_activations()
+        # if a pickle is provided load it, otherwise run the energy explorer on the network
+        if '.pkl' in sys.argv[3] or '.pickle' in sys.argv[3]:
+            with open(sys.argv[3], 'rb') as f:
+                rn = pickle.load(f)
+        else:
+            rn = ReactionNetwork(input_file)
+            subunit_dir = sys.argv[3]
+            En = EnergyExplorer(rn, subunit_dir)
+            En.explore_network()
+            En.intialize_activations()
+    else:
+        rn = ReactionNetwork(input_file)
 
     with open('./saved_nets/ap2_en_net.pkl', 'wb') as f:
         pickle.dump(rn, f)

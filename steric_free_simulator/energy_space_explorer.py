@@ -24,6 +24,7 @@ from pathos.multiprocessing import ProcessingPool as Pool
 
 def strip_pdb_ext(pdb_file: str) -> str:
     name = pdb_file.split('.')[0]
+    name = ''.join(sorted(name))
     return name
 
 class EnergyExplorer:
@@ -77,6 +78,7 @@ class EnergyExplorer:
 
     def _pose_from_pdb(self, pdb_file: str) -> Tuple[Pose, float]:
         name = strip_pdb_ext(os.path.split(pdb_file)[1])
+        name = ''.join(sorted(name))
         if name in self.written:
             return self.written[name]
         new_pose = pose_from_pdb(pdb_file)
@@ -87,13 +89,15 @@ class EnergyExplorer:
 
     def score_reaction(self, reactant_ids: Union[list, set]):
         names = [''.join(sorted(gtostr(self.net.network.nodes[rid]['struct']))) for rid in reactant_ids]
+        new_pdb_name = ''.join(sorted(''.join(sorted(names))))
         prebound_score = sum([self.written[n][1] for n in names])
+        if new_pdb_name in self.written:
+            return self.written[new_pdb_name][1], prebound_score
         new_pdb_str = ''
         for name in names:
             reactant_file = os.path.join(self.sub_dir, name + '.clean.pdb')
             with open(reactant_file, 'r') as f:
                 new_pdb_str += f.read()
-        new_pdb_name = ''.join(sorted(names))
         new_pdb_path = os.path.join(self.sub_dir, new_pdb_name + '.clean.pdb')
         with open(new_pdb_path, 'w') as f:
             f.write(new_pdb_str)
@@ -102,6 +106,7 @@ class EnergyExplorer:
         return bound_score, prebound_score
 
     def explore_network(self):
+        processed = set()
         for node_id in self.net.network.nodes():
             name = gtostr(self.net.network.nodes[node_id]['struct'])
             name = ''.join(sorted(name))
@@ -110,11 +115,11 @@ class EnergyExplorer:
             else:
                 self.net.network.nodes[node_id]['first'] = False
             for predecessors in self.net.get_reactant_sets(node_id):
-                if name not in self.written:
+                if name not in processed:
                     # this pattern has not yet been processed.
                     r_score, pr_score = self.score_reaction(predecessors)
-                    self.net.network.nodes[node_id][
-                        'first'] = True  # attribute to tell whether score is inherited from previous node with this pattern
+                    self.net.network.nodes[node_id]['first'] = True  # attribute to tell whether score is inherited from previous node with this pattern
+                    processed.add(name)
                 else:
                     # we will write the score to every node, and tell whether is energetically meaningful with "first" attribute.
                     r_score = pr_score = self.written[name][1]

@@ -9,10 +9,11 @@ class Simulator:
 
     def __init__(self, net: ReactionNetwork, runtime: int, dt: float = 1, obs=None, optimize_dt=True):
         self.dt = dt
+        self.rn = net
         if optimize_dt:
             self.optimize_step()
         self.steps = int(runtime / self.dt)
-        self.rn = net
+
 
     def optimize_step(self) -> float:
         """
