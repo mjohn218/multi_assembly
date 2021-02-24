@@ -4,6 +4,10 @@ from reaction_network import ReactionNetwork
 import numpy as np
 from typing import Tuple, Union
 
+from torch import Tensor
+from torch import nn
+import torch
+
 
 class Simulator:
 
@@ -13,7 +17,8 @@ class Simulator:
         if optimize_dt:
             self.optimize_step()
         self.steps = int(runtime / self.dt)
-
+        self._R = 8.3145
+        self._T = 273
 
     def optimize_step(self) -> float:
         """
@@ -50,10 +55,21 @@ class Simulator:
                         new_reactions.add(frozenset([(coreactant, successor), tuple(edge[:2])]))
         return new_reactions
 
-    def _reaction_prob(self, reactants: set) -> Tuple[float, ...]:
-        prob = [0., 0.]
+    def _compute_rate_constants(self, activation_energy: Tensor, dGrxn):
+        kon = self.rn.A * torch.exp(Tensor(-1)*activation_energy / (self._R * self._T))
+        koff = self.rn.A * torch.exp((Tensor(-1)*activation_energy + dGrxn) / (self._R * self._T))
+        return kon, koff
+
+    def _reaction_prob(self, reactants: set) -> Tuple[Tensor, ...]:
+        prob = [Tensor(0.), Tensor(0.)]
         data = self.rn.network.edges[min(reactants)]
-        kon = data['k_on']
+        if self.use_energies:
+            kon, koff = self._compute_rate_constants(data['activation_energy'], data['rxn_score'])
+            self.rn.network.edges[min(reactants)]['k_on'] = kon
+            self.rn.network.edges[min(reactants)]['k_off'] = koff
+        else:
+            kon = Tensor(data['k_on'])
+            koff = Tensor(data['k_off'])
         if len(reactants) == 1:
             edge = list(reactants)[0]
             copies = self.rn.network.nodes[edge[0]]['copies']
@@ -65,21 +81,21 @@ class Simulator:
             edge = None
             rate = kon
             for edge in reactants:
-                rate *= self.rn.network.nodes[edge[0]]['copies']
-        prob[0] = float(1 - np.exp(-1 * rate * self.dt))
-        offrate = data['k_off'] * self.rn.network.nodes[edge[1]]['copies']
-        prob[1] = float(1 - np.exp(-1 * offrate * self.dt))
-        if len(reactants) != 1 and (math.isclose(1, prob[0], abs_tol=.01) or
-                                    math.isclose(1, prob[1], abs_tol=.01)):
+                rate = rate * self.rn.network.nodes[edge[0]]['copies']
+        prob[0] = (1 - torch.exp(-1 * rate * self.dt))
+        offrate = koff * self.rn.network.nodes[edge[1]]['copies']
+        prob[1] = (1 - torch.exp(-1 * offrate * self.dt))
+        if len(reactants) != 1 and (math.isclose(1, prob[0].item(), abs_tol=.01) or
+                                    math.isclose(1, prob[1].item(), abs_tol=.01)):
             print("WARNING: Reaction probability seems to be saturated, "
                   "consider reducing time step size.")
         return tuple(prob)
 
-    def _forward(self, reaction: set, prob: float) -> Tuple[int, set]:
+    def _forward(self, reaction: set, prob: Tensor) -> Tuple[int, set]:
         r = np.random.rand(1)
         newly_nonzero = None
         newly_zero = set()
-        if r < prob:
+        if r < prob.item():
             e = None  # suppress warning
             # decrease reactant concentrations
             for e in reaction:
@@ -92,11 +108,11 @@ class Simulator:
             self.rn.network.nodes[e[1]]['copies'] += 1
         return newly_nonzero, newly_zero
 
-    def _reverse(self, reaction: set, prob: float) -> Tuple[set, int]:
+    def _reverse(self, reaction: set, prob: Tensor) -> Tuple[set, int]:
         r = np.random.rand(1)
         newly_nonzero = set()
         newly_zero = None
-        if r < prob:
+        if r < prob.item():
             e = None  # suppress warning
             for e in reaction:
                 # increase product concentrations
@@ -108,6 +124,12 @@ class Simulator:
             if self.rn.network.nodes[e[1]]['copies'] == 0:
                 newly_zero = e[1]
         return newly_nonzero, newly_zero
+
+    def _compute_yield(self):
+        nodes = self.rn.network.nodes(data=True)
+        max_poss = min([node[1]['copies'] for node in nodes[:self.rn.num_monomers]])
+        total_complete = nodes[-1]['copies']
+        return total_complete / max_poss
 
     def simulate(self):
         """
@@ -143,3 +165,4 @@ class Simulator:
             # update observables
             for obs in self.rn.observables.keys():
                 self.rn.observables[obs][1].append(self.rn.network.nodes[obs]['copies'])
+

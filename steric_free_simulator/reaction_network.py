@@ -42,6 +42,9 @@ class ReactionNetwork:
         self.parameters = None  # gradient params
         self.is_energy_set = False
 
+        # pre-exponential factor hyperparameter
+        self.A = None
+
     def get_reactant_sets(self, node_id: int):
         """
         Returns a generator over coreactants for a given node (i.e. product)
@@ -139,13 +142,14 @@ class ReactionNetwork:
                 self.allowed_edges[keys[i]][2] = lcf
         self.num_monomers = self._node_count
 
-    def intialize_activations(self):
+    def intialize_activations(self, A: float = 1):
         """
         function to set and initialize activation energy parameters for reaction network.
         :return:
         """
         if not self.is_energy_set:
             raise ValueError("The network free energies must be calculated for activation params to be used")
+        self.A = A  # set pre-exponential hyperparam
         # reaction rates may not match activation energies before sim start.
         for node in self.network.nodes:
             for reactant_set in self.get_reactant_sets(node):
