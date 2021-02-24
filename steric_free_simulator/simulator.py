@@ -7,7 +7,7 @@ from typing import Tuple, Union
 
 class Simulator:
 
-    def __init__(self, net: ReactionNetwork, runtime: int, dt: float = 1, obs=None, optimize_dt=True):
+    def __init__(self, net: ReactionNetwork, runtime: float, dt: float = 1, obs=None, optimize_dt=True):
         self.dt = dt
         self.rn = net
         if optimize_dt:
@@ -58,7 +58,7 @@ class Simulator:
             edge = list(reactants)[0]
             copies = self.rn.network.nodes[edge[0]]['copies']
             # 1M = 1 mol / L = 6.02e23 copies / L
-            k_close = kon * data['lcf'] * 100
+            k_close = kon * data['lcf'] * 100000
             # rxn is intra molecular i.e. loop closure
             rate = k_close * copies
         else:

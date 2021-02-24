@@ -13,9 +13,9 @@ import sys
 
 if __name__ == '__main__':
     input_file = sys.argv[1]
-    runtime_s = int(sys.argv[2])
+    runtime_s = float(sys.argv[2])
 
-    if sys.argv[3] is not None:
+    try:
         # if a pickle is provided load it, otherwise run the energy explorer on the network
         if '.pkl' in sys.argv[3] or '.pickle' in sys.argv[3]:
             with open(sys.argv[3], 'rb') as f:
@@ -26,7 +26,7 @@ if __name__ == '__main__':
             En = EnergyExplorer(rn, subunit_dir)
             En.explore_network()
             En.intialize_activations()
-    else:
+    except IndexError:
         rn = ReactionNetwork(input_file)
 
     with open('./saved_nets/ap2_en_net.pkl', 'wb') as f:
@@ -40,8 +40,12 @@ if __name__ == '__main__':
 
     #nx.draw(sim.rn.network)
     t = np.arange(steps)*dt
-    df = pd.DataFrame(sim.rn.observables)
-    df.to_csv('./4loop.csv')
+    data = {}
+    for key in sim.rn.observables:
+        entry = sim.rn.observables[key]
+        data[entry[0]] = entry[1]
+    df = pd.DataFrame(data)
+    # df.to_csv('./ap2.csv')
     for key in sim.rn.observables.keys():
         plt.scatter(t, sim.rn.observables[key][1],
                     cmap='plasma',
