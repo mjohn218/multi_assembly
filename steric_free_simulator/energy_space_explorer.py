@@ -126,15 +126,5 @@ class EnergyExplorer:
                 self.net.network.nodes[node_id]['score'] = pr_score  # add score attribute
                 for n in predecessors:
                     self.net.network.edges[(n, node_id)]['rxn_score'] = pr_score - r_score
+        self.net.is_energy_set = True
 
-    def intialize_activations(self):
-        """
-        function to set and initialize activation energy parameters for reaction network.
-        :return:
-        """
-        # reaction rates may not match activation energies before sim start.
-        for node in self.net.network.nodes:
-            for reactant_set in self.net.get_reactant_sets(node):
-                activation_energy = np.random.rand() * 10
-                for source in reactant_set:
-                    self.net.network.edges[(source, node)]['activation_energy'] = activation_energy

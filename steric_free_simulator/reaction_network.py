@@ -1,6 +1,11 @@
 import re
 import sys
 import networkx as nx
+import random
+
+from torch import Tensor
+from torch import rand
+from torch import nn
 
 LOOP_COOP_DEFAULT = 1
 
@@ -34,6 +39,8 @@ class ReactionNetwork:
         # resolve graph
         self.parse_bngl(open(bngl_path, 'r'))
         self.resolve_tree(one_step)
+        self.parameters = None  # gradient params
+        self.is_energy_set = False
 
     def get_reactant_sets(self, node_id: int):
         """
@@ -132,11 +139,21 @@ class ReactionNetwork:
                 self.allowed_edges[keys[i]][2] = lcf
         self.num_monomers = self._node_count
 
-    def init_activation_energy(self):
+    def intialize_activations(self):
         """
-        Assign random activation energy scores to the network.
+        function to set and initialize activation energy parameters for reaction network.
         :return:
         """
+        if not self.is_energy_set:
+            raise ValueError("The network free energies must be calculated for activation params to be used")
+        # reaction rates may not match activation energies before sim start.
+        for node in self.network.nodes:
+            for reactant_set in self.get_reactant_sets(node):
+                # same Tensor used in all three places (i.e. ptr)
+                activation_energy = nn.Parameter(Tensor(rand(1) * 10), requires_grad=True)
+                self.parameters[node] = activation_energy
+                for source in reactant_set:
+                    self.network.edges[(source, node)]['activation_energy'] = activation_energy
 
     def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
         if type(source_1) is not int:
@@ -245,6 +262,7 @@ class ReactionNetwork:
             self.observables[i] = (gtostr(self.network.nodes[i]['struct']), [])
         fin_dex = len(self.network.nodes) - 1
         self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
+
 
 
 if __name__ == '__main__':

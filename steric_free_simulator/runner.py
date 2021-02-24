@@ -25,7 +25,7 @@ if __name__ == '__main__':
             subunit_dir = sys.argv[3]
             En = EnergyExplorer(rn, subunit_dir)
             En.explore_network()
-            En.intialize_activations()
+            rn.intialize_activations()
     except IndexError:
         rn = ReactionNetwork(input_file, one_step=True)
 
