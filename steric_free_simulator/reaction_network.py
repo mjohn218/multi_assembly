@@ -22,17 +22,18 @@ def gtostr(g: nx.DiGraph) -> str:
 
 
 class ReactionNetwork:
-    def __init__(self, bngl_path: str):
+    def __init__(self, bngl_path: str, one_step: bool):
         self.network: nx.DiGraph() = nx.DiGraph()
         self.allowed_edges = {}
         self._node_count = 0
         self._rxn_count = 0
         self.num_monomers = 0
+        self.is_one_step = one_step
         # default observables are monomers and final complex
         self.observables = dict()
         # resolve graph
         self.parse_bngl(open(bngl_path, 'r'))
-        self.resolve_tree()
+        self.resolve_tree(one_step)
 
     def get_reactant_sets(self, node_id: int):
         """
@@ -137,10 +138,57 @@ class ReactionNetwork:
         :return:
         """
 
-    def match_maker(self, n1, n2=None) -> list:
+    def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
+        if type(source_1) is not int:
+            source_1 = int(source_1[0])
+        if source_2 is not None and type(source_2) is not int:
+            source_2 = int(source_2[0])
+        node_exists = [x for x in self.network.nodes(data=True) if
+                       _equal(x[1]['struct'], connected_item)]
+        if len(node_exists) == 0:
+            self.network.add_node(self._node_count, struct=connected_item, copies=0)
+            new_node = self._node_count
+            self._node_count += 1
+        elif len(node_exists) > 1:
+            raise Exception("Duplicate nodes in reaction Network")
+        else:
+            new_node = node_exists[0][0]
+
+        if template_edge_id is not None:
+            self.network.add_edge(source_1, new_node,
+                                  k_on=self.allowed_edges[template_edge_id][0],
+                                  k_off=self.allowed_edges[template_edge_id][1],
+                                  lcf=self.allowed_edges[template_edge_id][2],
+                                  uid=self._rxn_count)
+            if source_2 is not None:
+                self.network.add_edge(source_2, new_node,
+                                      k_on=self.allowed_edges[template_edge_id][0],
+                                      k_off=self.allowed_edges[template_edge_id][1],
+                                      lcf=self.allowed_edges[template_edge_id][2],
+                                      uid=self._rxn_count)
+        else:
+            self.network.add_edge(source_1, new_node,
+                                  k_on=1,
+                                  k_off=.1,
+                                  lcf=1,
+                                  uid=self._rxn_count)
+            if source_2 is not None:
+                self.network.add_edge(source_2, new_node,
+                                      k_on=1,
+                                      k_off=.1,
+                                      lcf=1,
+                                      uid=self._rxn_count)
+        self._rxn_count += 1
+        if len(node_exists) == 0:
+            return (new_node, self.network.nodes[new_node])
+        else:
+            return None
+
+    def match_maker(self, n1, n2=None, one_step=False) -> list:
         """
         determines if a valid edge can be added between two network states, and preforms
         addition if possible
+        :param one_step: whether to do one step binding
         :param n1: node in network
         :param n2: node in network
         :return:
@@ -152,41 +200,29 @@ class ReactionNetwork:
             item = nx.compose(orig, nextn)
         else:
             item = orig
+        connected_item = item.copy()
         for poss_edge in list(self.allowed_edges.keys()):
             if False not in [item.has_node(n) for n in poss_edge] and \
                     (n2 is None or
                      (True in [orig.has_node(n) for n in poss_edge] and
                       True in [nextn.has_node(n) for n in poss_edge]))\
                     and not item.has_edge(poss_edge[0], poss_edge[1]):
-                connected_item = item.copy()
+                # adds edge to new struct, should happen only once per match step if not one step
+                if not one_step:
+                    connected_item = item.copy()
                 connected_item.add_edge(poss_edge[0], poss_edge[1])
             else:
                 continue
-            node_exists = [x for x in self.network.nodes(data=True) if
-                           _equal(x[1]['struct'], connected_item)]
-            if len(node_exists) == 0:
-                self.network.add_node(self._node_count, struct=connected_item, copies=0)
-                new_node = self._node_count
-                self._node_count += 1
-            elif len(node_exists) > 1:
-                raise Exception("Duplicate nodes in reaction Network")
-            else:
-                new_node = node_exists[0][0]
+            if not one_step:
+                new_node = self._add_graph_state(connected_item, n1, source_2=n2, template_edge_id=poss_edge)
+                if new_node is not None:
+                    nodes_added.append(new_node)
+        # resolving cooperative network
+        if one_step:
+            new_node = self._add_graph_state(connected_item, n1, source_2=n2)
+            if new_node is not None:
+                nodes_added.append(new_node)
 
-            self.network.add_edge(n1[0], new_node,
-                                  k_on=self.allowed_edges[poss_edge][0],
-                                  k_off=self.allowed_edges[poss_edge][1],
-                                  lcf=self.allowed_edges[poss_edge][2],
-                                  uid=self._rxn_count)
-            if n2 is not None:
-                self.network.add_edge(n2[0], new_node,
-                                      k_on=self.allowed_edges[poss_edge][0],
-                                      k_off=self.allowed_edges[poss_edge][1],
-                                      lcf=self.allowed_edges[poss_edge][2],
-                                      uid=self._rxn_count)
-            self._rxn_count += 1
-            if len(node_exists) == 0:
-                nodes_added.append((new_node, self.network.nodes[new_node]))
         return nodes_added
 
     def is_hindered(self, n1, n2):
@@ -194,13 +230,13 @@ class ReactionNetwork:
         node_set2 = set(n2[1]['struct'].nodes())
         return len(node_set1 - node_set2) < len(node_set1)
 
-    def resolve_tree(self):
+    def resolve_tree(self, is_one_step):
         new_nodes = list(self.network.nodes(data=True))
         while len(new_nodes) > 0:
             node = new_nodes.pop(0)
             for anode in list(self.network.nodes(data=True)):
                 if not self.is_hindered(node, anode):
-                    new_nodes += self.match_maker(node, anode)
+                    new_nodes += self.match_maker(node, anode, is_one_step)
             # must also try internal bonds
             new_nodes += self.match_maker(node)
 

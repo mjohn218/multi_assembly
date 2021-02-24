@@ -21,15 +21,15 @@ if __name__ == '__main__':
             with open(sys.argv[3], 'rb') as f:
                 rn = pickle.load(f)
         else:
-            rn = ReactionNetwork(input_file)
+            rn = ReactionNetwork(input_file, one_step=True)
             subunit_dir = sys.argv[3]
             En = EnergyExplorer(rn, subunit_dir)
             En.explore_network()
             En.intialize_activations()
     except IndexError:
-        rn = ReactionNetwork(input_file)
+        rn = ReactionNetwork(input_file, one_step=True)
 
-    with open('./saved_nets/ap2_en_net.pkl', 'wb') as f:
+    with open('./saved_nets/ap2_one_step_en.pkl', 'wb') as f:
         pickle.dump(rn, f)
 
     sim = Simulator(rn, runtime_s)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         entry = sim.rn.observables[key]
         data[entry[0]] = entry[1]
     df = pd.DataFrame(data)
-    # df.to_csv('./ap2.csv')
+    df.to_csv('./ap2_1step_en.csv')
     for key in sim.rn.observables.keys():
         plt.scatter(t, sim.rn.observables[key][1],
                     cmap='plasma',
