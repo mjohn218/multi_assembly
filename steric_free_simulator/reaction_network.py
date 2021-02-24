@@ -3,7 +3,8 @@ import sys
 import networkx as nx
 import random
 
-from torch import Tensor
+import torch
+from torch import DoubleTensor as Tensor
 from torch import rand
 from torch import nn
 
@@ -39,7 +40,7 @@ class ReactionNetwork:
         # resolve graph
         self.parse_bngl(open(bngl_path, 'r'))
         self.resolve_tree(one_step)
-        self.parameters = None  # gradient params
+        self.parameters = {}  # gradient params
         self.is_energy_set = False
 
         # pre-exponential factor hyperparameter
@@ -87,23 +88,23 @@ class ReactionNetwork:
             init_pop = int(params[items[1]])
         state_net = nx.Graph()
         state_net.add_node(sp_info[0])
-        self.network.add_node(self._node_count, struct=state_net, copies=init_pop)
+        self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]))
         self._node_count += 1
 
     def parse_rule(self, line, params):
         items = re.split(r' |, ', line)
         r_info = re.split('\\(.\\)+.|\\(.\\)<->', items[0])
         try:
-            k_on = float(items[1])
+            k_on = None # float(items[1])
         except ValueError:
-            k_on = float(params[items[1]])
+            k_on = None # float(params[items[1]])
         if len(items) > 2:
             try:
-                k_off = float(items[2])
+                k_off = None # float(items[2])
             except ValueError:
-                k_off = float(params[items[2]])
+                k_off = None # float(params[items[2]])
         else:
-            k_off = 0
+            k_off = None # 0
         self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [k_on, k_off, LOOP_COOP_DEFAULT]
 
     def parse_bngl(self, f):
@@ -154,7 +155,7 @@ class ReactionNetwork:
         for node in self.network.nodes:
             for reactant_set in self.get_reactant_sets(node):
                 # same Tensor used in all three places (i.e. ptr)
-                activation_energy = nn.Parameter(Tensor(rand(1) * 10), requires_grad=True)
+                activation_energy = nn.Parameter(rand(1, dtype=torch.double) * Tensor([10.]), requires_grad=True)
                 self.parameters[node] = activation_energy
                 for source in reactant_set:
                     self.network.edges[(source, node)]['activation_energy'] = activation_energy
@@ -167,7 +168,7 @@ class ReactionNetwork:
         node_exists = [x for x in self.network.nodes(data=True) if
                        _equal(x[1]['struct'], connected_item)]
         if len(node_exists) == 0:
-            self.network.add_node(self._node_count, struct=connected_item, copies=0)
+            self.network.add_node(self._node_count, struct=connected_item, copies=Tensor([0.]))
             new_node = self._node_count
             self._node_count += 1
         elif len(node_exists) > 1:

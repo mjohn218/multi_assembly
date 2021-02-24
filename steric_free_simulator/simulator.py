@@ -4,21 +4,23 @@ from reaction_network import ReactionNetwork
 import numpy as np
 from typing import Tuple, Union
 
-from torch import Tensor
+from torch import DoubleTensor as Tensor
 from torch import nn
 import torch
 
 
 class Simulator:
 
-    def __init__(self, net: ReactionNetwork, runtime: float, dt: float = 1, obs=None, optimize_dt=True):
+    def __init__(self, net: ReactionNetwork, runtime: float, dt: float = 1, lin_factor: float = 10., optimize_dt=True):
         self.dt = dt
         self.rn = net
+        self._R = Tensor([8.3145])
+        self._T = Tensor([273.])
+        self._linearity_factor = Tensor([lin_factor]) # higher produces *more* discrete reaction updates, but reduces optimization effectivity.
+        self.use_energies = self.rn.is_energy_set
         if optimize_dt:
             self.optimize_step()
         self.steps = int(runtime / self.dt)
-        self._R = 8.3145
-        self._T = 273
 
     def optimize_step(self) -> float:
         """
@@ -56,17 +58,18 @@ class Simulator:
         return new_reactions
 
     def _compute_rate_constants(self, activation_energy: Tensor, dGrxn):
-        kon = self.rn.A * torch.exp(Tensor(-1)*activation_energy / (self._R * self._T))
-        koff = self.rn.A * torch.exp((Tensor(-1)*activation_energy + dGrxn) / (self._R * self._T))
+        kon = self.rn.A * torch.exp(Tensor([-1.])*activation_energy / (self._R * self._T))
+        koff = self.rn.A * torch.exp((Tensor([-1.])*activation_energy + Tensor([float(dGrxn)])) / (self._R * self._T))
         return kon, koff
 
     def _reaction_prob(self, reactants: set) -> Tuple[Tensor, ...]:
-        prob = [Tensor(0.), Tensor(0.)]
+        prob = [Tensor([0.]), Tensor([0.])]
         data = self.rn.network.edges[min(reactants)]
         if self.use_energies:
             kon, koff = self._compute_rate_constants(data['activation_energy'], data['rxn_score'])
-            self.rn.network.edges[min(reactants)]['k_on'] = kon
-            self.rn.network.edges[min(reactants)]['k_off'] = koff
+            for reactant in reactants:
+                self.rn.network.edges[reactant]['k_on'] = kon
+                self.rn.network.edges[reactant]['k_off'] = koff
         else:
             kon = Tensor(data['k_on'])
             koff = Tensor(data['k_off'])
@@ -91,44 +94,50 @@ class Simulator:
                   "consider reducing time step size.")
         return tuple(prob)
 
+    def _compute_copy_change(self, r: Tensor, p: Tensor):
+        x = self._linearity_factor * (p - r)
+        result = torch.sigmoid(x)
+        return result
+
     def _forward(self, reaction: set, prob: Tensor) -> Tuple[int, set]:
-        r = np.random.rand(1)
+        r = torch.rand(1)
         newly_nonzero = None
         newly_zero = set()
-        if r < prob.item():
-            e = None  # suppress warning
-            # decrease reactant concentrations
-            for e in reaction:
-                self.rn.network.nodes[e[0]]['copies'] -= 1
-                if self.rn.network.nodes[e[0]]['copies'] == 0:
-                    newly_zero.add(e[0])
-            # increase product concentration
-            if self.rn.network.nodes[e[1]]['copies'] == 0:
-                newly_nonzero = e[1]
-            self.rn.network.nodes[e[1]]['copies'] += 1
+        e = None  # suppress warning
+        # decrease reactant concentrations
+        delta_copies = self._compute_copy_change(r, prob)
+        for e in reaction:
+            self.rn.network.nodes[e[0]]['copies'] = self.rn.network.nodes[e[0]]['copies'] - delta_copies
+            if self.rn.network.nodes[e[0]]['copies'] == 0:
+                newly_zero.add(e[0])
+        # increase product concentration
+        if self.rn.network.nodes[e[1]]['copies'] == 0:
+            newly_nonzero = e[1]
+        self.rn.network.nodes[e[1]]['copies'] = self.rn.network.nodes[e[1]]['copies'] + delta_copies
         return newly_nonzero, newly_zero
 
     def _reverse(self, reaction: set, prob: Tensor) -> Tuple[set, int]:
-        r = np.random.rand(1)
+        r = torch.rand(1)
         newly_nonzero = set()
         newly_zero = None
-        if r < prob.item():
-            e = None  # suppress warning
-            for e in reaction:
-                # increase product concentrations
-                if self.rn.network.nodes[e[0]]['copies'] == 0:
-                    newly_nonzero.add(e[0])
-                self.rn.network.nodes[e[0]]['copies'] += 1
-            # decrease reactant concentration
-            self.rn.network.nodes[e[1]]['copies'] -= 1
-            if self.rn.network.nodes[e[1]]['copies'] == 0:
-                newly_zero = e[1]
+        delta_copies = self._compute_copy_change(r, prob)
+        e = None  # suppress warning
+        for e in reaction:
+            # increase product concentrations
+            if self.rn.network.nodes[e[0]]['copies'] == 0:
+                newly_nonzero.add(e[0])
+            self.rn.network.nodes[e[0]]['copies'] = self.rn.network.nodes[e[0]]['copies'] + delta_copies
+        # decrease reactant concentration
+        self.rn.network.nodes[e[1]]['copies'] = self.rn.network.nodes[e[1]]['copies'] - delta_copies
+        if self.rn.network.nodes[e[1]]['copies'] == 0:
+            newly_zero = e[1]
         return newly_nonzero, newly_zero
 
-    def _compute_yield(self):
-        nodes = self.rn.network.nodes(data=True)
-        max_poss = min([node[1]['copies'] for node in nodes[:self.rn.num_monomers]])
-        total_complete = nodes[-1]['copies']
+    def _compute_yield(self) -> Tensor:
+        nodes = dict(self.rn.network.nodes(data=True))
+        node_list = [nodes[key] for key in sorted(nodes.keys())]
+        max_poss = torch.min(Tensor([node['copies'] for node in node_list[:self.rn.num_monomers]]), dim=0)[0]
+        total_complete = node_list[-1]['copies']
         return total_complete / max_poss
 
     def simulate(self):
@@ -143,6 +152,8 @@ class Simulator:
         for step in range(self.steps):
             newly_zero = set()
             reactions = reactions.union(self._possible_reactions(newly_nonzero, nonzero))
+            if (step % 100) == 0:
+                print("Processing " + str(len(reactions)) + " reactions for step " + str(step))
             newly_nonzero = set()
             for reaction in reactions:
                 prob = self._reaction_prob(reaction)
@@ -165,4 +176,7 @@ class Simulator:
             # update observables
             for obs in self.rn.observables.keys():
                 self.rn.observables[obs][1].append(self.rn.network.nodes[obs]['copies'])
+        for key in self.rn.observables:
+            self.rn.observables[key] = (self.rn.observables[key][0], Tensor(self.rn.observables[key][1]))
+        return self._compute_yield()
 

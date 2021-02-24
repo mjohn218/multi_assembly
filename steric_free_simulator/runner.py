@@ -36,8 +36,8 @@ if __name__ == '__main__':
     steps = sim.steps
     print("found best dt to be " + str(sim.dt))
     dt = sim.dt
-    sim.simulate()
-
+    percent_yield = sim.simulate()
+    print("end yield is " + str(percent_yield * 100) + "%")
     #nx.draw(sim.rn.network)
     t = np.arange(steps)*dt
     data = {}
