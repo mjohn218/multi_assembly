@@ -22,5 +22,5 @@ Thumbs.db
 
 #IGNORE JUPYTER CHECKPOINTS#
 *.ipynb_checkpoints
-#*#
+*\#*
 
