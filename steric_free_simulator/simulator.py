@@ -4,9 +4,16 @@ from reaction_network import ReactionNetwork
 import numpy as np
 from typing import Tuple, Union
 
+import matplotlib
+from matplotlib import pyplot as plt
+
 from torch import DoubleTensor as Tensor
 from torch import nn
 import torch
+
+import pandas as pd
+
+plt.ion()
 
 
 class Simulator:
@@ -21,18 +28,28 @@ class Simulator:
         if optimize_dt:
             self.optimize_step()
         self.steps = int(runtime / self.dt)
+        self.runtime = runtime
 
-    def optimize_step(self) -> float:
+    def optimize_step(self, depth=0) -> float:
         """
         find the dt that is accurate while also efficient and return it
         """
         reactions = self._possible_reactions(
             set(range(self.rn.num_monomers)), set(range(self.rn.num_monomers)))
+        depth += 1
+        if depth == 50:
+            return self.dt
         for r in reactions:
-            prob = self._reaction_prob(set(r))
-            if len(r) > 1 and (prob[0] >= .99 or prob[1] >= .99):
+            with torch.no_grad():
+                prob = self._reaction_prob(set(r))
+            if len(r) > 1 and (prob[0] >= .9 or prob[1] >= .9):
                 self.dt /= 2
-                self.optimize_step()
+                self.optimize_step(depth)
+                return self.dt
+            elif len(r) > 1 and (prob[0] <= .1 or prob[1] <= .1):
+                self.dt *= 2
+                self.optimize_step(depth)
+                return self.dt
         return self.dt
 
     def _possible_reactions(self, new_nodes: set, node_set: set):
@@ -108,10 +125,10 @@ class Simulator:
         delta_copies = self._compute_copy_change(r, prob)
         for e in reaction:
             self.rn.network.nodes[e[0]]['copies'] = self.rn.network.nodes[e[0]]['copies'] - delta_copies
-            if self.rn.network.nodes[e[0]]['copies'] == 0:
+            if self.rn.network.nodes[e[0]]['copies'] < 1:
                 newly_zero.add(e[0])
         # increase product concentration
-        if self.rn.network.nodes[e[1]]['copies'] == 0:
+        if self.rn.network.nodes[e[1]]['copies'] < 1:
             newly_nonzero = e[1]
         self.rn.network.nodes[e[1]]['copies'] = self.rn.network.nodes[e[1]]['copies'] + delta_copies
         return newly_nonzero, newly_zero
@@ -124,21 +141,14 @@ class Simulator:
         e = None  # suppress warning
         for e in reaction:
             # increase product concentrations
-            if self.rn.network.nodes[e[0]]['copies'] == 0:
+            if self.rn.network.nodes[e[0]]['copies'] < 1:
                 newly_nonzero.add(e[0])
             self.rn.network.nodes[e[0]]['copies'] = self.rn.network.nodes[e[0]]['copies'] + delta_copies
         # decrease reactant concentration
         self.rn.network.nodes[e[1]]['copies'] = self.rn.network.nodes[e[1]]['copies'] - delta_copies
-        if self.rn.network.nodes[e[1]]['copies'] == 0:
+        if self.rn.network.nodes[e[1]]['copies'] < 1:
             newly_zero = e[1]
         return newly_nonzero, newly_zero
-
-    def _compute_yield(self) -> Tensor:
-        nodes = dict(self.rn.network.nodes(data=True))
-        node_list = [nodes[key] for key in sorted(nodes.keys())]
-        max_poss = torch.min(Tensor([node['copies'] for node in node_list[:self.rn.num_monomers]]), dim=0)[0]
-        total_complete = node_list[-1]['copies']
-        return total_complete / max_poss
 
     def simulate(self):
         """
@@ -149,10 +159,13 @@ class Simulator:
         nonzero = newly_nonzero.copy()
         reactions = set()  # set of sets of reaction edges
         # get list of edges id pairs present in non-zero population.
+        nodes = dict(self.rn.network.nodes(data=True))
+        node_list = [nodes[key] for key in sorted(nodes.keys())]
+        max_poss_yield = torch.min(Tensor([node['copies'] for node in node_list[:self.rn.num_monomers]]), dim=0)[0]
         for step in range(self.steps):
             newly_zero = set()
             reactions = reactions.union(self._possible_reactions(newly_nonzero, nonzero))
-            if (step % 100) == 0:
+            if (step % 500) == 0:
                 print("Processing " + str(len(reactions)) + " reactions for step " + str(step))
             newly_nonzero = set()
             for reaction in reactions:
@@ -175,8 +188,47 @@ class Simulator:
                             reactions.remove(rxn)
             # update observables
             for obs in self.rn.observables.keys():
-                self.rn.observables[obs][1].append(self.rn.network.nodes[obs]['copies'])
+                self.rn.observables[obs][1].append(self.rn.network.nodes[obs]['copies'].item())
+        total_complete = node_list[-1]['copies']
+        final_yield = total_complete / max_poss_yield
+        return final_yield
+
+    def observables_to_csv(self, out_path):
+        data = {}
         for key in self.rn.observables:
-            self.rn.observables[key] = (self.rn.observables[key][0], Tensor(self.rn.observables[key][1]))
-        return self._compute_yield()
+            entry = self.rn.observables[key]
+            data[entry[0]] = entry[1]
+        df = pd.DataFrame(data)
+        df.to_csv(out_path)
+
+    def plot_observables(self, iter_num=None):
+        t = np.arange(self.steps) * self.dt
+        for key in self.rn.observables.keys():
+            data = np.array(self.rn.observables[key][1])
+            plt.scatter(t, data,
+                        cmap='plasma',
+                        s=.1,
+                        label=self.rn.observables[key][0])
+        plt.legend(loc='best')
+        plt.show(block=False)
+
+    def optimize(self, iter: int, lr: float):
+        param_itr = self.rn.get_params()
+        optimizer = torch.optim.SGD(param_itr, lr)
+        for i in range(iter):
+            self.rn.reset()
+            self.optimize_step()
+            print("time step: " + str(self.dt))
+            self.steps = int(self.runtime / self.dt)
+            optimizer.zero_grad()
+            total_yield = self.simulate()
+            print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+            cost = -total_yield
+            og_params = np.array([p.item() for p in self.rn.get_params()])
+            cost.backward()
+            optimizer.step()
+            new_params = np.array([p.item() for p in self.rn.get_params()])
+            print('avg parameter update: ' + str(np.mean(og_params - new_params)))
+            print('max parameter update: ' + str(np.max(og_params - new_params)))
+
 

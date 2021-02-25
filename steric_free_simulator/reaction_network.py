@@ -38,6 +38,7 @@ class ReactionNetwork:
         # default observables are monomers and final complex
         self.observables = dict()
         # resolve graph
+        self._initial_copies = {}
         self.parse_bngl(open(bngl_path, 'r'))
         self.resolve_tree(one_step)
         self.parameters = {}  # gradient params
@@ -46,9 +47,17 @@ class ReactionNetwork:
         # pre-exponential factor hyperparameter
         self.A = None
 
+    def get_params(self):
+        """
+        returns an iterator over optimization parameters
+        :return:
+        """
+        for key in self.parameters:
+            yield self.parameters[key]
+
     def get_reactant_sets(self, node_id: int):
         """
-        Returns a generator over coreactants for a given node (i.e. product)
+        Returns a iterator over coreactants for a given node (i.e. product)
         :param node_id: the node to know reactant sets for
         :return:
         """
@@ -89,6 +98,7 @@ class ReactionNetwork:
         state_net = nx.Graph()
         state_net.add_node(sp_info[0])
         self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]))
+        self._initial_copies[self._node_count] = Tensor([float(init_pop)])
         self._node_count += 1
 
     def parse_rule(self, line, params):
@@ -143,7 +153,17 @@ class ReactionNetwork:
                 self.allowed_edges[keys[i]][2] = lcf
         self.num_monomers = self._node_count
 
-    def intialize_activations(self, A: float = 1):
+    def reset(self):
+        for key in self._initial_copies:
+            self.network.nodes[key]['copies'] = self._initial_copies[key]
+        self.observables = {}
+        # add default observables
+        for i in range(self.num_monomers):
+            self.observables[i] = (gtostr(self.network.nodes[i]['struct']), [])
+        fin_dex = len(self.network.nodes) - 1
+        self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
+
+    def intialize_activations(self, A: float = 1, mode="middle"):
         """
         function to set and initialize activation energy parameters for reaction network.
         :return:
@@ -155,8 +175,11 @@ class ReactionNetwork:
         for node in self.network.nodes:
             for reactant_set in self.get_reactant_sets(node):
                 # same Tensor used in all three places (i.e. ptr)
-                activation_energy = nn.Parameter(rand(1, dtype=torch.double) * Tensor([10.]), requires_grad=True)
-                self.parameters[node] = activation_energy
+                if mode == 'uniform':
+                    activation_energy = nn.Parameter(rand(1, dtype=torch.double) * Tensor([10.]), requires_grad=True)
+                elif mode == 'middle':
+                    activation_energy = nn.Parameter(Tensor([5.]), requires_grad=True)
+                self.parameters[tuple(list(reactant_set) + [node])] = activation_energy
                 for source in reactant_set:
                     self.network.edges[(source, node)]['activation_energy'] = activation_energy
 
@@ -169,6 +192,7 @@ class ReactionNetwork:
                        _equal(x[1]['struct'], connected_item)]
         if len(node_exists) == 0:
             self.network.add_node(self._node_count, struct=connected_item, copies=Tensor([0.]))
+            self._initial_copies[self._node_count] = Tensor([0.])
             new_node = self._node_count
             self._node_count += 1
         elif len(node_exists) > 1:

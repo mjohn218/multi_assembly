@@ -25,32 +25,24 @@ if __name__ == '__main__':
             subunit_dir = sys.argv[3]
             En = EnergyExplorer(rn, subunit_dir)
             En.explore_network()
-            rn.intialize_activations()
     except IndexError:
         rn = ReactionNetwork(input_file, one_step=True)
 
     with open('./saved_nets/ap2_one_step_en.pkl', 'wb') as f:
         pickle.dump(rn, f)
 
+    rn.intialize_activations(A=10)
     sim = Simulator(rn, runtime_s)
     steps = sim.steps
     print("found best dt to be " + str(sim.dt))
     dt = sim.dt
-    percent_yield = sim.simulate()
-    print("end yield is " + str(percent_yield * 100) + "%")
+    sim.optimize(10, lr=1)
+
+    with open('./saved_nets/ap2_one_step_en_optim.pkl', 'wb') as f:
+        pickle.dump(rn, f)
+    #  percent_yield = sim.simulate()
+
+    # print("end yield is " + str(percent_yield.item() * 100)[:4] + "%")
     #nx.draw(sim.rn.network)
-    t = np.arange(steps)*dt
-    data = {}
-    for key in sim.rn.observables:
-        entry = sim.rn.observables[key]
-        data[entry[0]] = entry[1]
-    df = pd.DataFrame(data)
-    df.to_csv('./ap2_1step_en.csv')
-    for key in sim.rn.observables.keys():
-        plt.scatter(t, sim.rn.observables[key][1],
-                    cmap='plasma',
-                    s=.1,
-                    label=sim.rn.observables[key][0])
-    plt.legend(loc='best')
-    plt.show()
+    sim.plot_observables()
     print('done')
