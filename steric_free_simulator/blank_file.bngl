@@ -1,0 +1,123 @@
+begin model
+begin parameters
+	NA 6.022e23 #mol^-1
+	sigma 0.002 #um
+	vol_CP 3.2e-15 #volume L
+	sa_PM 2.1715 #um^2 Assuming a sphere
+
+	#Binding parameters
+	kon 0.1
+	kon2 1
+	kon3 1
+	kon4 100000
+	kon_arc18_arp3 kon
+	kon_arp2_arc15 kon
+	kon_arc15_arc40 kon
+	kon_arc15_arc19 kon
+	kon_arc19_arc35 kon
+	kon_arc19_arc40 kon
+	kon_arc19_arp2 kon
+	kon_arc19_arp3 kon
+	kon_arc35_arp3 kon
+	kon_arp2_arp3 kon
+	koff 1
+
+	maxagg 15
+end parameters
+
+begin molecule types
+	ARC35(a,b)
+	ARC18(a)
+	ARC15(a,b,c)
+	ARC19(a,b,c,d,f)
+	ARC40(a,b)
+	ARP2(a,b,c)
+	ARP3(a,b,c,d)
+end molecule types
+
+begin seed species
+ARC35(a,b) 1000
+ARC18(a) 1000
+ARC15(a,b,c) 1000
+ARC19(a,b,c,d,f) 1000
+ARC40(a,b) 1000
+ARP2(a,b,c) 1000
+ARP3(a,b,c,d) 1000
+
+end seed species
+
+begin observables
+
+	Molecules FreeARC35 ARC35(a,b)
+	Molecules FreeARC18 ARC18(a)
+	Molecules FreeARC15 ARC15(a,b,c)
+	Molecules FreeARC19 ARC19(a,b,c,d,f)
+	Molecules FreeARC40 ARC40(a,b)
+	Molecules FreeARP2 ARP2(a,b,c)
+	Molecules FreeARP3 ARP3(a,b,c,d)
+
+	#Species FullComplex ARC19(a!+,b!+,c!+,d!+,f!+).ARC18()
+	#Species FullComplex2 ARC19(a!+,b!+,c!+,d!+,f!+).ARC18(a!+).ARC35(a!+,b!+).ARC15(a!+,b!+,c!+).ARC40(a!+,b!+).ARP2(a!+,b!+,c!+).ARP3(a!+,b!+,c!+,d!+)
+	#Species FullComplex3 ARC35().ARC18().ARC15().ARC19().ARC40().ARP2().ARP3()
+	Species FullComplex4 ARC19(a!1,b!2,c!3,d!4,f!5).ARC18(a!6).ARC35(a!5,b!7).ARC15(a!1,b!8,c!9).ARC40(a!2,b!8).ARP2(a!9,b!3,c!10).ARP3(a!6,b!4,c!7,d!10)
+	#Species TwoARC19 ARC19().ARC19()
+
+	Molecules ARC_19 ARC19()
+
+end observables
+
+begin functions
+	BooleanFunc(x) = if(ARC_19(x)<maxagg,kon,0)
+	BooleanFunc2(x) = if(ARC_19(x)<maxagg,kon2,0)
+end functions
+
+begin reaction rules
+	%x:ARC15(a)+ARC19(a)<->ARC15(a!1).ARC19(a!1) BooleanFunc2(x), koff
+	%x:ARC15(b)+ARC40(b)<->ARC15(b!1).ARC40(b!1) BooleanFunc(x), koff
+	%x:ARC15(c)+ARP2(a)<->ARC15(c!1).ARP2(a!1) BooleanFunc(x), koff
+	ARC18(a)+ARP3(a)<->ARC18(a!1).ARP3(a!1) kon3, koff
+	ARC19(f)+%x:ARC35(a)<->ARC19(f!1).ARC35(a!1) BooleanFunc2(x), koff
+	ARC19(b)+%x:ARC40(a)<->ARC19(b!1).ARC40(a!1) BooleanFunc2(x), koff
+	ARC19(c)+%x:ARP2(b)<->ARC19(c!1).ARP2(b!1) BooleanFunc2(x), koff
+	ARC19(d)+%x:ARP3(b)<->ARC19(d!1).ARP3(b!1) BooleanFunc2(x), koff
+	%x:ARC35(b)+ARP3(c)<->ARC35(b!1).ARP3(c!1) BooleanFunc(x), koff
+	%x:ARP2(c)+ARP3(d)<->ARP2(c!1).ARP3(d!1) BooleanFunc(x), koff
+
+	# Need to add a new set of rules for trimer binding. If two members of the trimer are
+	# bound, the third binding event should be much more likely
+	# Will need 12 rules in total, 3 for each possible trimer (4)
+
+	ARC19(b!1,a).ARC40(a!1,b!2).ARC15(b!2,a) -> ARC19(b!1,a!3).ARC40(a!1,b!2).ARC15(b!2,a!3) kon4
+	ARC19(b!1,a!3).ARC40(a!1,b).ARC15(b,a!3) -> ARC19(b!1,a!3).ARC40(a!1,b!2).ARC15(b!2,a!3) kon4
+	ARC19(b,a!3).ARC40(a,b!2).ARC15(b!2,a!3) -> ARC19(b!1,a!3).ARC40(a!1,b!2).ARC15(b!2,a!3) kon4
+
+	ARC19(a!1,c).ARP2(a!3,b).ARC15(a!1,c!3) -> ARC19(a!1,c!2).ARP2(a!3,b!2).ARC15(a!1,c!3) kon4
+	ARC19(a,c!2).ARP2(a!3,b!2).ARC15(a,c!3) -> ARC19(a!1,c!2).ARP2(a!3,b!2).ARC15(a!1,c!3) kon4
+	ARC19(a!1,c!2).ARP2(a,b!2).ARC15(a!1,c) -> ARC19(a!1,c!2).ARP2(a!3,b!2).ARC15(a!1,c!3) kon4
+
+	ARC19(c!1,d!2).ARP2(b!1,c).ARP3(b!2,d) -> ARC19(c!1,d!2).ARP2(b!1,c!3).ARP3(b!2,d!3) kon4
+	ARC19(c!1,d).ARP2(b!1,c!3).ARP3(b,d!3) -> ARC19(c!1,d!2).ARP2(b!1,c!3).ARP3(b!2,d!3) kon4
+	ARC19(c,d!2).ARP2(b,c!3).ARP3(b!2,d!3) -> ARC19(c!1,d!2).ARP2(b!1,c!3).ARP3(b!2,d!3) kon4
+
+	ARC19(d!1,f!2).ARP3(b!1,c).ARC35(a!2,b) -> ARC19(d!1,f!2).ARP3(b!1,c!3).ARC35(a!2,b!3) kon4
+	ARC19(d!1,f).ARP3(b!1,c!3).ARC35(a,b!3) -> ARC19(d!1,f!2).ARP3(b!1,c!3).ARC35(a!2,b!3) kon4
+	ARC19(d,f!2).ARP3(b,c!3).ARC35(a!2,b!3) -> ARC19(d!1,f!2).ARP3(b!1,c!3).ARC35(a!2,b!3) kon4
+
+end reaction rules
+
+end model
+
+#generate_network({overwrite=>1});
+simulate_nf({suffix=>"nf",t_end=>0.01,n_steps=>10000});
+#simulate_ode({suffix=>"ode",t_end=>0.00025,n_steps=>50});
+
+
+
+
+
+
+
+
+
+
+
