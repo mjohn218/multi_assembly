@@ -1,0 +1,26 @@
+# OS ANNOYING FILES#
+######################
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+*.DS_Store
+*~*
+
+#IDE ANNOYING FILES#
+*.idea
+*.iml
+
+#GENERALLY IGNORE OBJECT BINARIES OR SERIALIZATION#
+*.pkl
+*.json
+*.xml
+
+#IGNORE DATA FILES (FORCE COMMIT IF WANTED)
+*.csv
+*.h5
+
+#IGNORE JUPYTER CHECKPOINTS#
+*.ipynb_checkpoints
+#*#
+
