@@ -31,7 +31,8 @@ if __name__ == '__main__':
     with open('./saved_nets/ap2_one_step_en.pkl', 'wb') as f:
         pickle.dump(rn, f)
 
-    rn.intialize_activations(A=10)
+    rn.reset()
+    rn.intialize_activations()
     sim = Simulator(rn, runtime_s)
     steps = sim.steps
     print("found best dt to be " + str(sim.dt))

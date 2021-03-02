@@ -163,25 +163,24 @@ class ReactionNetwork:
         fin_dex = len(self.network.nodes) - 1
         self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
 
-    def intialize_activations(self, A: float = 1, mode="middle"):
+    def intialize_activations(self, mode="middle"):
         """
         function to set and initialize activation energy parameters for reaction network.
         :return:
         """
         if not self.is_energy_set:
             raise ValueError("The network free energies must be calculated for activation params to be used")
-        self.A = A  # set pre-exponential hyperparam
-        # reaction rates may not match activation energies before sim start.
         for node in self.network.nodes:
             for reactant_set in self.get_reactant_sets(node):
                 # same Tensor used in all three places (i.e. ptr)
                 if mode == 'uniform':
-                    activation_energy = nn.Parameter(rand(1, dtype=torch.double) * Tensor([10.]), requires_grad=True)
+                    k_on = nn.Parameter(rand(1, dtype=torch.double) * Tensor([1]), requires_grad=True)
                 elif mode == 'middle':
-                    activation_energy = nn.Parameter(Tensor([5.]), requires_grad=True)
-                self.parameters[tuple(list(reactant_set) + [node])] = activation_energy
+                    k_on = nn.Parameter(Tensor([1.]), requires_grad=True)
+                self.parameters[tuple(list(reactant_set) + [node])] = k_on
                 for source in reactant_set:
-                    self.network.edges[(source, node)]['activation_energy'] = activation_energy
+                    self.network.edges[(source, node)]['k_on'] = k_on
+                    self.network.edges[(source, node)]['k_off'] = k_on
 
     def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
         if type(source_1) is not int:
