@@ -18,11 +18,10 @@ plt.ion()
 
 class Simulator:
 
-    def __init__(self, net: ReactionNetwork, runtime: float, dt: float = 1, lin_factor: float = 10., optimize_dt=True):
+    def __init__(self, net: ReactionNetwork, runtime: float, dt: float = 1, lin_factor: float = 5., optimize_dt=True):
         self.dt = dt
         self.rn = net
-        self._R = Tensor([8.3145])
-        self._T = Tensor([273.])
+        self.score_proportionality = .1
         self._linearity_factor = Tensor([lin_factor]) # higher produces *more* discrete reaction updates, but reduces optimization effectivity.
         self.use_energies = self.rn.is_energy_set
         if optimize_dt:
@@ -74,21 +73,19 @@ class Simulator:
                         new_reactions.add(frozenset([(coreactant, successor), tuple(edge[:2])]))
         return new_reactions
 
-    def _compute_rate_constants(self, activation_energy: Tensor, dGrxn):
-        kon = self.rn.A * torch.exp(Tensor([-1.])*activation_energy / (self._R * self._T))
-        koff = self.rn.A * torch.exp((Tensor([-1.])*activation_energy + Tensor([float(dGrxn)])) / (self._R * self._T))
-        return kon, koff
+    def _compute_disassociation(self, kon: Tensor, dGrxn):
+        koff = kon / (torch.exp(-Tensor([self.score_proportionality]) * Tensor([dGrxn])))
+        return koff
 
     def _reaction_prob(self, reactants: set) -> Tuple[Tensor, ...]:
         prob = [Tensor([0.]), Tensor([0.])]
         data = self.rn.network.edges[min(reactants)]
+        kon = torch.abs(Tensor(data['k_on']))
         if self.use_energies:
-            kon, koff = self._compute_rate_constants(data['activation_energy'], data['rxn_score'])
+            koff = self._compute_disassociation(kon, data['rxn_score'])
             for reactant in reactants:
-                self.rn.network.edges[reactant]['k_on'] = kon
                 self.rn.network.edges[reactant]['k_off'] = koff
         else:
-            kon = Tensor(data['k_on'])
             koff = Tensor(data['k_off'])
         if len(reactants) == 1:
             edge = list(reactants)[0]
@@ -105,24 +102,29 @@ class Simulator:
         prob[0] = (1 - torch.exp(-1 * rate * self.dt))
         offrate = koff * self.rn.network.nodes[edge[1]]['copies']
         prob[1] = (1 - torch.exp(-1 * offrate * self.dt))
-        if len(reactants) != 1 and (math.isclose(1, prob[0].item(), abs_tol=.01) or
-                                    math.isclose(1, prob[1].item(), abs_tol=.01)):
-            print("WARNING: Reaction probability seems to be saturated, "
-                  "consider reducing time step size.")
+        # if len(reactants) != 1 and (math.isclose(1, prob[0].item(), abs_tol=.01) or
+        #                             math.isclose(1, prob[1].item(), abs_tol=.01)):
+            # print("WARNING: Reaction probability seems to be saturated, "
+            #       "consider reducing time step size.")
         return tuple(prob)
 
-    def _compute_copy_change(self, r: Tensor, p: Tensor):
-        x = self._linearity_factor * (p - r)
-        result = torch.sigmoid(x)
+    def _compute_copy_change(self, p: Tensor, method='sigmoid'):
+        if method == 'sigmoid':
+            r = torch.rand(1, dtype=torch.double)
+            x = self._linearity_factor * (p - r)
+            result = torch.sigmoid(x)
+        elif method == 'linear':
+            result = p
+        else:
+            raise ValueError('Invalid copy update mode')
         return result
 
     def _forward(self, reaction: set, prob: Tensor) -> Tuple[int, set]:
-        r = torch.rand(1)
         newly_nonzero = None
         newly_zero = set()
         e = None  # suppress warning
         # decrease reactant concentrations
-        delta_copies = self._compute_copy_change(r, prob)
+        delta_copies = self._compute_copy_change(prob)
         for e in reaction:
             self.rn.network.nodes[e[0]]['copies'] = self.rn.network.nodes[e[0]]['copies'] - delta_copies
             if self.rn.network.nodes[e[0]]['copies'] < 1:
@@ -134,10 +136,9 @@ class Simulator:
         return newly_nonzero, newly_zero
 
     def _reverse(self, reaction: set, prob: Tensor) -> Tuple[set, int]:
-        r = torch.rand(1)
         newly_nonzero = set()
         newly_zero = None
-        delta_copies = self._compute_copy_change(r, prob)
+        delta_copies = self._compute_copy_change(prob)
         e = None  # suppress warning
         for e in reaction:
             # increase product concentrations
@@ -150,7 +151,7 @@ class Simulator:
             newly_zero = e[1]
         return newly_nonzero, newly_zero
 
-    def simulate(self):
+    def simulate(self, verbose=False):
         """
         modifies reaction network
         :return:
@@ -165,7 +166,7 @@ class Simulator:
         for step in range(self.steps):
             newly_zero = set()
             reactions = reactions.union(self._possible_reactions(newly_nonzero, nonzero))
-            if (step % 500) == 0:
+            if verbose and (step % 500) == 0:
                 print("Processing " + str(len(reactions)) + " reactions for step " + str(step))
             newly_nonzero = set()
             for reaction in reactions:
@@ -212,23 +213,6 @@ class Simulator:
         plt.legend(loc='best')
         plt.show(block=False)
 
-    def optimize(self, iter: int, lr: float):
-        param_itr = self.rn.get_params()
-        optimizer = torch.optim.SGD(param_itr, lr)
-        for i in range(iter):
-            self.rn.reset()
-            self.optimize_step()
-            print("time step: " + str(self.dt))
-            self.steps = int(self.runtime / self.dt)
-            optimizer.zero_grad()
-            total_yield = self.simulate()
-            print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
-            cost = -total_yield
-            og_params = np.array([p.item() for p in self.rn.get_params()])
-            cost.backward()
-            optimizer.step()
-            new_params = np.array([p.item() for p in self.rn.get_params()])
-            print('avg parameter update: ' + str(np.mean(og_params - new_params)))
-            print('max parameter update: ' + str(np.max(og_params - new_params)))
+
 
 
