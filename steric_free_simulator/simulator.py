@@ -102,10 +102,7 @@ class Simulator:
         prob[0] = (1 - torch.exp(-1 * rate * self.dt))
         offrate = koff * self.rn.network.nodes[edge[1]]['copies']
         prob[1] = (1 - torch.exp(-1 * offrate * self.dt))
-        # if len(reactants) != 1 and (math.isclose(1, prob[0].item(), abs_tol=.01) or
-        #                             math.isclose(1, prob[1].item(), abs_tol=.01)):
-            # print("WARNING: Reaction probability seems to be saturated, "
-            #       "consider reducing time step size.")
+
         return tuple(prob)
 
     def _compute_copy_change(self, p: Tensor, method='sigmoid'):
@@ -156,14 +153,17 @@ class Simulator:
         modifies reaction network
         :return:
         """
-        newly_nonzero = set(range(self.rn.num_monomers))
-        nonzero = newly_nonzero.copy()
         reactions = set()  # set of sets of reaction edges
+        depleted = set()  # track depleted monomers so we don't restart 0'ed out system with them
         # get list of edges id pairs present in non-zero population.
         nodes = dict(self.rn.network.nodes(data=True))
         node_list = [nodes[key] for key in sorted(nodes.keys())]
         max_poss_yield = torch.min(Tensor([node['copies'] for node in node_list[:self.rn.num_monomers]]), dim=0)[0]
+
         for step in range(self.steps):
+            if len(reactions) == 0:
+                newly_nonzero = set(range(self.rn.num_monomers)) - depleted
+                nonzero = newly_nonzero.copy()
             newly_zero = set()
             reactions = reactions.union(self._possible_reactions(newly_nonzero, nonzero))
             if verbose and (step % 500) == 0:
@@ -179,10 +179,13 @@ class Simulator:
                 for n in lnz:
                     if n not in nonzero: newly_nonzero.add(n)
                 if lz in nonzero: newly_zero.add(lz)
-            nonzero = nonzero.union(newly_nonzero)
+            nonzero = nonzero.union(newly_nonzero) - {None}
             # below is necessary to prune impossible reactions, overall more efficient this way
             if len(newly_zero) > 0:
-                for n in newly_zero: nonzero.remove(n)
+                for n in (newly_zero - {None}):
+                    nonzero.remove(n)
+                    if n < self.rn.num_monomers:
+                        depleted.add(n)
                 for rxn in list(reactions):
                     for e in list(rxn):
                         if True in [n in newly_zero for n in e] and rxn in reactions:

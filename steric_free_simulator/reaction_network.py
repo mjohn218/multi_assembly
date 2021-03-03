@@ -11,7 +11,13 @@ from torch import nn
 LOOP_COOP_DEFAULT = 1
 
 
-def _equal(n1, n2):
+def _equal(n1, n2) -> bool:
+    """
+    Test whether two structures have identical connectivity
+    :param n1: nx.Graph
+    :param n2: nx.Graph
+    :return: Boolean indicating whether or not graphs are equal
+    """
     nm = nx.algorithms.isomorphism.categorical_node_match("label", None)
     int_n1 = nx.convert_node_labels_to_integers(n1, label_attribute="label")
     int_n2 = nx.convert_node_labels_to_integers(n2, label_attribute="label")
@@ -19,16 +25,56 @@ def _equal(n1, n2):
 
 
 def gtostr(g: nx.DiGraph) -> str:
+    """
+    get string representation of sorted graph node set.
+    :param g: input graph
+    :return: string label of graph nodes
+    """
     stout = ""
     for n in g.nodes():
         stout += str(n)
-    # make invarient
+    # make invariant
     stout = ''.join(sorted(stout))
     return stout
 
 
 class ReactionNetwork:
+    """
+    ReactionNetwork objects store all the information needed to run a simulation. It
+    stores allowed reactions, intermediate structures, rate constants, and reaction free
+    energy scores, all encoded in an attributed directed acyclic graph.
+    The reaction network also stores optimization parameters explicitly in the parameters
+    attribute.
+    More then just being a container for reaction data, the ReactionNetwork class provides
+    methods to build a network that prohibits stericly hindered interactions from a simple
+    bngl file containing just pairwise interactions.
+
+    Attributes:
+        network: nx.DiGraph
+            The networkx graoh object that encodes allowed reactions in its structure.
+            Nodes are structures (including all possible intermediates), and also
+            store the copy number for the structure, and a graph layout of the structure.
+            An edge indicates that one node may react to produce another, if more than one
+            reactant is needed to to produce a product, then both edges will have the
+            same uid attribute. Edges also store k_on and k_off.
+            Nodes also store the rosetta score of that state, and edges store the delta
+            score for that reaction. Note that all energy related attributes will be null
+            until the reactionNetwork is processed by an energy explorer.
+
+        allowed_edges: set[Tuple[int]]
+            A set containing the allowed pairwise reactions defined in the input file.
+
+        is_one_step: bool
+            Whether to model loop closure as a one step reaction (potentially better for
+            for larger, more "floppy", complexes) or two step (far less intermediate states,
+            rosetta energies map more accurately)
+
+    """
     def __init__(self, bngl_path: str, one_step: bool):
+        """
+        :param bngl_path: path to bngl containing pairwise interactions.
+        :param one_step: whether this reaction network should be built as one step or two step
+        """
         self.network: nx.DiGraph() = nx.DiGraph()
         self.allowed_edges = {}
         self._node_count = 0
@@ -118,6 +164,12 @@ class ReactionNetwork:
         self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [k_on, k_off, LOOP_COOP_DEFAULT]
 
     def parse_bngl(self, f):
+        """
+        Read the bngl file and initialize allowed edges, and initialize the network with
+        monomer nodes and copies.
+        :param f: file object in read mode, pointed at input bngl
+        :return: None
+        """
         parameters = dict()
         cur_block = ''
         for line in f:
@@ -154,6 +206,11 @@ class ReactionNetwork:
         self.num_monomers = self._node_count
 
     def reset(self):
+        """
+        Initialize monomer copy numbers, and set all other species copy numbers to 0.
+        Also reinitialize all k_on parameters.
+        :return:
+        """
         for key in self._initial_copies:
             self.network.nodes[key]['copies'] = self._initial_copies[key]
         self.observables = {}
@@ -165,7 +222,8 @@ class ReactionNetwork:
 
     def intialize_activations(self, mode="middle"):
         """
-        function to set and initialize activation energy parameters for reaction network.
+        function to set and initialize k_on parameters for reaction network. Adds each to
+        the parameters attribute, which stores all params to optimize over.
         :return:
         """
         if not self.is_energy_set:
@@ -183,6 +241,14 @@ class ReactionNetwork:
                     self.network.edges[(source, node)]['k_off'] = k_on
 
     def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
+        """
+        Adds a new species defined by connected_item to the graph, if unique.
+        :param connected_item: The graph structure reoresenting the product (new node requested)
+        :param source_1: reactant 1 node
+        :param source_2: reactant 2 node (may be None)
+        :param template_edge_id:
+        :return:
+        """
         if type(source_1) is not int:
             source_1 = int(source_1[0])
         if source_2 is not None and type(source_2) is not int:
@@ -270,12 +336,23 @@ class ReactionNetwork:
 
         return nodes_added
 
-    def is_hindered(self, n1, n2):
+    def is_hindered(self, n1, n2) -> bool:
+        """
+        Determines if binding two species would be sterically hindered.
+        :param n1: node 1 (species 1)
+        :param n2: node 2 (species 2)
+        :return:
+        """
         node_set1 = set(n1[1]['struct'].nodes())
         node_set2 = set(n2[1]['struct'].nodes())
         return len(node_set1 - node_set2) < len(node_set1)
 
     def resolve_tree(self, is_one_step):
+        """
+        Build the full reaction network from whatever initial info was given
+        :param is_one_step:
+        :return:
+        """
         new_nodes = list(self.network.nodes(data=True))
         while len(new_nodes) > 0:
             node = new_nodes.pop(0)
