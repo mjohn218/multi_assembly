@@ -102,10 +102,7 @@ class Simulator:
         prob[0] = (1 - torch.exp(-1 * rate * self.dt))
         offrate = koff * self.rn.network.nodes[edge[1]]['copies']
         prob[1] = (1 - torch.exp(-1 * offrate * self.dt))
-        # if len(reactants) != 1 and (math.isclose(1, prob[0].item(), abs_tol=.01) or
-        #                             math.isclose(1, prob[1].item(), abs_tol=.01)):
-            # print("WARNING: Reaction probability seems to be saturated, "
-            #       "consider reducing time step size.")
+
         return tuple(prob)
 
     def _compute_copy_change(self, p: Tensor, method='sigmoid'):
