@@ -24,3 +24,6 @@ Thumbs.db
 *.ipynb_checkpoints
 *\#*
 
+#locally stored objects
+steric_free_simulator/local_saves
+
