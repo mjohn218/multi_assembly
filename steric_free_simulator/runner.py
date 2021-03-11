@@ -1,7 +1,7 @@
 from reaction_network import ReactionNetwork
 from energy_space_explorer import EnergyExplorer
 from simulator import Simulator
-
+from vec_sim import VecSim
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     rn.reset()
     rn.intialize_activations()
-    sim = Simulator(rn, runtime_s)
+    sim = VecSim(rn, runtime_s)
     steps = sim.steps
     print("found best dt to be " + str(sim.dt))
     dt = sim.dt
