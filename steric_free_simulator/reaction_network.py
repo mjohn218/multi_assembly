@@ -1,5 +1,7 @@
 import re
 import sys
+from typing import Tuple
+
 import networkx as nx
 import random
 
@@ -90,9 +92,6 @@ class ReactionNetwork:
         self.parameters = {}  # gradient params
         self.is_energy_set = False
 
-        # pre-exponential factor hyperparameter
-        self.A = None
-
     def get_params(self):
         """
         returns an iterator over optimization parameters
@@ -124,7 +123,6 @@ class ReactionNetwork:
                 all_predecessors.remove(poss_coreactant)
                 predecessors.add(poss_coreactant[0])
             yield predecessors
-
 
     def parse_param(self, line):
         # Reserved Params
@@ -264,7 +262,9 @@ class ReactionNetwork:
             raise Exception("Duplicate nodes in reaction Network")
         else:
             new_node = node_exists[0][0]
-
+        if self.network.has_edge(source_1, new_node):
+            # skip if edge exists failsafe.
+            return None
         if template_edge_id is not None:
             self.network.add_edge(source_1, new_node,
                                   k_on=self.allowed_edges[template_edge_id][0],
