@@ -77,28 +77,24 @@ class VectorizedRxnNet:
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
         return M, EA, rxn_score_vec, copies_vec
 
-    def get_copy_prod_vector(self):
+    def get_copy_prod_vector(self, volume: float):
         """
           get the vector storing product of copies for each reactant in each reaction.
         Returns: Tensor
             A tensor with shape (rxn_count * 2)
         """
-        r_filter = -1 * self.M.T
-
-        # avoid inplace
-        temp = torch.zeros(r_filter.shape).double()
-        temp[r_filter == 0] = -1
-        r_filter = r_filter + temp
+        r_filter = -1 * self.M.T.clone()
+        r_filter[r_filter == 0] = -1
 
         c_temp_mat = torch.mul(r_filter, self.copies_vec)
-        temp = torch.zeros(c_temp_mat.shape).double()
-        temp[c_temp_mat < 0] = 1
-        c_temp_mat = torch.max(temp, c_temp_mat) # don't want to zero reactions that don't use all species! This doesn't matter for grad since we don't care about the comp graph branch anyway.
+
+        c_temp_mat = c_temp_mat / volume  # get copies per liter
+
+        c_temp_mat[c_temp_mat < 0] = 1  # don't want to zero reactions that don't use all species! This doesn't matter for grad since we don't care about the comp graph branch anyway.
 
         c_mask = r_filter + self.copies_vec
-        temp = torch.zeros(c_mask.shape).double()
-        temp[c_mask == -1] = 1
-        c_temp_mat = c_temp_mat + temp
+
+        c_temp_mat[c_mask == -1] = 1
 
         c_prod_vec = torch.prod(c_temp_mat, dim=1)  # compute products
         return c_prod_vec

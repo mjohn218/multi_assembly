@@ -11,7 +11,15 @@ from steric_free_simulator import VectorizedRxnNet
 
 class Optimizer:
 
-    def __init__(self, reaction_network, sim_runtime, optim_iterations, learning_rate, sim_mode="vectorized", resample_time_step=False):
+    def __init__(self, reaction_network,
+                 sim_runtime: float,
+                 optim_iterations: int,
+                 learning_rate: float,
+                 sim_mode="vectorized",
+                 resample_time_step=False,
+                 score_constant: float = 1.,
+                 freq_fact: float = 10.,
+                 volume=1e-5):
         if sim_mode == 'infinite':
             self.sim_class = Simulator
             self.rn = reaction_network
@@ -31,6 +39,9 @@ class Optimizer:
         self.yield_per_iter = []
         self.is_optimized = False
         self.dt = None
+        self._sim_score_constant = score_constant
+        self._sim_freq_factor = freq_fact
+        self._sim_volume = volume
 
     def plot_observable(self, iteration):
         t = self.sim_observables[iteration]['steps']
@@ -60,11 +71,18 @@ class Optimizer:
             # reset for new simulator
             self.rn.reset()
             if self.resample_time_step or i == 0:
-                sim = self.sim_class(self.rn, self.sim_runtime)
+                sim = self.sim_class(self.rn,
+                                     self.sim_runtime,
+                                     score_constant=self._sim_score_constant,
+                                     freq_fact=self._sim_freq_factor,
+                                     volume=self._sim_volume)
                 if type(sim) is Simulator:
                     sim.optimize_step()
             else:
-                sim = self.sim_class(self.rn, self.sim_runtime)
+                sim = self.sim_class(self.rn, self.sim_runtime,
+                                     score_constant=self._sim_score_constant,
+                                     freq_fact=self._sim_freq_factor,
+                                     volume=self._sim_volume)
 
             # preform simulation
             self.optimizer.zero_grad()
