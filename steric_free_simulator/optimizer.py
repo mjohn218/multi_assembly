@@ -3,7 +3,7 @@ from torch.nn import functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-
+import psutil 
 from steric_free_simulator import Simulator
 from steric_free_simulator import VecSim
 from steric_free_simulator import VectorizedRxnNet
@@ -55,6 +55,7 @@ class Optimizer:
         data = np.array(self.yield_per_iter, dtype=np.float)
         data[data < .1] = np.mean(data[data > .1])
         plt.plot(steps, data)
+        plt.ylim((0, 1))
         plt.title = 'Yield at each iteration'
         plt.show()
 
@@ -100,7 +101,15 @@ class Optimizer:
                 elif type(sim) is VecSim:
                     new_params = self.rn.EA.clone().detach()
 
-                print('param update: ' + str(og_params - new_params))
+                print('param update: ' + str(new_params - og_params))
+                
+            values = psutil.virtual_memory()
+            if (values.total >> 30) / (1024.0 ** 3) > 16:
+                # kill program if it uses to much ram
+                return self.rn
+            if i == self.optim_iterations - 1:
+                print("optimization complete")
+                return self.rn
                 # print('avg parameter update: ' + str(np.mean(og_params - new_params)))
                 # print('max parameter update: ' + str(np.max(og_params - new_params)))
                 # print('min parameter update: ' + str(np.min(og_params - new_params)))
