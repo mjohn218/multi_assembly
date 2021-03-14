@@ -50,7 +50,10 @@ class VecSim:
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone())
         while cur_time < self.runtime:
             for obs in self.rn.observables.keys():
-                self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                try:
+                    self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                except IndexError:
+                    print('bkpt')
             k = self._compute_constants(self.rn.EA, self.rn.rxn_score_vec)
             copy_prod_vec = self.rn.get_copy_prod_vector()
             rxn_rates = copy_prod_vec * k
@@ -58,9 +61,9 @@ class VecSim:
             step = 1 / total_rate
             rate_step = rxn_rates * step
             delta_copies = torch.matmul(self.rn.M, rate_step)
-            self.rn.copies_vec = self.rn.copies_vec + delta_copies
+            self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape))
             cur_time = cur_time + step
-            self.steps.append(cur_time.clone())
+            self.steps.append(cur_time.item())
 
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)

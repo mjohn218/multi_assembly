@@ -33,11 +33,7 @@ class Optimizer:
         self.dt = None
 
     def plot_observable(self, iteration):
-        if self.sim_class is Simulator:
-            num_steps = int(self.sim_runtime / self.dt)
-            t = np.arange(num_steps) * self.dt
-        elif self.sim_class is VecSim:
-            t = self.sim_observables[iteration]['steps']
+        t = self.sim_observables[iteration]['steps']
         for key in self.sim_observables[iteration].keys():
             if key == 'steps':
                 continue
@@ -86,7 +82,7 @@ class Optimizer:
 
             # preform gradient step
             if i != self.optim_iterations - 1:
-                physics_penalty = torch.sum(100 * F.relu(-1*(self.rn.EA - .1)))  # stops zeroing or negating params
+                physics_penalty = torch.sum(10 * F.relu(-1*(self.rn.EA - .1)))  # stops zeroing or negating params
                 cost = -total_yield + physics_penalty
                 if type(sim) is Simulator:
                     og_params = np.array([p.item() for p in self.rn.get_params()])
@@ -102,9 +98,10 @@ class Optimizer:
                     new_params = self.rn.EA.clone().detach()
 
                 print('param update: ' + str(new_params - og_params))
-                
+
             values = psutil.virtual_memory()
-            if (values.total >> 30) / (1024.0 ** 3) > 16:
+            mem = values.available / (1024.0 ** 3)
+            if mem < 8:
                 # kill program if it uses to much ram
                 return self.rn
             if i == self.optim_iterations - 1:
