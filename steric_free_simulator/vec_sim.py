@@ -18,8 +18,24 @@ import sys
 
 
 class VecSim:
+    """
+    Run a vectorized gillespie simulation
+    """
 
-    def __init__(self, net: Union[ReactionNetwork, VectorizedRxnNet], runtime: float):
+    def __init__(self, net: Union[ReactionNetwork, VectorizedRxnNet],
+                 runtime: float,
+                 score_constant: float = 1.,
+                 freq_fact: float = 10.,
+                 volume=1e-5):
+        """
+
+        Args:
+            net: The reaction network to run the simulation on.
+            runtime: Length (in seconds) of the simulation.
+            score_constant: User defined parameter, equals Joules / Rosetta Score Unit.
+            freq_fact: User defined parameter, collision frequency.
+            volume: Volume of simulation in Micro Liters.
+        """
         if type(net) is ReactionNetwork:
             self.rn = VectorizedRxnNet(net)
         else:
@@ -28,14 +44,16 @@ class VecSim:
         self.use_energies = self.rn.is_energy_set
         self.runtime = runtime
         self.observables = self.rn.observables
-        self.A = Tensor([10.])
+        self._constant = Tensor([score_constant])
+        self.A = Tensor([freq_fact])
         self._R = Tensor([8.314])
         self._T = Tensor([273.15])
+        self.volume = volume * 1e-6  # convert microliters to liters
         self.steps = []
 
     def _compute_constants(self, EA: Tensor, dGrxn: Tensor) -> Tensor:
         kon = self.A * torch.exp(-EA / (self._R * self._T))
-        koff = self.A * torch.exp(-(EA - dGrxn) / (self._R * self._T))
+        koff = self.A * torch.exp(-(EA - self._constant * dGrxn) / (self._R * self._T))
         k = torch.cat([kon, koff], dim=0)
         return k.clone()
 
@@ -45,7 +63,7 @@ class VecSim:
         :return:
         """
         cur_time = 0
-        cutoff = 10000000
+        cutoff = 1000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone())
         while cur_time < self.runtime:
@@ -55,8 +73,8 @@ class VecSim:
                 except IndexError:
                     print('bkpt')
             k = self._compute_constants(self.rn.EA, self.rn.rxn_score_vec)
-            copy_prod_vec = self.rn.get_copy_prod_vector()
-            rxn_rates = copy_prod_vec * k
+            concentration_prod_vec = self.rn.get_copy_prod_vector(volume=self.volume)
+            rxn_rates = concentration_prod_vec * k
             total_rate = torch.sum(rxn_rates)
             step = 1 / total_rate
             rate_step = rxn_rates * step
