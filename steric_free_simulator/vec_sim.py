@@ -11,8 +11,10 @@ from matplotlib import pyplot as plt
 from torch import DoubleTensor as Tensor
 from torch import nn
 import torch
-
+import psutil 
 import pandas as pd
+
+import sys
 
 
 class VecSim:
@@ -26,9 +28,9 @@ class VecSim:
         self.use_energies = self.rn.is_energy_set
         self.runtime = runtime
         self.observables = self.rn.observables
-        self.A = Tensor([1.])
-        self._R = Tensor([10.])
-        self._T = Tensor([10.])
+        self.A = Tensor([10.])
+        self._R = Tensor([8.314])
+        self._T = Tensor([273.15])
         self.steps = []
 
     def _compute_constants(self, EA: Tensor, dGrxn: Tensor) -> Tensor:
@@ -43,6 +45,7 @@ class VecSim:
         :return:
         """
         cur_time = 0
+        cutoff = 10000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone())
         while cur_time < self.runtime:
@@ -59,6 +62,9 @@ class VecSim:
             cur_time = cur_time + step
             self.steps.append(cur_time.clone())
 
+            if len(self.steps) > cutoff:
+                print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
+                break
         total_complete = self.rn.copies_vec[-1]
         final_yield = total_complete / max_poss_yield
         return final_yield

@@ -103,5 +103,15 @@ class VectorizedRxnNet:
         c_prod_vec = torch.prod(c_temp_mat, dim=1)  # compute products
         return c_prod_vec
 
-    def update_reaction_net(self, rn):
-        raise NotImplementedError
+    def update_reaction_net(self, rn, k =  None):
+        for n in rn.network.nodes:
+            rn.network.nodes[n]['copies'] = self.copies_vec[n].item()
+            for r_set in rn.get_reactant_sets(n):
+                r_tup = tuple(r_set)
+                reaction_id = rn.network.get_edge_data(r_tup[0], n)['uid']
+                for r in r_tup:
+                    if k is not None:
+                        rn.network.edges[(r, n)]['k_on'] = k[reaction_id].item()
+                        rn.network.edges[(r, n)]['k_off'] = k[reaction_id + int(k.shape[0] / 2)].item()
+                    rn.network.edges[(r, n)]['activation_energy'] = self.EA[reaction_id].item()
+        return rn

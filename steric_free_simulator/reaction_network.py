@@ -238,6 +238,14 @@ class ReactionNetwork:
                     self.network.edges[(source, node)]['k_on'] = k_on
                     self.network.edges[(source, node)]['k_off'] = k_on
 
+    def initialize_random_energy(self, percent_negative=.5, score_range=1000):
+        for node in self.network.nodes:
+            for reactant_set in self.get_reactant_sets(node):
+                score = (rand(1, dtype=torch.double) - percent_negative) * score_range
+                for source in reactant_set:
+                    self.network.edges[(source, node)]['rxn_score'] = score
+        self.is_energy_set = True
+
     def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
         """
         Adds a new species defined by connected_item to the graph, if unique.
