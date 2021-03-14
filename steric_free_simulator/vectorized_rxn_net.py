@@ -16,9 +16,10 @@ class VectorizedRxnNet:
     simulation as torch tensors. Acts as a base object for optimization simulations.
     """
 
-    def __init__(self, rn: ReactionNetwork):
+    def __init__(self, rn: ReactionNetwork, dev):
         rn.reset()
         rn.intialize_activations()
+        self.dev = torch.device('cpu')
         self.M, EA, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
         self.initial_EA = Tensor(EA).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
@@ -26,14 +27,25 @@ class VectorizedRxnNet:
         self.observables = rn.observables
         self.is_energy_set = rn.is_energy_set
         self.num_monomers = rn.num_monomers
+        self.to(dev)
 
     def reset(self):
         self.copies_vec = self.initial_copies.clone()
         for key in self.observables:
             self.observables[key] = (self.observables[key][0], [])
 
+
     def get_params(self):
         yield self.EA
+
+    def to(self, dev):
+        self.M = self.M.to(dev)
+        self.EA = nn.Parameter(self.EA.data.clone().detach().to(dev), requires_grad=True)
+        self.copies_vec = self.copies_vec.to(dev)
+        self.initial_copies = self.initial_copies.to(dev)
+        self.rxn_score_vec = self.rxn_score_vec.to(dev)
+        self.dev = dev
+        return self
 
     @staticmethod
     def generate_vectorized_representation(rn: ReactionNetwork) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
@@ -53,10 +65,10 @@ class VectorizedRxnNet:
         """
         num_states = len(rn.network.nodes)
         # initialize tensor representation dimensions
-        M = torch.zeros((num_states, rn._rxn_count * 2), dtype=torch.double).double()
-        EA = torch.zeros([rn._rxn_count], dtype=torch.double, requires_grad=True).double()
-        rxn_score_vec = torch.zeros([rn._rxn_count], dtype=torch.double).double()
-        copies_vec = torch.zeros([num_states], dtype=torch.double).double()
+        M = torch.zeros((num_states, rn._rxn_count * 2)).double()
+        EA = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        rxn_score_vec = torch.zeros([rn._rxn_count]).double()
+        copies_vec = torch.zeros([num_states]).double()
 
         for n in rn.network.nodes():
             copies_vec[n] = rn.network.nodes[n]['copies']

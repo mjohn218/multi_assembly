@@ -19,13 +19,22 @@ class Optimizer:
                  resample_time_step=False,
                  score_constant: float = 1.,
                  freq_fact: float = 10.,
-                 volume=1e-5):
+                 volume=1e-5,
+                 device='cpu'):
+        if torch.cuda.is_available() and "cpu" not in device:
+            self.dev = torch.device(device)
+            print("Using " + device)
+        else:
+            self.dev = torch.device("cpu")
+            device = 'cpu'
+            print("Using CPU")
+        self._dev_name = device
         if sim_mode == 'infinite':
             self.sim_class = Simulator
             self.rn = reaction_network
         elif sim_mode == 'vectorized':
             self.sim_class = VecSim
-            self.rn = VectorizedRxnNet(reaction_network)
+            self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
             resample_time_step = False
         else:
             raise TypeError("sim mode not available")
@@ -75,14 +84,16 @@ class Optimizer:
                                      self.sim_runtime,
                                      score_constant=self._sim_score_constant,
                                      freq_fact=self._sim_freq_factor,
-                                     volume=self._sim_volume)
+                                     volume=self._sim_volume,
+                                     device=self._dev_name)
                 if type(sim) is Simulator:
                     sim.optimize_step()
             else:
                 sim = self.sim_class(self.rn, self.sim_runtime,
                                      score_constant=self._sim_score_constant,
                                      freq_fact=self._sim_freq_factor,
-                                     volume=self._sim_volume)
+                                     volume=self._sim_volume,
+                                     device=self._dev_name)
 
             # preform simulation
             self.optimizer.zero_grad()
@@ -96,11 +107,11 @@ class Optimizer:
             if type(sim) is Simulator:
                 self.parameter_history.append(nx.get_edge_attributes(self.rn.network, 'k_on').copy())
             elif type(sim) is VecSim:
-                self.parameter_history.append(self.rn.EA.clone().detach().numpy())
+                self.parameter_history.append(self.rn.EA.clone().detach().to(torch.device('cpu')).numpy())
 
             # preform gradient step
             if i != self.optim_iterations - 1:
-                physics_penalty = torch.sum(10 * F.relu(-1*(self.rn.EA - .1)))  # stops zeroing or negating params
+                physics_penalty = torch.sum(10 * F.relu(-1*(self.rn.EA - .1))) .to(self.dev) # stops zeroing or negating params
                 cost = -total_yield + physics_penalty
                 if type(sim) is Simulator:
                     og_params = np.array([p.item() for p in self.rn.get_params()])
