@@ -20,10 +20,10 @@ class VectorizedRxnNet:
         rn.reset()
         rn.intialize_activations()
         self.dev = torch.device('cpu')
-        self.M, EA, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
-        self.initial_EA = Tensor(EA).clone().detach()
+        self.M, kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
+        self.initial_params = Tensor(kon).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
-        self.EA = nn.Parameter(EA, requires_grad=True)
+        self.kon = nn.Parameter(kon, requires_grad=True)
         self.observables = rn.observables
         self.is_energy_set = rn.is_energy_set
         self.num_monomers = rn.num_monomers
@@ -34,13 +34,12 @@ class VectorizedRxnNet:
         for key in self.observables:
             self.observables[key] = (self.observables[key][0], [])
 
-
     def get_params(self):
-        yield self.EA
+        yield self.kon
 
     def to(self, dev):
         self.M = self.M.to(dev)
-        self.EA = nn.Parameter(self.EA.data.clone().detach().to(dev), requires_grad=True)
+        self.kon = nn.Parameter(self.kon.data.clone().detach().to(dev), requires_grad=True)
         self.copies_vec = self.copies_vec.to(dev)
         self.initial_copies = self.initial_copies.to(dev)
         self.rxn_score_vec = self.rxn_score_vec.to(dev)
@@ -66,7 +65,7 @@ class VectorizedRxnNet:
         num_states = len(rn.network.nodes)
         # initialize tensor representation dimensions
         M = torch.zeros((num_states, rn._rxn_count * 2)).double()
-        EA = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        kon = torch.zeros([rn._rxn_count], requires_grad=True).double()
         rxn_score_vec = torch.zeros([rn._rxn_count]).double()
         copies_vec = torch.zeros([num_states]).double()
 
@@ -77,9 +76,9 @@ class VectorizedRxnNet:
                 data = rn.network.get_edge_data(r_tup[0], n)
                 reaction_id = data['uid']
                 try:
-                    EA[reaction_id] = data['activation_energy']
+                    kon[reaction_id] = data['k_on']
                 except Exception:
-                    EA[reaction_id] = 5.
+                    kon[reaction_id] = 10.
                 rxn_score_vec[reaction_id] = data['rxn_score']
                 # forward
                 M[n, reaction_id] = 1.
@@ -87,7 +86,7 @@ class VectorizedRxnNet:
                     M[r, reaction_id] = -1.
         # generate the reverse map explicitly
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
-        return M, EA, rxn_score_vec, copies_vec
+        return M, kon, rxn_score_vec, copies_vec
 
     def get_copy_prod_vector(self, volume: float):
         """
@@ -121,5 +120,5 @@ class VectorizedRxnNet:
                     if k is not None:
                         rn.network.edges[(r, n)]['k_on'] = k[reaction_id].item()
                         rn.network.edges[(r, n)]['k_off'] = k[reaction_id + int(k.shape[0] / 2)].item()
-                    rn.network.edges[(r, n)]['activation_energy'] = self.EA[reaction_id].item()
+                    rn.network.edges[(r, n)]['k_on'] = self.kon[reaction_id].item()
         return rn

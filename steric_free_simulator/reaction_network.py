@@ -232,7 +232,7 @@ class ReactionNetwork:
                 if mode == 'uniform':
                     k_on = nn.Parameter(rand(1, dtype=torch.double) * Tensor([1]), requires_grad=True)
                 elif mode == 'middle':
-                    k_on = nn.Parameter(Tensor([1.]), requires_grad=True)
+                    k_on = nn.Parameter(Tensor([10.]), requires_grad=True)
                 self.parameters[tuple(list(reactant_set) + [node])] = k_on
                 for source in reactant_set:
                     self.network.edges[(source, node)]['k_on'] = k_on
