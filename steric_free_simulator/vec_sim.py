@@ -17,6 +17,13 @@ import pandas as pd
 import sys
 
 
+def _make_finite(t):
+    temp = t.clone()
+    temp[t == -np.inf] = -2. ** 32.
+    temp[t == np.inf] = 2. ** 32.
+    return temp
+
+
 class VecSim:
     """
     Run a vectorized gillespie simulation
@@ -53,17 +60,17 @@ class VecSim:
         self.runtime = runtime
         self.observables = self.rn.observables
         self._constant = Tensor([score_constant]).to(self.dev)
-        self.A = Tensor([freq_fact]).to(self.dev)
-        self._R = Tensor([8.314]).to(self.dev)
-        self._T = Tensor([273.15]).to(self.dev)
+        self.avo = Tensor([6.022e23])
         self.volume = Tensor([volume * 1e-6]).to(self.dev)  # convert microliters to liters
         self.steps = []
 
-    def _compute_constants(self, EA: Tensor, dGrxn: Tensor) -> Tensor:
-        kon = self.A * torch.exp(-EA / (self._R * self._T))
-        koff = self.A * torch.exp(-(EA - self._constant * dGrxn) / (self._R * self._T))
-        k = torch.cat([kon, koff], dim=0)
-        return k.clone().to(self.dev)
+    def _compute_constants(self, kon: Tensor, dGrxn: Tensor) -> Tensor:
+        # kon / koff = e^dG*R*T
+        # ln(kon) - ln(koff) = dG*R*T
+        l_kon = torch.log(kon)
+        l_koff = (self._constant * dGrxn) + l_kon
+        l_k = torch.cat([l_kon, l_koff], dim=0)
+        return l_k.clone().to(self.dev)
 
     def simulate(self, verbose=False):
         """
@@ -74,20 +81,24 @@ class VecSim:
         cutoff = 1000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
+        l_k = self._compute_constants(self.rn.kon, self.rn.rxn_score_vec)
         while cur_time < self.runtime:
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
                 except IndexError:
                     print('bkpt')
-            k = self._compute_constants(self.rn.EA, self.rn.rxn_score_vec)
-            concentration_prod_vec = self.rn.get_copy_prod_vector(volume=self.volume)
-            rxn_rates = concentration_prod_vec * k
-            total_rate = torch.sum(rxn_rates)
-            step = 1 / total_rate
-            rate_step = rxn_rates * step
+            copies_prod = self.rn.get_copy_prod_vector(volume=self.volume)
+            copies_prod = copies_prod + 2e-32
+            l_conc_prod_vec = torch.log(copies_prod)
+            l_molarity_prod_vec = l_conc_prod_vec - torch.log(self.avo)
+            l_rxn_rates = l_molarity_prod_vec + l_k
+            l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
+            l_step = 0 - l_total_rate
+            rate_step = torch.exp(l_rxn_rates + l_step)
             delta_copies = torch.matmul(self.rn.M, rate_step)
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
+            step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
 
