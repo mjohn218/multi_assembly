@@ -140,3 +140,17 @@ class Optimizer:
                 # print('max parameter update: ' + str(np.max(og_params - new_params)))
                 # print('min parameter update: ' + str(np.min(og_params - new_params)))
             del sim
+
+if __name__ == '__main__':
+    from steric_free_simulator import ReactionNetwork
+    base_input = './input_files/dimer.bngl'
+    rn = ReactionNetwork(base_input, one_step=True)
+    rn.initialize_random_energy(percent_negative=-.75, score_range=10000, seed=4242)
+    rn.reset()
+    rn.intialize_activations()
+    optim = Optimizer(reaction_network=rn,
+                      sim_runtime=.001,
+                      optim_iterations=10,
+                      learning_rate=10,
+                      sim_mode='vectorized')
+    vec_rn = optim.optimize()
