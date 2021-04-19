@@ -18,8 +18,7 @@ class Optimizer:
                  sim_mode="vectorized",
                  resample_time_step=False,
                  score_constant: float = 1.,
-                 freq_fact: float = 10.,
-                 volume=1e-5,
+                 volume=.1,
                  device='cpu'):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
@@ -50,7 +49,6 @@ class Optimizer:
         self.is_optimized = False
         self.dt = None
         self._sim_score_constant = score_constant
-        self._sim_freq_factor = freq_fact
         self._sim_volume = volume
 
     def plot_observable(self, iteration):
@@ -84,7 +82,6 @@ class Optimizer:
                 sim = self.sim_class(self.rn,
                                      self.sim_runtime,
                                      score_constant=self._sim_score_constant,
-                                     freq_fact=self._sim_freq_factor,
                                      volume=self._sim_volume,
                                      device=self._dev_name)
                 if type(sim) is Simulator:
@@ -92,7 +89,6 @@ class Optimizer:
             else:
                 sim = self.sim_class(self.rn, self.sim_runtime,
                                      score_constant=self._sim_score_constant,
-                                     freq_fact=self._sim_freq_factor,
                                      volume=self._sim_volume,
                                      device=self._dev_name)
 
@@ -112,7 +108,7 @@ class Optimizer:
 
             # preform gradient step
             if i != self.optim_iterations - 1:
-                k = torch.exp(sim._compute_constants(self.rn.kon, self.rn.rxn_score_vec))
+                k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, scalar_modifier=self._sim_score_constant))
                 physics_penalty = torch.sum(10 * F.relu(-1*(k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
                 cost = -total_yield + physics_penalty
                 if type(sim) is Simulator:
@@ -127,8 +123,10 @@ class Optimizer:
                     new_params = np.array([p.item() for p in self.rn.get_params()])
                 elif type(sim) is VecSim:
                     new_params = self.rn.kon.clone().detach()
+                else:
+                    raise TypeError
 
-                print('param update: ' + str(new_params - og_params))
+                print('current params: ' + str(new_params))
 
             values = psutil.virtual_memory()
             mem = values.available / (1024.0 ** 3)

@@ -4,6 +4,7 @@ from .vectorized_rxn_net import VectorizedRxnNet
 from .simulator import Simulator
 from .vec_sim import VecSim
 from .optimizer import Optimizer
+from .EqSolver import EquilibriumSolver
 
 __all__ = [
     "EnergyExplorer",
@@ -11,5 +12,6 @@ __all__ = [
     "Simulator",
     "VecSim",
     "Optimizer",
-    "VectorizedRxnNet"
+    "VectorizedRxnNet",
+    "EquilibriumSolver"
 ]
