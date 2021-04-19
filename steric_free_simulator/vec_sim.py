@@ -29,11 +29,10 @@ class VecSim:
     Run a vectorized gillespie simulation
     """
 
-    def __init__(self, net: Union[ReactionNetwork, VectorizedRxnNet],
+    def __init__(self, net: VectorizedRxnNet,
                  runtime: float,
                  score_constant: float = 1.,
-                 freq_fact: float = 10.,
-                 volume=1e-5,
+                 volume=1,
                  device='cuda:0'):
         """
 
@@ -41,8 +40,7 @@ class VecSim:
             net: The reaction network to run the simulation on.
             runtime: Length (in seconds) of the simulation.
             score_constant: User defined parameter, equals Joules / Rosetta Score Unit.
-            freq_fact: User defined parameter, collision frequency.
-            volume: Volume of simulation in Micro Liters.
+            volume: Volume of simulation in Micro Meters. Default is .001 uL = 1 um^3
         """
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
@@ -55,22 +53,13 @@ class VecSim:
             self.rn = VectorizedRxnNet(net, dev=self.dev)
         else:
             self.rn = net
-        self.score_proportionality = Tensor([.1]).to(self.dev)
         self.use_energies = self.rn.is_energy_set
         self.runtime = runtime
         self.observables = self.rn.observables
         self._constant = Tensor([score_constant]).to(self.dev)
         self.avo = Tensor([6.022e23])
-        self.volume = Tensor([volume * 1e-6]).to(self.dev)  # convert microliters to liters
+        self.volume = Tensor([volume * 1e-15]).to(self.dev)  # convert cubic micro-micrometers to liters
         self.steps = []
-
-    def _compute_constants(self, kon: Tensor, dGrxn: Tensor) -> Tensor:
-        # kon / koff = e^dG*R*T
-        # ln(kon) - ln(koff) = dG*R*T
-        l_kon = torch.log(kon)
-        l_koff = (self._constant * dGrxn) + l_kon
-        l_k = torch.cat([l_kon, l_koff], dim=0)
-        return l_k.clone().to(self.dev)
 
     def simulate(self, verbose=False):
         """
@@ -78,26 +67,30 @@ class VecSim:
         :return:
         """
         cur_time = 0
-        cutoff = 1000000
+        cutoff = 50000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
-        l_k = self._compute_constants(self.rn.kon, self.rn.rxn_score_vec)
+        l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         while cur_time < self.runtime:
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
                 except IndexError:
                     print('bkpt')
-            copies_prod = self.rn.get_copy_prod_vector(volume=self.volume)
-            copies_prod = copies_prod + 2e-32
-            l_conc_prod_vec = torch.log(copies_prod)
-            l_molarity_prod_vec = l_conc_prod_vec - torch.log(self.avo)
-            l_rxn_rates = l_molarity_prod_vec + l_k
+            l_conc_prod_vec = self.rn.get_log_copy_prod_vector(volume=self.volume)
+            # copies_prod = copies_prod + 2e-32
+            # l_conc_prod_vec = torch.log(copies_prod)
+            l_rxn_rates = l_conc_prod_vec + l_k
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
             delta_copies = torch.matmul(self.rn.M, rate_step)
+            initial_monomers = self.rn.initial_copies
+            min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
+            min_copies[0:initial_monomers.shape[0]] = initial_monomers
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
+            #self.rn.copies_vec = torch.min(self.rn.copies_vec, min_copies)
+            initial_copies = self.rn.initial_copies
             step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
