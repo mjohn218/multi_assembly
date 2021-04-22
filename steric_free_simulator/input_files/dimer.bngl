@@ -20,6 +20,6 @@ begin observables
 end observables
 
 begin rules
-    A(a)+B(a)<->A(a!1).B(a!1) kon, koff
+    A(a)+B(a)<->A(a!1).B(a!1) G=10000
 
 end rules
