@@ -23,7 +23,6 @@ class VectorizedRxnNet:
 
     def __init__(self, rn: ReactionNetwork, dev):
         rn.reset()
-        rn.intialize_activations()
         self.dev = torch.device('cpu')
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K

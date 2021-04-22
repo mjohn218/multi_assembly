@@ -67,7 +67,7 @@ class VecSim:
         :return:
         """
         cur_time = 0
-        cutoff = 50000
+        cutoff = 10000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
         l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)

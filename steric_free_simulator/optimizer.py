@@ -3,7 +3,7 @@ from torch.nn import functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-import psutil 
+import psutil
 from steric_free_simulator import Simulator
 from steric_free_simulator import VecSim
 from steric_free_simulator import VectorizedRxnNet
@@ -57,16 +57,15 @@ class Optimizer:
             if key == 'steps':
                 continue
             data = np.array(self.sim_observables[iteration][key][1])
-            plt.scatter(t, data,
-                        cmap='plasma',
-                        s=.1,
-                        label=self.sim_observables[iteration][key][0])
-        plt.legend(loc='best')
+            plt.plot(t, data, label=self.sim_observables[iteration][key][0])
+        lgnd = plt.legend(loc='best')
+        for i in range(len(lgnd.legendHandles)):
+            lgnd.legendHandles[i]._sizes = [30]
         plt.title = 'Sim iteration ' + str(iteration)
         plt.show()
 
     def plot_yield(self):
-        steps = np.arange(self.optim_iterations)
+        steps = np.arange(len(self.yield_per_iter))
         data = np.array(self.yield_per_iter, dtype=np.float)
         data[data < .1] = np.mean(data[data > .1])
         plt.plot(steps, data)
@@ -108,8 +107,10 @@ class Optimizer:
 
             # preform gradient step
             if i != self.optim_iterations - 1:
-                k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, scalar_modifier=self._sim_score_constant))
-                physics_penalty = torch.sum(10 * F.relu(-1*(k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
+                k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                            scalar_modifier=self._sim_score_constant))
+                physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(
+                    self.dev)  # stops zeroing or negating params
                 cost = -total_yield + physics_penalty
                 if type(sim) is Simulator:
                     og_params = np.array([p.item() for p in self.rn.get_params()])
