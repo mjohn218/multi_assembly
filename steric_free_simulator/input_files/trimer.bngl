@@ -6,9 +6,9 @@ begin parameters
 end parameters
 
 begin species
-    A(a,b) 1000
-    B(a,b) 1000
-    C(a,b) 1000
+    A(a,b) 5.0
+    B(a,b) 5.0
+    C(a,b) 5.0
 end species
 
 begin rules

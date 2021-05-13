@@ -2,8 +2,7 @@
 # steric free simulator will build full reaction network and generate allowed rules
 
 begin parameters
-    kon .1
-    koff .1
+
 end parameters
 
 begin species
