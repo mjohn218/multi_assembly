@@ -121,22 +121,14 @@ class VectorizedRxnNet:
         c_temp_mat = torch.mul(r_filter, self.copies_vec)
 
         l_c_temp_mat = torch.log(c_temp_mat)
-        # l_c_temp_mat = l_c_temp_mat - torch.log(self._avo)     # convert copies to mols
 
-        #l_c_temp_mat = l_c_temp_mat - torch.log(volume)  # get copies per liter
-
-        #l_c_temp_mat = l_c_temp_mat - torch.log(self._avo)  # get mols per liter
-
-        l_c_temp_mat[c_temp_mat < 0] = 0   # 0 = log(1), don't want to zero reactions that don't use all species! This doesn't matter for grad since we don't care about the comp graph branch anyway.
+        l_c_temp_mat[c_temp_mat < 0] = 0
 
         c_mask = r_filter + self.copies_vec
 
         l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)
 
         l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1) # compute log products
-
-        # can't allow negative infinity
-        #l_c_prod_vec[torch.isinf(l_c_prod_vec)] = -100
 
         return l_c_prod_vec
 
