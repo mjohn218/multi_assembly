@@ -26,7 +26,11 @@ def _make_finite(t):
 
 class VecSim:
     """
-    Run a vectorized gillespie simulation
+    Run a vectorized deterministic simulation. All data and parameters are represented as
+    Torch Tensors, allowing for gradients to be tracked. This simulator was designed to
+    fill three primary requirements.
+        - The simulation must be fully differentiable. That is, the entire can be thought
+          of as a single multi-varie
     """
 
     def __init__(self, net: VectorizedRxnNet,
