@@ -12,21 +12,29 @@ from torch import nn
 
 class VectorizedRxnNet:
     """
-    Provides an wrapper for a rxn network that represents the core information needed for
+    Provides a lightweight class that represents the core information needed for
     simulation as torch tensors. Acts as a base object for optimization simulations.
+    Data structure is performance optimized, not easily readable / accessible.
+
+    Units:
+    units of Kon assumed to be [copies]-1 S-1, units of Koff S-1
+    units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
     def __init__(self, rn: ReactionNetwork, dev):
         rn.reset()
-        rn.intialize_activations()
         self.dev = torch.device('cpu')
-        self.M, EA, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
-        self.initial_EA = Tensor(EA).clone().detach()
+        self._avo = Tensor([6.02214e23])  # copies / mol
+        self._R = Tensor([8.314])  # J / mol * K
+        self._T = Tensor([273.15])  # K
+        self.M, kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
+        self.initial_params = Tensor(kon).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
-        self.EA = nn.Parameter(EA, requires_grad=True)
+        self.kon = nn.Parameter(kon, requires_grad=True)
         self.observables = rn.observables
         self.is_energy_set = rn.is_energy_set
         self.num_monomers = rn.num_monomers
+        self.reaction_ids = []
         self.to(dev)
 
     def reset(self):
@@ -34,21 +42,19 @@ class VectorizedRxnNet:
         for key in self.observables:
             self.observables[key] = (self.observables[key][0], [])
 
-
     def get_params(self):
-        yield self.EA
+        yield self.kon
 
     def to(self, dev):
         self.M = self.M.to(dev)
-        self.EA = nn.Parameter(self.EA.data.clone().detach().to(dev), requires_grad=True)
+        self.kon = nn.Parameter(self.kon.data.clone().detach().to(dev), requires_grad=True)
         self.copies_vec = self.copies_vec.to(dev)
         self.initial_copies = self.initial_copies.to(dev)
         self.rxn_score_vec = self.rxn_score_vec.to(dev)
         self.dev = dev
         return self
 
-    @staticmethod
-    def generate_vectorized_representation(rn: ReactionNetwork) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+    def generate_vectorized_representation(self, rn: ReactionNetwork) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
         """
         Get a matrix mapping reactions to state updates. Since every reaction has a forward
         and reverse, dimensions of map matrix M are (rxn_count*2 x num_states). The forward
@@ -66,7 +72,7 @@ class VectorizedRxnNet:
         num_states = len(rn.network.nodes)
         # initialize tensor representation dimensions
         M = torch.zeros((num_states, rn._rxn_count * 2)).double()
-        EA = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        kon = torch.zeros([rn._rxn_count], requires_grad=True).double()
         rxn_score_vec = torch.zeros([rn._rxn_count]).double()
         copies_vec = torch.zeros([num_states]).double()
 
@@ -77,9 +83,9 @@ class VectorizedRxnNet:
                 data = rn.network.get_edge_data(r_tup[0], n)
                 reaction_id = data['uid']
                 try:
-                    EA[reaction_id] = data['activation_energy']
+                    kon[reaction_id] = data['k_on']
                 except Exception:
-                    EA[reaction_id] = 5.
+                    kon[reaction_id] = 1.
                 rxn_score_vec[reaction_id] = data['rxn_score']
                 # forward
                 M[n, reaction_id] = 1.
@@ -87,11 +93,25 @@ class VectorizedRxnNet:
                     M[r, reaction_id] = -1.
         # generate the reverse map explicitly
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
-        return M, EA, rxn_score_vec, copies_vec
+        return M, kon, rxn_score_vec, copies_vec
 
-    def get_copy_prod_vector(self, volume: float):
+    def compute_log_constants(self, kon: Tensor, dGrxn: Tensor, scalar_modifier) -> Tensor:
+        """
+        Returns log(k) for each reaction concatenated with log(koff) for each reaction
+        """
+        # copies_R = self._R / self._avo
+        # copies_score = dGrxn / self._avo
+        # above conversions cancel
+        std_c = Tensor([1.])  # units mols / L
+        l_kon = torch.log(kon)  # mol-1 s-1
+        l_koff = (dGrxn * scalar_modifier / (self._R * self._T)) + l_kon + torch.log(std_c)
+        l_k = torch.cat([l_kon, l_koff], dim=0)
+        return l_k.clone().to(self.dev)
+
+    def get_log_copy_prod_vector(self, volume: float):
         """
           get the vector storing product of copies for each reactant in each reaction.
+          Copies number a converted to M before calculation
         Returns: Tensor
             A tensor with shape (rxn_count * 2)
         """
@@ -100,26 +120,27 @@ class VectorizedRxnNet:
 
         c_temp_mat = torch.mul(r_filter, self.copies_vec)
 
-        c_temp_mat = c_temp_mat / volume  # get copies per liter
+        l_c_temp_mat = torch.log(c_temp_mat)
 
-        c_temp_mat[c_temp_mat < 0] = 1  # don't want to zero reactions that don't use all species! This doesn't matter for grad since we don't care about the comp graph branch anyway.
+        l_c_temp_mat[c_temp_mat < 0] = 0
 
         c_mask = r_filter + self.copies_vec
 
-        c_temp_mat[c_mask == -1] = 1
+        l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)
 
-        c_prod_vec = torch.prod(c_temp_mat, dim=1)  # compute products
-        return c_prod_vec
+        l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1) # compute log products
 
-    def update_reaction_net(self, rn, k =  None):
+        return l_c_prod_vec
+
+    def update_reaction_net(self, rn, scalar_modifier: int = 1):
         for n in rn.network.nodes:
             rn.network.nodes[n]['copies'] = self.copies_vec[n].item()
             for r_set in rn.get_reactant_sets(n):
                 r_tup = tuple(r_set)
                 reaction_id = rn.network.get_edge_data(r_tup[0], n)['uid']
                 for r in r_tup:
-                    if k is not None:
-                        rn.network.edges[(r, n)]['k_on'] = k[reaction_id].item()
-                        rn.network.edges[(r, n)]['k_off'] = k[reaction_id + int(k.shape[0] / 2)].item()
-                    rn.network.edges[(r, n)]['activation_energy'] = self.EA[reaction_id].item()
+                    k = self.compute_log_constants(self.kon, self.rxn_score_vec, scalar_modifier)
+                    k = torch.exp(k)
+                    rn.network.edges[(r, n)]['k_on'] = k[reaction_id].item()
+                    rn.network.edges[(r, n)]['k_off'] = k[reaction_id + int(k.shape[0] / 2)].item()
         return rn

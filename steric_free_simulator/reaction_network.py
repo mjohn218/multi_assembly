@@ -72,7 +72,7 @@ class ReactionNetwork:
             rosetta energies map more accurately)
 
     """
-    def __init__(self, bngl_path: str, one_step: bool):
+    def __init__(self, bngl_path: str, one_step: bool, seed=None):
         """
         :param bngl_path: path to bngl containing pairwise interactions.
         :param one_step: whether this reaction network should be built as one step or two step
@@ -85,12 +85,12 @@ class ReactionNetwork:
         self.is_one_step = one_step
         # default observables are monomers and final complex
         self.observables = dict()
+        self.seed = seed
         # resolve graph
         self._initial_copies = {}
-        self.parse_bngl(open(bngl_path, 'r'))
-        self.resolve_tree(one_step)
+        self.parse_bngl(open(bngl_path, 'r'), seed=self.seed)
         self.parameters = {}  # gradient params
-        self.is_energy_set = False
+        self.is_energy_set = True
 
     def get_params(self):
         """
@@ -138,14 +138,17 @@ class ReactionNetwork:
         try:
             init_pop = int(items[1])
         except ValueError:
-            init_pop = int(params[items[1]])
+            try:
+                init_pop = float(items[1])
+            except ValueError:
+                init_pop = int(params[items[1]])
         state_net = nx.Graph()
         state_net.add_node(sp_info[0])
         self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]))
         self._initial_copies[self._node_count] = Tensor([float(init_pop)])
         self._node_count += 1
 
-    def parse_rule(self, line, params):
+    def parse_rule(self, line, params, seed=None, percent_negative=.5, score_range=100):
         items = re.split(r' |, ', line)
         r_info = re.split('\\(.\\)+.|\\(.\\)<->', items[0])
         try:
@@ -158,10 +161,17 @@ class ReactionNetwork:
             except ValueError:
                 k_off = None # float(params[items[2]])
         else:
-            k_off = None # 0
-        self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [k_on, k_off, LOOP_COOP_DEFAULT]
+            k_off = None  # 0
 
-    def parse_bngl(self, f):
+        if 'G=' in items[-1]:
+            score = Tensor([float(items[-1].split('=')[1])])
+        else:
+            if seed:
+                torch.random.manual_seed(seed)
+            score = (rand(1, dtype=torch.double) - percent_negative) * score_range
+        self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [k_on, k_off, LOOP_COOP_DEFAULT, score]
+
+    def parse_bngl(self, f, seed=None):
         """
         Read the bngl file and initialize allowed edges, and initialize the network with
         monomer nodes and copies.
@@ -190,7 +200,7 @@ class ReactionNetwork:
                     elif cur_block == 'species':
                         self.parse_species(line, parameters)
                     elif cur_block == 'rules':
-                        self.parse_rule(line, parameters)
+                        self.parse_rule(line, parameters, seed=None)
 
         # attach loop cooperativity param to rules (python 3.6+ only due to dict ordering changes)
         if "loop_coop" in parameters:
@@ -206,7 +216,6 @@ class ReactionNetwork:
     def reset(self):
         """
         Initialize monomer copy numbers, and set all other species copy numbers to 0.
-        Also reinitialize all k_on parameters.
         :return:
         """
         for key in self._initial_copies:
@@ -238,15 +247,19 @@ class ReactionNetwork:
                     self.network.edges[(source, node)]['k_on'] = k_on
                     self.network.edges[(source, node)]['k_off'] = k_on
 
-    def initialize_random_energy(self, percent_negative=.5, score_range=1000):
+    def initialize_random_pairwise_energy(self, percent_negative=.5, score_range=1000, seed=None):
         for node in self.network.nodes:
             for reactant_set in self.get_reactant_sets(node):
+                if seed is not None:
+                    torch.random.manual_seed(seed)
                 score = (rand(1, dtype=torch.double) - percent_negative) * score_range
                 for source in reactant_set:
-                    self.network.edges[(source, node)]['rxn_score'] = score
+                    if source < self.num_monomers:
+                        self.network.edges[(source, node)]['rxn_score'] = score
+
         self.is_energy_set = True
 
-    def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template_edge_id=None):
+    def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template=None):
         """
         Adds a new species defined by connected_item to the graph, if unique.
         :param connected_item: The graph structure reoresenting the product (new node requested)
@@ -273,29 +286,22 @@ class ReactionNetwork:
         if self.network.has_edge(source_1, new_node):
             # skip if edge exists failsafe.
             return None
-        if template_edge_id is not None:
-            self.network.add_edge(source_1, new_node,
-                                  k_on=self.allowed_edges[template_edge_id][0],
-                                  k_off=self.allowed_edges[template_edge_id][1],
-                                  lcf=self.allowed_edges[template_edge_id][2],
-                                  uid=self._rxn_count)
-            if source_2 is not None:
-                self.network.add_edge(source_2, new_node,
-                                      k_on=self.allowed_edges[template_edge_id][0],
-                                      k_off=self.allowed_edges[template_edge_id][1],
-                                      lcf=self.allowed_edges[template_edge_id][2],
-                                      uid=self._rxn_count)
+        if not template:
+            return None
         else:
+            dg_coop = sum([self.allowed_edges[e][3] for e in template])
             self.network.add_edge(source_1, new_node,
                                   k_on=1,
                                   k_off=.1,
                                   lcf=1,
+                                  rxn_score=dg_coop,
                                   uid=self._rxn_count)
             if source_2 is not None:
                 self.network.add_edge(source_2, new_node,
                                       k_on=1,
                                       k_off=.1,
                                       lcf=1,
+                                      rxn_score=dg_coop,
                                       uid=self._rxn_count)
         self._rxn_count += 1
         if len(node_exists) == 0:
@@ -320,25 +326,20 @@ class ReactionNetwork:
         else:
             item = orig
         connected_item = item.copy()
+        new_bonds = []
         for poss_edge in list(self.allowed_edges.keys()):
             if False not in [item.has_node(n) for n in poss_edge] and \
                     (n2 is None or
                      (True in [orig.has_node(n) for n in poss_edge] and
                       True in [nextn.has_node(n) for n in poss_edge]))\
                     and not item.has_edge(poss_edge[0], poss_edge[1]):
-                # adds edge to new struct, should happen only once per match step if not one step
-                if not one_step:
-                    connected_item = item.copy()
                 connected_item.add_edge(poss_edge[0], poss_edge[1])
+                new_bonds.append(poss_edge)
             else:
                 continue
-            if not one_step:
-                new_node = self._add_graph_state(connected_item, n1, source_2=n2, template_edge_id=poss_edge)
-                if new_node is not None:
-                    nodes_added.append(new_node)
-        # resolving cooperative network
+        # resolving one step  network
         if one_step:
-            new_node = self._add_graph_state(connected_item, n1, source_2=n2)
+            new_node = self._add_graph_state(connected_item, n1, source_2=n2, template=new_bonds)
             if new_node is not None:
                 nodes_added.append(new_node)
 
@@ -355,7 +356,7 @@ class ReactionNetwork:
         node_set2 = set(n2[1]['struct'].nodes())
         return len(node_set1 - node_set2) < len(node_set1)
 
-    def resolve_tree(self, is_one_step):
+    def resolve_tree(self):
         """
         Build the full reaction network from whatever initial info was given
         :param is_one_step:
@@ -366,7 +367,7 @@ class ReactionNetwork:
             node = new_nodes.pop(0)
             for anode in list(self.network.nodes(data=True)):
                 if not self.is_hindered(node, anode):
-                    new_nodes += self.match_maker(node, anode, is_one_step)
+                    new_nodes += self.match_maker(node, anode, self.is_one_step)
             # must also try internal bonds
             new_nodes += self.match_maker(node)
 
@@ -375,8 +376,6 @@ class ReactionNetwork:
             self.observables[i] = (gtostr(self.network.nodes[i]['struct']), [])
         fin_dex = len(self.network.nodes) - 1
         self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
-
-
 
 if __name__ == '__main__':
     bngls_path = sys.argv[1]  # path to bngl

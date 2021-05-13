@@ -17,16 +17,26 @@ import pandas as pd
 import sys
 
 
+def _make_finite(t):
+    temp = t.clone()
+    temp[t == -np.inf] = -2. ** 32.
+    temp[t == np.inf] = 2. ** 32.
+    return temp
+
+
 class VecSim:
     """
-    Run a vectorized gillespie simulation
+    Run a vectorized deterministic simulation. All data and parameters are represented as
+    Torch Tensors, allowing for gradients to be tracked. This simulator was designed to
+    fill three primary requirements.
+        - The simulation must be fully differentiable. That is, the entire can be thought
+          of as a single multi-varie
     """
 
-    def __init__(self, net: Union[ReactionNetwork, VectorizedRxnNet],
+    def __init__(self, net: VectorizedRxnNet,
                  runtime: float,
                  score_constant: float = 1.,
-                 freq_fact: float = 10.,
-                 volume=1e-5,
+                 volume=1,
                  device='cuda:0'):
         """
 
@@ -34,8 +44,7 @@ class VecSim:
             net: The reaction network to run the simulation on.
             runtime: Length (in seconds) of the simulation.
             score_constant: User defined parameter, equals Joules / Rosetta Score Unit.
-            freq_fact: User defined parameter, collision frequency.
-            volume: Volume of simulation in Micro Liters.
+            volume: Volume of simulation in Micro Meters. Default is .001 uL = 1 um^3
         """
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
@@ -48,22 +57,13 @@ class VecSim:
             self.rn = VectorizedRxnNet(net, dev=self.dev)
         else:
             self.rn = net
-        self.score_proportionality = Tensor([.1]).to(self.dev)
         self.use_energies = self.rn.is_energy_set
         self.runtime = runtime
         self.observables = self.rn.observables
         self._constant = Tensor([score_constant]).to(self.dev)
-        self.A = Tensor([freq_fact]).to(self.dev)
-        self._R = Tensor([8.314]).to(self.dev)
-        self._T = Tensor([273.15]).to(self.dev)
-        self.volume = Tensor([volume * 1e-6]).to(self.dev)  # convert microliters to liters
+        self.avo = Tensor([6.022e23])
+        self.volume = Tensor([volume * 1e-15]).to(self.dev)  # convert cubic micro-micrometers to liters
         self.steps = []
-
-    def _compute_constants(self, EA: Tensor, dGrxn: Tensor) -> Tensor:
-        kon = self.A * torch.exp(-EA / (self._R * self._T))
-        koff = self.A * torch.exp(-(EA - self._constant * dGrxn) / (self._R * self._T))
-        k = torch.cat([kon, koff], dim=0)
-        return k.clone().to(self.dev)
 
     def simulate(self, verbose=False):
         """
@@ -71,23 +71,31 @@ class VecSim:
         :return:
         """
         cur_time = 0
-        cutoff = 1000000
+        cutoff = 10000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
+        l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         while cur_time < self.runtime:
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
                 except IndexError:
                     print('bkpt')
-            k = self._compute_constants(self.rn.EA, self.rn.rxn_score_vec)
-            concentration_prod_vec = self.rn.get_copy_prod_vector(volume=self.volume)
-            rxn_rates = concentration_prod_vec * k
-            total_rate = torch.sum(rxn_rates)
-            step = 1 / total_rate
-            rate_step = rxn_rates * step
+            l_conc_prod_vec = self.rn.get_log_copy_prod_vector(volume=self.volume)
+            # copies_prod = copies_prod + 2e-32
+            # l_conc_prod_vec = torch.log(copies_prod)
+            l_rxn_rates = l_conc_prod_vec + l_k
+            l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
+            l_step = 0 - l_total_rate
+            rate_step = torch.exp(l_rxn_rates + l_step)
             delta_copies = torch.matmul(self.rn.M, rate_step)
+            initial_monomers = self.rn.initial_copies
+            min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
+            min_copies[0:initial_monomers.shape[0]] = initial_monomers
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
+            #self.rn.copies_vec = torch.min(self.rn.copies_vec, min_copies)
+            initial_copies = self.rn.initial_copies
+            step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
 

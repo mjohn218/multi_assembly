@@ -1,0 +1,34 @@
+begin model
+
+## Reserved Parameters::
+#   loop_coop: a list of loop cooperativity factors, one for each rule.
+
+begin parameters
+    init_pop    10000
+    kon .1
+    koff .01
+    # loop_coop   [1, 1, 1, 1]
+end parameters
+
+begin species
+    A(a,b,c) 4.47 umol
+    M(a,b,c) 6.06 umol
+    B(a,b) 5.85 umol
+    S(a,b) 8.45 umol
+end species
+
+begin observables
+    full_complex    A(a!1,b!1,c!).B(a!1,b!1).M(a!1,b!1).S(a!1)
+    momomer_A   A(a,b,c)
+    monomer_B   B(a,b)
+    monomer_M   M(a,b)
+    monomer_D   S(a)
+end observables
+
+begin rules
+    A(a)+B(b)<->A(a!1).B(a!1)  G=15
+    A(b)+M(a)<->A(b!1).M(a!1)  G=-4.9
+    A(c)+S(a)<->A(c!1).S(a!1)  G=3.75
+    B(b)+M(b)<->B(b!1).M(b!1)  G=-40.32
+    M(c)+S(b)<->M(c!1).S(b!1)  G=-81.57
+end rules
