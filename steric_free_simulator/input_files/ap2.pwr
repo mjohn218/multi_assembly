@@ -26,9 +26,9 @@ begin observables
 end observables
 
 begin rules
-    A(a)+B(b)<->A(a!1).B(a!1)  G=15
-    A(b)+M(a)<->A(b!1).M(a!1)  G=-4.9
-    A(c)+S(a)<->A(c!1).S(a!1)  G=3.75
-    B(b)+M(b)<->B(b!1).M(b!1)  G=-40.32
-    M(c)+S(b)<->M(c!1).S(b!1)  G=-81.57
+    A(a)+B(b)<->A(a!1).B(a!1)  G=1650
+    A(b)+M(a)<->A(b!1).M(a!1)  G=-1300
+    A(c)+S(a)<->A(c!1).S(a!1)  G=1660
+    B(b)+M(b)<->B(b!1).M(b!1)  G=2100
+    M(c)+S(b)<->M(c!1).S(b!1)  G=-4050
 end rules

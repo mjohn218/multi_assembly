@@ -1,17 +1,9 @@
-import math
-
-from vectorized_rxn_net import VectorizedRxnNet
+from steric_free_simulator.vectorized_rxn_net import VectorizedRxnNet
 from reaction_network import ReactionNetwork
 import numpy as np
-from typing import Tuple, Union
-
-import matplotlib
-from matplotlib import pyplot as plt
 
 from torch import DoubleTensor as Tensor
-from torch import nn
 import torch
-import psutil
 import pandas as pd
 
 import sys
