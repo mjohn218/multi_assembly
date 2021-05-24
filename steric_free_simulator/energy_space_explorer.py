@@ -14,11 +14,8 @@ from reaction_network import ReactionNetwork
 from reaction_network import gtostr
 
 import os
-import pickle as pk
 import shutil
 import sys
-import networkx
-import numpy as np
 from pathos.multiprocessing import ProcessingPool as Pool
 
 
@@ -27,8 +24,15 @@ def strip_pdb_ext(pdb_file: str) -> str:
     name = ''.join(sorted(name))
     return name
 
-class EnergyExplorer:
 
+class EnergyExplorer:
+    """
+    A class to estimate the relative reaction free energies for a set of pairwise reactions.
+    Will output the energy estimates to the command line. It is up to the user to add them
+    to an input .pwr file if desired. Keep in mind that the scale of the energy score outputs
+    is arbitrary, and will likely need to be changed.
+
+    """
     def __init__(self, net: ReactionNetwork, subunit_dir: str):
         rosetta_init()
         self.net = net
@@ -106,25 +110,14 @@ class EnergyExplorer:
         return bound_score, prebound_score
 
     def explore_network(self):
-        processed = set()
         for node_id in self.net.network.nodes():
-            name = gtostr(self.net.network.nodes[node_id]['struct'])
-            name = ''.join(sorted(name))
-            if node_id < self.net.num_monomers:
-                self.net.network.nodes[node_id]['first'] = True
-            else:
-                self.net.network.nodes[node_id]['first'] = False
-            for predecessors in self.net.get_reactant_sets(node_id):
-                if name not in processed:
-                    # this pattern has not yet been processed.
+            structure = self.net.network.nodes[node_id]['struct']
+            if len(structure) == 2:
+                # is a pairwise reaction !
+                name = gtostr(structure)
+                name = ''.join(sorted(name))
+                for predecessors in self.net.get_reactant_sets(node_id):
                     r_score, pr_score = self.score_reaction(predecessors)
-                    self.net.network.nodes[node_id]['first'] = True  # attribute to tell whether score is inherited from previous node with this pattern
-                    processed.add(name)
-                else:
-                    # we will write the score to every node, and tell whether is energetically meaningful with "first" attribute.
-                    r_score = pr_score = self.written[name][1]
-                self.net.network.nodes[node_id]['score'] = pr_score  # add score attribute
-                for n in predecessors:
-                    self.net.network.edges[(n, node_id)]['rxn_score'] = pr_score - r_score
-        self.net.is_energy_set = True
+                    self.net.network.nodes[node_id]['score'] = pr_score  # add score attribute
+                    print('for pairwise product ', name, ' score is ', pr_score - r_score)
 
