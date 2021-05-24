@@ -49,7 +49,7 @@ class VecSim:
         self.use_energies = self.rn.is_energy_set
         self.runtime = runtime
         self.observables = self.rn.observables
-        self._constant = Tensor([score_constant]).to(self.dev)
+        self._constant = 1.
         self.avo = Tensor([6.022e23])
         self.steps = []
 
@@ -69,7 +69,7 @@ class VecSim:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
                 except IndexError:
                     print('bkpt')
-            l_conc_prod_vec = self.rn.get_log_copy_prod_vector(volume=self.volume)
+            l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # copies_prod = copies_prod + 2e-32
             # l_conc_prod_vec = torch.log(copies_prod)
             l_rxn_rates = l_conc_prod_vec + l_k
