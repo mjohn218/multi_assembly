@@ -99,8 +99,6 @@ class VectorizedRxnNet:
         """
         Returns log(k) for each reaction concatenated with log(koff) for each reaction
         """
-        # copies_R = self._R / self._avo
-        # copies_score = dGrxn / self._avo
         # above conversions cancel
         std_c = Tensor([1.])  # units mols / L
         l_kon = torch.log(kon)  # mol-1 s-1
@@ -111,7 +109,6 @@ class VectorizedRxnNet:
     def get_log_copy_prod_vector(self, volume: float):
         """
           get the vector storing product of copies for each reactant in each reaction.
-          Copies number a converted to M before calculation
         Returns: Tensor
             A tensor with shape (rxn_count * 2)
         """
