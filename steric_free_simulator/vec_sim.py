@@ -27,15 +27,12 @@ class VecSim:
 
     def __init__(self, net: VectorizedRxnNet,
                  runtime: float,
-                 score_constant: float = 1.,
-                 volume=1,
                  device='cuda:0'):
         """
 
         Args:
             net: The reaction network to run the simulation on.
             runtime: Length (in seconds) of the simulation.
-            score_constant: User defined parameter, equals Joules / Rosetta Score Unit.
             volume: Volume of simulation in Micro Meters. Default is .001 uL = 1 um^3
         """
         if torch.cuda.is_available() and "cpu" not in device:
@@ -54,7 +51,6 @@ class VecSim:
         self.observables = self.rn.observables
         self._constant = Tensor([score_constant]).to(self.dev)
         self.avo = Tensor([6.022e23])
-        self.volume = Tensor([volume * 1e-15]).to(self.dev)  # convert cubic micro-micrometers to liters
         self.steps = []
 
     def simulate(self, verbose=False):
@@ -85,8 +81,6 @@ class VecSim:
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
             min_copies[0:initial_monomers.shape[0]] = initial_monomers
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
-            #self.rn.copies_vec = torch.min(self.rn.copies_vec, min_copies)
-            initial_copies = self.rn.initial_copies
             step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
