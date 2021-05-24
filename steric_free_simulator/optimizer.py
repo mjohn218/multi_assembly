@@ -15,10 +15,6 @@ class Optimizer:
                  sim_runtime: float,
                  optim_iterations: int,
                  learning_rate: float,
-                 sim_mode="vectorized",
-                 resample_time_step=False,
-                 score_constant: float = 1.,
-                 volume=.1,
                  device='cpu'):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
@@ -28,28 +24,18 @@ class Optimizer:
             device = 'cpu'
             print("Using CPU")
         self._dev_name = device
-        if sim_mode == 'infinite':
-            self.sim_class = Simulator
-            self.rn = reaction_network
-        elif sim_mode == 'vectorized':
-            self.sim_class = VecSim
-            self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
-            resample_time_step = False
-        else:
-            raise TypeError("sim mode not available")
+        self.sim_class = VecSim
+        self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
         self.sim_runtime = sim_runtime
         param_itr = self.rn.get_params()
         self.optimizer = torch.optim.Adam(param_itr, learning_rate)
         self.lr = learning_rate
-        self.resample_time_step = resample_time_step
         self.optim_iterations = optim_iterations
         self.sim_observables = []
         self.parameter_history = []
         self.yield_per_iter = []
         self.is_optimized = False
         self.dt = None
-        self._sim_score_constant = score_constant
-        self._sim_volume = volume
 
     def plot_observable(self, iteration):
         t = self.sim_observables[iteration]['steps']
@@ -77,19 +63,9 @@ class Optimizer:
         for i in range(self.optim_iterations):
             # reset for new simulator
             self.rn.reset()
-            if self.resample_time_step or i == 0:
-                sim = self.sim_class(self.rn,
-                                     self.sim_runtime,
-                                     score_constant=self._sim_score_constant,
-                                     volume=self._sim_volume,
-                                     device=self._dev_name)
-                if type(sim) is Simulator:
-                    sim.optimize_step()
-            else:
-                sim = self.sim_class(self.rn, self.sim_runtime,
-                                     score_constant=self._sim_score_constant,
-                                     volume=self._sim_volume,
-                                     device=self._dev_name)
+            sim = self.sim_class(self.rn,
+                                 self.sim_runtime,
+                                 device=self._dev_name)
 
             # preform simulation
             self.optimizer.zero_grad()
@@ -100,23 +76,14 @@ class Optimizer:
             # update tracked data
             self.sim_observables.append(self.rn.observables.copy())
             self.sim_observables[-1]['steps'] = np.array(sim.steps)
-            if type(sim) is Simulator:
-                self.parameter_history.append(nx.get_edge_attributes(self.rn.network, 'k_on').copy())
-            elif type(sim) is VecSim:
-                self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
+            self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
 
             # preform gradient step
             if i != self.optim_iterations - 1:
                 k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
-                                                            scalar_modifier=self._sim_score_constant))
-                physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(
-                    self.dev)  # stops zeroing or negating params
+                                                            scalar_modifier=1.))
+                physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
                 cost = -total_yield + physics_penalty
-                if type(sim) is Simulator:
-                    og_params = np.array([p.item() for p in self.rn.get_params()])
-                elif type(sim) is VecSim:
-                    og_params = self.rn.kon.clone().detach()
-
                 cost.backward()
                 self.optimizer.step()
 
@@ -137,21 +104,18 @@ class Optimizer:
             if i == self.optim_iterations - 1:
                 print("optimization complete")
                 return self.rn
-                # print('avg parameter update: ' + str(np.mean(og_params - new_params)))
-                # print('max parameter update: ' + str(np.max(og_params - new_params)))
-                # print('min parameter update: ' + str(np.min(og_params - new_params)))
+
             del sim
+
 
 if __name__ == '__main__':
     from steric_free_simulator import ReactionNetwork
     base_input = './input_files/dimer.bngl'
     rn = ReactionNetwork(base_input, one_step=True)
-    rn.initialize_random_energy(percent_negative=-.75, score_range=10000, seed=4242)
     rn.reset()
     rn.intialize_activations()
     optim = Optimizer(reaction_network=rn,
                       sim_runtime=.001,
                       optim_iterations=10,
-                      learning_rate=10,
-                      sim_mode='vectorized')
+                      learning_rate=10,)
     vec_rn = optim.optimize()
