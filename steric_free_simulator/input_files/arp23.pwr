@@ -1,0 +1,42 @@
+# bngl needs to specify only basic dimerization rules, rates, initial values.
+
+begin model
+
+## Reserved Parameters::
+#   loop_coop: a list of loop cooperativity factors, one for each rule.
+
+begin parameters
+    init_pop    10000
+    kon .1
+    koff .0
+end parameters
+
+begin species
+    A19(a,b,c,d,e) init_pop
+    A3(a,b,c,d) init_pop
+    A2(a,b,c) init_pop
+    A15(a,b,c) init_pop
+    A40(a,b) init_pop
+    A35(a,b) init_pop
+    A18(a) init_pop
+end species
+
+begin observables
+    full_complex    A19(a!1,b!1,c!1,d!1,e!1)
+end observables
+
+begin rules
+    A19(a)+A3(a)<->A19(a!1).A3(a!1) 1, koff
+    A19(b)+A2(a)<->A19(b!1).A2(a!1) .1, koff
+    A19(c)+A15(a)<->A19(c!1).A15(a!1) .1, koff
+    A19(d)+A40(a)<->A19(d!1).A40(a!1) .1, koff
+    A19(e)+A35(a)<->A19(e!1).A35(a!1) 1, koff
+
+    A3(b)+A2(b)<->A3(b!1).A2(b!1) .1, koff
+    A3(c)+A35(b)<->A3(c!1).A35(b!1) .1, koff
+    A3(d)+A18(a)<->A3(d!1).A18(a!1) .1, koff
+
+    A2(c)+A15(b)<->A2(c!1).A15(b!1) .1, koff
+
+    A15(c)+A40(b)<->A15(c!1).A40(b!1) .1, koff
+end rules
