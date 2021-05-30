@@ -106,7 +106,7 @@ class VectorizedRxnNet:
         l_k = torch.cat([l_kon, l_koff], dim=0)
         return l_k.clone().to(self.dev)
 
-    def get_log_copy_prod_vector(self, volume: float):
+    def get_log_copy_prod_vector(self):
         """
           get the vector storing product of copies for each reactant in each reaction.
         Returns: Tensor
@@ -114,19 +114,12 @@ class VectorizedRxnNet:
         """
         r_filter = -1 * self.M.T.clone()
         r_filter[r_filter == 0] = -1
-
         c_temp_mat = torch.mul(r_filter, self.copies_vec)
-
         l_c_temp_mat = torch.log(c_temp_mat)
-
         l_c_temp_mat[c_temp_mat < 0] = 0
-
         c_mask = r_filter + self.copies_vec
-
         l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)
-
-        l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1) # compute log products
-
+        l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)  # compute log products
         return l_c_prod_vec
 
     def update_reaction_net(self, rn, scalar_modifier: int = 1):
