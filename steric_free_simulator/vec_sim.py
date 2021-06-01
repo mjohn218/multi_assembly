@@ -21,8 +21,7 @@ class VecSim:
     Run a vectorized deterministic simulation. All data and parameters are represented as
     Torch Tensors, allowing for gradients to be tracked. This simulator was designed to
     fill three primary requirements.
-        - The simulation must be fully differentiable. That is, the entire can be thought
-          of as a single multi-varie
+        - The simulation must be fully differentiable.
     """
 
     def __init__(self, net: VectorizedRxnNet,
@@ -33,7 +32,7 @@ class VecSim:
         Args:
             net: The reaction network to run the simulation on.
             runtime: Length (in seconds) of the simulation.
-            volume: Volume of simulation in Micro Meters. Default is .001 uL = 1 um^3
+
         """
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
@@ -70,17 +69,18 @@ class VecSim:
                 except IndexError:
                     print('bkpt')
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
-            # copies_prod = copies_prod + 2e-32
-            # l_conc_prod_vec = torch.log(copies_prod)
             l_rxn_rates = l_conc_prod_vec + l_k
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
             delta_copies = torch.matmul(self.rn.M, rate_step)
+
+            # Prevent negative copy cumbers explicitly (possible due to local linear approximation)
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
             min_copies[0:initial_monomers.shape[0]] = initial_monomers
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
+
             step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())

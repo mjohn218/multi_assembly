@@ -2,9 +2,7 @@ import torch
 from torch.nn import functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-import networkx as nx
 import psutil
-from steric_free_simulator import Simulator
 from steric_free_simulator import VecSim
 from steric_free_simulator import VectorizedRxnNet
 
@@ -25,7 +23,13 @@ class Optimizer:
             print("Using CPU")
         self._dev_name = device
         self.sim_class = VecSim
-        self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
+        if type(reaction_network) is not VectorizedRxnNet:
+            try:
+                self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
+            except Exception:
+                raise TypeError(" Must be type ReactionNetwork or VectorizedRxnNetwork.")
+        else:
+            self.rn = reaction_network
         self.sim_runtime = sim_runtime
         param_itr = self.rn.get_params()
         self.optimizer = torch.optim.Adam(param_itr, learning_rate)
@@ -37,13 +41,16 @@ class Optimizer:
         self.is_optimized = False
         self.dt = None
 
-    def plot_observable(self, iteration):
+    def plot_observable(self, iteration, ax=None):
         t = self.sim_observables[iteration]['steps']
         for key in self.sim_observables[iteration].keys():
             if key == 'steps':
                 continue
             data = np.array(self.sim_observables[iteration][key][1])
-            plt.plot(t, data, label=self.sim_observables[iteration][key][0])
+            if not ax:
+                plt.plot(t, data, label=self.sim_observables[iteration][key][0])
+            else:
+                ax.plot(t, data, label=self.sim_observables[iteration][key][0])
         lgnd = plt.legend(loc='best')
         for i in range(len(lgnd.legendHandles)):
             lgnd.legendHandles[i]._sizes = [30]
@@ -53,7 +60,6 @@ class Optimizer:
     def plot_yield(self):
         steps = np.arange(len(self.yield_per_iter))
         data = np.array(self.yield_per_iter, dtype=np.float)
-        data[data < .1] = np.mean(data[data > .1])
         plt.plot(steps, data)
         plt.ylim((0, 1))
         plt.title = 'Yield at each iteration'
@@ -86,14 +92,7 @@ class Optimizer:
                 cost = -total_yield + physics_penalty
                 cost.backward()
                 self.optimizer.step()
-
-                if type(sim) is Simulator:
-                    new_params = np.array([p.item() for p in self.rn.get_params()])
-                elif type(sim) is VecSim:
-                    new_params = self.rn.kon.clone().detach()
-                else:
-                    raise TypeError
-
+                new_params = self.rn.kon.clone().detach()
                 print('current params: ' + str(new_params))
 
             values = psutil.virtual_memory()
