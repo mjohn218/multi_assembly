@@ -37,8 +37,10 @@ class VectorizedRxnNet:
         self.reaction_ids = []
         self.to(dev)
 
-    def reset(self):
+    def reset(self, reset_params=False):
         self.copies_vec = self.initial_copies.clone()
+        if reset_params:
+            self.kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
         for key in self.observables:
             self.observables[key] = (self.observables[key][0], [])
 
