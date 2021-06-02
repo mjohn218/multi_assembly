@@ -97,7 +97,7 @@ class Optimizer:
 
             values = psutil.virtual_memory()
             mem = values.available / (1024.0 ** 3)
-            if mem < 8:
+            if mem < .5:
                 # kill program if it uses to much ram
                 return self.rn
             if i == self.optim_iterations - 1:
