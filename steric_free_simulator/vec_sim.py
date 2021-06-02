@@ -1,10 +1,11 @@
 from steric_free_simulator.vectorized_rxn_net import VectorizedRxnNet
-from reaction_network import ReactionNetwork
+from steric_free_simulator import ReactionNetwork
 import numpy as np
 
 from torch import DoubleTensor as Tensor
 import torch
 import pandas as pd
+from matplotlib import pyplot as plt
 
 import sys
 
@@ -79,8 +80,9 @@ class VecSim:
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
             min_copies[0:initial_monomers.shape[0]] = initial_monomers
-            self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape, device=self.dev))
-
+            self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape,
+                                                                                          dtype=torch.double,
+                                                                                          device=self.dev))
             step = torch.exp(l_step)
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
@@ -91,6 +93,18 @@ class VecSim:
         total_complete = self.rn.copies_vec[-1]
         final_yield = total_complete / max_poss_yield
         return final_yield.to(self.dev)
+
+    def plot_observable(self, ax=None):
+        t = np.array(self.steps)
+        for key in self.observables.keys():
+            data = np.array(self.observables[key][1])
+            if not ax:
+                plt.plot(t, data, label=self.observables[key][0])
+            else:
+                ax.plot(t, data, label=self.observables[key][0])
+        lgnd = plt.legend(loc='best')
+        for i in range(len(lgnd.legendHandles)):
+            lgnd.legendHandles[i]._sizes = [30]
 
     def observables_to_csv(self, out_path):
         data = {}

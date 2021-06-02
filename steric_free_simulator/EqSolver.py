@@ -1,5 +1,5 @@
-from reaction_network import ReactionNetwork
-from reaction_network import gtostr
+from steric_free_simulator import ReactionNetwork
+from steric_free_simulator.reaction_network import gtostr
 import numpy as np
 from typing import Tuple, Union
 
@@ -57,7 +57,7 @@ class EquilibriumSolver:
             solution = sympy.solvers.nsolve(self.poly_system,
                                             list(self.symbols.values()),
                                             init_val,
-                                            prec=5,
+                                            prec=7,
                                             max_steps=1000000000,
                                             verify=True)
         except ValueError:
