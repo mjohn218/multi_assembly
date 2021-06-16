@@ -53,7 +53,7 @@ class ReactionNetwork:
 
     Attributes:
         network: nx.DiGraph
-            The networkx graoh object that encodes allowed reactions in its structure.
+            The networkx graph object that encodes allowed reactions in its structure.
             Nodes are structures (including all possible intermediates), and also
             store the copy number for the structure, and a graph layout of the structure.
             An edge indicates that one node may react to produce another, if more than one
@@ -130,6 +130,8 @@ class ReactionNetwork:
         #           range of 0 to 1, with binding being strongly forward at 1
         items = line.split(None, 1)
         items[1] = eval(items[1])
+        if items[0] == 'default_assoc':
+            self.default_k_on = items[1]
         return items
 
     def parse_species(self, line, params):
@@ -151,25 +153,18 @@ class ReactionNetwork:
     def parse_rule(self, line, params, seed=None, percent_negative=.5, score_range=100):
         items = re.split(r' |, ', line)
         r_info = re.split('\\(.\\)+.|\\(.\\)<->', items[0])
-        try:
-            k_on = None # float(items[1])
-        except ValueError:
-            k_on = None # float(params[items[1]])
-        if len(items) > 2:
-            try:
-                k_off = None # float(items[2])
-            except ValueError:
-                k_off = None # float(params[items[2]])
+        if params['default_assoc']:
+            self.k_on = params['default_assoc']
         else:
-            k_off = None  # 0
-
+            self.k_on = 1
+        k_off = None
         if 'G=' in items[-1]:
             score = Tensor([float(items[-1].split('=')[1])])
         else:
             if seed:
                 torch.random.manual_seed(seed)
             score = (rand(1, dtype=torch.double) - percent_negative) * score_range
-        self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [k_on, k_off, LOOP_COOP_DEFAULT, score]
+        self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [None, None, LOOP_COOP_DEFAULT, score]
 
     def parse_bngl(self, f, seed=None):
         """
@@ -245,7 +240,6 @@ class ReactionNetwork:
                 self.parameters[tuple(list(reactant_set) + [node])] = k_on
                 for source in reactant_set:
                     self.network.edges[(source, node)]['k_on'] = k_on
-                    self.network.edges[(source, node)]['k_off'] = k_on
 
     def initialize_random_pairwise_energy(self, percent_negative=.5, score_range=1000, seed=None):
         for node in self.network.nodes:
@@ -291,15 +285,15 @@ class ReactionNetwork:
         else:
             dg_coop = sum([self.allowed_edges[e][3] for e in template])
             self.network.add_edge(source_1, new_node,
-                                  k_on=1,
-                                  k_off=.1,
+                                  k_on=self.default_k_on,
+                                  k_off=None,
                                   lcf=1,
                                   rxn_score=dg_coop,
                                   uid=self._rxn_count)
             if source_2 is not None:
                 self.network.add_edge(source_2, new_node,
-                                      k_on=1,
-                                      k_off=.1,
+                                      k_on=self.default_k_on,
+                                      k_off=None,
                                       lcf=1,
                                       rxn_score=dg_coop,
                                       uid=self._rxn_count)
