@@ -21,16 +21,28 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, dev):
+    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dev='cpu'):
+        """
+
+        :param rn: The reaction network template
+        :param assoc_is_param: whether the association constants should be treated as parameters for optimization
+        :param copies_is_param: whether the initial copy numbers should be treated as parameters for optimization
+        :param dev: the device to use for torch tensors
+        """
         rn.reset()
-        self.dev = torch.device('cpu')
+        self.dev = torch.device(dev)
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K
         self._T = Tensor([273.15])  # K
-        self.M, kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
-        self.initial_params = Tensor(kon).clone().detach()
+        self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
+        self.initial_params = Tensor(self.kon).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
-        self.kon = nn.Parameter(kon, requires_grad=True)
+        self.assoc_is_param = assoc_is_param
+        self.copies_is_param = copies_is_param
+        if assoc_is_param:
+            self.kon = nn.Parameter(self.kon, requires_grad=True)
+        if copies_is_param:
+            self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
         self.observables = rn.observables
         self.is_energy_set = rn.is_energy_set
         self.num_monomers = rn.num_monomers
@@ -45,7 +57,12 @@ class VectorizedRxnNet:
             self.observables[key] = (self.observables[key][0], [])
 
     def get_params(self):
-        yield self.kon
+        if self.assoc_is_param and self.copies_is_param:
+            return [self.kon, self.c_params]
+        elif self.copies_is_param:
+            return [self.c_params]
+        elif self.assoc_is_param:
+            return [self.kon]
 
     def to(self, dev):
         self.M = self.M.to(dev)
