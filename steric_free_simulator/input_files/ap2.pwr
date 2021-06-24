@@ -4,10 +4,7 @@ begin model
 #   loop_coop: a list of loop cooperativity factors, one for each rule.
 
 begin parameters
-    init_pop    10000
-    kon .1
-    koff .01
-    # loop_coop   [1, 1, 1, 1]
+    default_assoc   1.
 end parameters
 
 begin species
