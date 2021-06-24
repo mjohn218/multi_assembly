@@ -1,5 +1,5 @@
 begin parameters
-
+    default_assoc   1.
 end parameters
 
 begin species
