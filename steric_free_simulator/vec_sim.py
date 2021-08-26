@@ -72,10 +72,31 @@ class VecSim:
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             l_rxn_rates = l_conc_prod_vec + l_k
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
+            #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
             delta_copies = torch.matmul(self.rn.M, rate_step)
 
+            if (torch.min(self.rn.copies_vec + delta_copies) < 1e-8):
+                #print("Taking smaller timestep")
+                #Take a smaller time step
+                l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
+                l_step = 0 - l_total_rate
+                rate_step = torch.exp(l_rxn_rates + l_step)
+                delta_copies = torch.matmul(self.rn.M, rate_step)
+
+
+            # print("-----------------------------")
+            # print("Total number of A: ", self.rn.copies_vec[0]+self.rn.copies_vec[4]+self.rn.copies_vec[5]+self.rn.copies_vec[6])
+            # print("Rxn rates: ", l_rxn_rates)
+            # print("Total rxn rate: ",l_total_rate)
+            # print("Copies: ",self.rn.copies_vec)
+            # print("Next step size: ",l_step)
+            # print("Rate step: ", rate_step)
+            # print("Matrix: ",self.rn.M)
+            # print("delta_copies: ", delta_copies)
+
+            #print("Current time: ",cur_time)
             # Prevent negative copy cumbers explicitly (possible due to local linear approximation)
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
@@ -83,7 +104,18 @@ class VecSim:
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape,
                                                                                           dtype=torch.double,
                                                                                           device=self.dev))
+            #print("Final copies: ", self.rn.copies_vec[-1])
             step = torch.exp(l_step)
+            if cur_time + step > self.runtime:
+                print("Current time: ",cur_time)
+                print("Next time: ",cur_time + step)
+                print("Next time larger than simulation runtime. Ending simulation.")
+                for obs in self.rn.observables.keys():
+                    try:
+                        self.rn.observables[obs][1].pop()
+                    except IndexError:
+                        print('bkpt')
+                break
             cur_time = cur_time + step
             self.steps.append(cur_time.item())
 
@@ -94,15 +126,20 @@ class VecSim:
         final_yield = total_complete / max_poss_yield
         return final_yield.to(self.dev)
 
-    def plot_observable(self, ax=None):
+    def plot_observable(self,nodes_list, ax=None):
         t = np.array(self.steps)
         for key in self.observables.keys():
-            data = np.array(self.observables[key][1])
-            if not ax:
-                plt.plot(t, data, label=self.observables[key][0])
-            else:
-                ax.plot(t, data, label=self.observables[key][0])
+
+            if self.observables[key][0] in nodes_list:
+                data = np.array(self.observables[key][1])
+                if not ax:
+                    plt.plot(t, data, label=self.observables[key][0])
+                else:
+                    ax.plot(t, data, label=self.observables[key][0])
         lgnd = plt.legend(loc='best')
+        plt.ticklabel_format(style='sci',scilimits=(-3,3))
+        plt.ylabel(r'Conc in M')
+        plt.xlabel('Time (s)')
         for i in range(len(lgnd.legendHandles)):
             lgnd.legendHandles[i]._sizes = [30]
 

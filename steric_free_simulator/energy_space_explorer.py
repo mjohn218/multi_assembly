@@ -5,7 +5,7 @@ from pyrosetta import pose_from_pdb
 from pyrosetta import dump_pdb
 from pyrosetta import init as rosetta_init
 import pyrosetta.rosetta.protocols.relax as relax
-from rosetta.protocols.relax import *
+from pyrosetta.rosetta.protocols.relax import *
 from pyrosetta import get_fa_scorefxn
 from pyrosetta.toolbox import cleanATOM
 from pyrosetta import Pose
@@ -85,6 +85,7 @@ class EnergyExplorer:
         name = ''.join(sorted(name))
         if name in self.written:
             return self.written[name]
+        print("pdb_file: ", pdb_file)
         new_pose = pose_from_pdb(pdb_file)
         self.relaxer.apply(new_pose)
         new_pose.dump_pdb(os.path.join(os.path.split(pdb_file)[0], name + '.relaxed.clean.pdb'))
@@ -120,4 +121,3 @@ class EnergyExplorer:
                     r_score, pr_score = self.score_reaction(predecessors)
                     self.net.network.nodes[node_id]['score'] = pr_score  # add score attribute
                     print('for pairwise product ', name, ' score is ', pr_score - r_score)
-

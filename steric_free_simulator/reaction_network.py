@@ -146,6 +146,7 @@ class ReactionNetwork:
                 init_pop = int(params[items[1]])
         state_net = nx.Graph()
         state_net.add_node(sp_info[0])
+        print(state_net.nodes())
         self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]))
         self._initial_copies[self._node_count] = Tensor([float(init_pop)])
         self._node_count += 1
@@ -269,6 +270,8 @@ class ReactionNetwork:
         node_exists = [x for x in self.network.nodes(data=True) if
                        _equal(x[1]['struct'], connected_item)]
         if len(node_exists) == 0:
+            print("New node added--1")
+            print(connected_item.nodes())
             self.network.add_node(self._node_count, struct=connected_item, copies=Tensor([0.]))
             self._initial_copies[self._node_count] = Tensor([0.])
             new_node = self._node_count
@@ -283,7 +286,8 @@ class ReactionNetwork:
         if not template:
             return None
         else:
-            dg_coop = sum([self.allowed_edges[e][3] for e in template])
+            print(self.allowed_edges)
+            dg_coop = sum([self.allowed_edges[tuple(sorted(e))][3] for e in template])
             self.network.add_edge(source_1, new_node,
                                   k_on=self.default_k_on,
                                   k_off=None,
@@ -299,6 +303,8 @@ class ReactionNetwork:
                                       uid=self._rxn_count)
         self._rxn_count += 1
         if len(node_exists) == 0:
+            print("New node added--2")
+            print(self.network.nodes())
             return (new_node, self.network.nodes[new_node])
         else:
             return None
@@ -321,7 +327,10 @@ class ReactionNetwork:
             item = orig
         connected_item = item.copy()
         new_bonds = []
+        add_to_graph = False
         for poss_edge in list(self.allowed_edges.keys()):
+            print("Allowed edges: ")
+            print(poss_edge)
             if False not in [item.has_node(n) for n in poss_edge] and \
                     (n2 is None or
                      (True in [orig.has_node(n) for n in poss_edge] and
@@ -329,10 +338,13 @@ class ReactionNetwork:
                     and not item.has_edge(poss_edge[0], poss_edge[1]):
                 connected_item.add_edge(poss_edge[0], poss_edge[1])
                 new_bonds.append(poss_edge)
+                add_to_graph=True
+                print("Connected Nodes: ",connected_item.nodes())
+                print("Connected Edges: ",connected_item.edges())
             else:
                 continue
         # resolving one step  network
-        if one_step:
+        if one_step and add_to_graph:
             new_node = self._add_graph_state(connected_item, n1, source_2=n2, template=new_bonds)
             if new_node is not None:
                 nodes_added.append(new_node)
@@ -348,6 +360,10 @@ class ReactionNetwork:
         """
         node_set1 = set(n1[1]['struct'].nodes())
         node_set2 = set(n2[1]['struct'].nodes())
+        print("-----")
+        print(node_set1)
+        print(node_set2)
+        print(node_set1 - node_set2)
         return len(node_set1 - node_set2) < len(node_set1)
 
     def resolve_tree(self):
@@ -361,15 +377,17 @@ class ReactionNetwork:
             node = new_nodes.pop(0)
             for anode in list(self.network.nodes(data=True)):
                 if not self.is_hindered(node, anode):
+                    print("False")
                     new_nodes += self.match_maker(node, anode, self.is_one_step)
             # must also try internal bonds
             new_nodes += self.match_maker(node)
 
         # add default observables
-        for i in range(self.num_monomers):
+        #Add all nodes as observables
+        for i in range(len(self.network.nodes)):
             self.observables[i] = (gtostr(self.network.nodes[i]['struct']), [])
-        fin_dex = len(self.network.nodes) - 1
-        self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
+        # fin_dex = len(self.network.nodes) - 1
+        # self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
 
 if __name__ == '__main__':
     bngls_path = sys.argv[1]  # path to bngl

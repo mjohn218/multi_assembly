@@ -29,7 +29,7 @@ class VectorizedRxnNet:
         :param copies_is_param: whether the initial copy numbers should be treated as parameters for optimization
         :param dev: the device to use for torch tensors
         """
-        rn.reset()
+        #rn.reset()
         self.dev = torch.device(dev)
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K

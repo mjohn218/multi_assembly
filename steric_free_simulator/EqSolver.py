@@ -47,11 +47,15 @@ class EquilibriumSolver:
         self.rn = net
         self.poly_system, self.symbols = find_eq_eqns(net)
 
-    def solve(self, depth=0):
+    def solve(self, depth=0, init_val=[],verifyBool=True):
+        print(self.poly_system)
         if depth > 100:
-            raise ValueError('unable to find acceptable solution')
+            #raise ValueError('unable to find acceptable solution')
+            print("No aceeptable solution found")
+            return None
         copies = list(self.rn._initial_copies.values())
-        init_val = (np.random.rand((len(copies))) * max(copies).clone().detach().numpy()).tolist()
+        if not init_val:
+            init_val = (np.random.rand((len(copies))) * max(copies).clone().detach().numpy()).tolist()
         solution = None
         try:
             solution = sympy.solvers.nsolve(self.poly_system,
@@ -59,10 +63,8 @@ class EquilibriumSolver:
                                             init_val,
                                             prec=7,
                                             max_steps=1000000000,
-                                            verify=True)
+                                            verify=verifyBool)
         except ValueError:
             self.solve(depth=depth+1)
 
         return solution
-
-

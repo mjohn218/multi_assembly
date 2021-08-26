@@ -8,10 +8,10 @@ begin parameters
 end parameters
 
 begin species
-    A(a,b,c) 4.47 umol
-    M(a,b,c) 6.06 umol
-    B(a,b) 5.85 umol
-    S(a,b) 8.45 umol
+    A(a,b,c) 20.0 umol
+    M(a,b,c) 20.0 umol
+    B(a,b) 20.0 umol
+    S(a,b) 20.0 umol
 end species
 
 begin observables
@@ -23,9 +23,9 @@ begin observables
 end observables
 
 begin rules
-    A(a)+B(b)<->A(a!1).B(a!1)  G=1650
-    A(b)+M(a)<->A(b!1).M(a!1)  G=-1300
-    A(c)+S(a)<->A(c!1).S(a!1)  G=1660
-    B(b)+M(b)<->B(b!1).M(b!1)  G=2100
-    M(c)+S(b)<->M(c!1).S(b!1)  G=-4050
+    A(a)+B(b)<->A(a!1).B(a!1)  G=-10000	
+    A(b)+M(a)<->A(b!1).M(a!1)  G=-10000	
+    A(c)+S(a)<->A(c!1).S(a!1)  G=-10000
+    B(b)+M(b)<->B(b!1).M(b!1)  G=-10000
+    M(c)+S(b)<->M(c!1).S(b!1)  G=-10000
 end rules

@@ -41,16 +41,19 @@ class Optimizer:
         self.is_optimized = False
         self.dt = None
 
-    def plot_observable(self, iteration, ax=None):
+    def plot_observable(self, iteration, nodes_list,ax=None):
         t = self.sim_observables[iteration]['steps']
+
         for key in self.sim_observables[iteration].keys():
             if key == 'steps':
                 continue
-            data = np.array(self.sim_observables[iteration][key][1])
-            if not ax:
-                plt.plot(t, data, label=self.sim_observables[iteration][key][0])
-            else:
-                ax.plot(t, data, label=self.sim_observables[iteration][key][0])
+
+            elif self.sim_observables[iteration][key][0] in nodes_list:
+                data = np.array(self.sim_observables[iteration][key][1])
+                if not ax:
+                    plt.plot(t, data, label=self.sim_observables[iteration][key][0])
+                else:
+                    ax.plot(t, data, label=self.sim_observables[iteration][key][0])
         lgnd = plt.legend(loc='best')
         for i in range(len(lgnd.legendHandles)):
             lgnd.legendHandles[i]._sizes = [30]
@@ -66,6 +69,9 @@ class Optimizer:
         plt.show()
 
     def optimize(self):
+        print("Reaction Parameters before optimization: ")
+        print(self.rn.get_params())
+        counter = 0
         for i in range(self.optim_iterations):
             # reset for new simulator
             self.rn.reset()
@@ -76,6 +82,17 @@ class Optimizer:
             # preform simulation
             self.optimizer.zero_grad()
             total_yield = sim.simulate()
+
+            #Check change in yield from last gradient step. Break if less than a tolerance
+            # if i > 1 and total_yield - self.yield_per_iter[-1] < 1e-8:
+            #     counter+=1
+            #
+            #     if counter >10 :
+            #         print("Max tolerance reached. Stopping optimization")
+            #         print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+            #         return self.rn
+            # else:
+            #     counter = 0
             self.yield_per_iter.append(total_yield.item())
             print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
 
