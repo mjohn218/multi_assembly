@@ -10,6 +10,9 @@ Thumbs.db
 #IDE ANNOYING FILES#
 *.idea
 *.iml
+*.spyproject
+*spyder*
+*pycache*
 
 #GENERALLY IGNORE OBJECT BINARIES OR SERIALIZATION#
 *.pkl
