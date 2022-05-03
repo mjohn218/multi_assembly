@@ -148,10 +148,15 @@ class VectorizedRxnNet:
         """
         r_filter = -1 * self.M.T.clone()
         r_filter[r_filter == 0] = -1
-        c_temp_mat = torch.mul(r_filter, self.copies_vec)
+        m_sign = torch.sign(r_filter)
+
+        c_temp_mat = self.copies_vec.pow(torch.abs(r_filter))
+        c_temp_mat = torch.mul(m_sign, c_temp_mat)
+
         l_c_temp_mat = torch.log(c_temp_mat)
         l_c_temp_mat[c_temp_mat < 0] = 0
         c_mask = r_filter + self.copies_vec
+
         l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)
         l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)  # compute log products
         return l_c_prod_vec
