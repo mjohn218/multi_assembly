@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union, Dict
 
 from steric_free_simulator import ReactionNetwork
 
@@ -20,8 +20,7 @@ class VectorizedRxnNet:
     units of Kon assumed to be [copies]-1 S-1, units of Koff S-1
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
-
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dev='cpu'):
+    def __init__(self, rn: Union[ReactionNetwork, Dict], assoc_is_param=True, copies_is_param=False, dev='cpu'):
         """
 
         :param rn: The reaction network template
@@ -29,12 +28,30 @@ class VectorizedRxnNet:
         :param copies_is_param: whether the initial copy numbers should be treated as parameters for optimization
         :param dev: the device to use for torch tensors
         """
-        rn.reset()
         self.dev = torch.device(dev)
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K
         self._T = Tensor([273.15])  # K
-        self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
+        if type(rn) is ReactionNetwork:
+            rn.reset()
+            self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
+            self.observables = rn.observables
+            self.is_energy_set = rn.is_energy_set
+            self.num_monomers = rn.num_monomers
+        elif type(rn) is dict:
+            print("Vectorized Network Conditions Are Being Set Manually....")
+            assert len(set(rn.keys()).intersection({'M', 'rxn_score_vec', 'copies_vec', 'kon', 'num_monomers'})) == 5
+            self.M = rn['M']
+            self.kon = rn['kon']
+            self.rxn_score_vec = rn['rxn_score_vec']
+            self.copies_vec = rn['copies_vec']
+            self.num_monomers = rn['num_monomers']
+            self.observables = {}
+            for i in range(self.num_monomers):
+                self.observables[i] = (str(i), [])
+            self.observables[len(self.M) - 1] = ('complete', [])
+            self.is_energy_set = True
+
         self.initial_params = Tensor(self.kon).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
         self.assoc_is_param = assoc_is_param
@@ -43,9 +60,7 @@ class VectorizedRxnNet:
             self.kon = nn.Parameter(self.kon, requires_grad=True)
         if copies_is_param:
             self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
-        self.observables = rn.observables
-        self.is_energy_set = rn.is_energy_set
-        self.num_monomers = rn.num_monomers
+
         self.reaction_ids = []
         self.to(dev)
 
