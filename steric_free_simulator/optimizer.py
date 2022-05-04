@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import psutil
 from steric_free_simulator import VecSim
-from steric_free_simulator import VectorizedRxnNet
+from steric_free_simulator import VectorizedRxnNet, ReactionNetwork
 
 
 class Optimizer:
@@ -13,7 +13,9 @@ class Optimizer:
                  sim_runtime: float,
                  optim_iterations: int,
                  learning_rate: float,
-                 device='cpu'):
+                 device='cpu',
+                 optimize_copies=False,
+                 optimize_rate_constants=True):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
             print("Using " + device)
@@ -23,13 +25,16 @@ class Optimizer:
             print("Using CPU")
         self._dev_name = device
         self.sim_class = VecSim
-        if type(reaction_network) is not VectorizedRxnNet:
-            try:
-                self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
-            except Exception:
-                raise TypeError(" Must be type ReactionNetwork or VectorizedRxnNetwork.")
-        else:
+        self.optimize_copies = optimize_copies
+        self.optimize_rates = optimize_rate_constants
+        if type(reaction_network) is ReactionNetwork:
+            self.rn = VectorizedRxnNet(reaction_network, dev=self.dev,
+                                       copies_is_param=optimize_copies,
+                                       assoc_is_param=optimize_rate_constants)
+        elif type(reaction_network) is VectorizedRxnNet:
             self.rn = reaction_network
+        else:
+            raise TypeError
         self.sim_runtime = sim_runtime
         param_itr = self.rn.get_params()
         self.optimizer = torch.optim.Adam(param_itr, learning_rate)
@@ -40,6 +45,8 @@ class Optimizer:
         self.yield_per_iter = []
         self.is_optimized = False
         self.dt = None
+
+
 
     def plot_observable(self, iteration, ax=None):
         t = self.sim_observables[iteration]['steps']
@@ -92,8 +99,13 @@ class Optimizer:
                 cost = -total_yield + physics_penalty
                 cost.backward()
                 self.optimizer.step()
-                new_params = self.rn.kon.clone().detach()
-                print('current params: ' + str(new_params))
+
+                if self.optimize_rates:
+                    new_params = self.rn.kon.clone().detach()
+                    print('current rate constant params: ' + str(new_params))
+                if self.optimize_copies:
+                    new_params = self.rn.c_params
+                    print('current monomer initial copies params: ' + str(new_params))
 
             values = psutil.virtual_memory()
             mem = values.available / (1024.0 ** 3)

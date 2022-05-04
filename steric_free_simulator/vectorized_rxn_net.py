@@ -59,13 +59,17 @@ class VectorizedRxnNet:
         if assoc_is_param:
             self.kon = nn.Parameter(self.kon, requires_grad=True)
         if copies_is_param:
-            self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
+            self.c_params = nn.Parameter(self.initial_copies[:self.num_monomers], requires_grad=True)
 
         self.reaction_ids = []
         self.to(dev)
 
     def reset(self, reset_params=False):
-        self.copies_vec = self.initial_copies.clone()
+        if self.copies_is_param:
+            zero_pad = torch.zeros_like(self.initial_copies[self.num_monomers:])
+            self.copies_vec = torch.cat([self.c_params, zero_pad], dim=0)
+        else:
+            self.copies_vec = self.initial_copies.clone()
         if reset_params:
             self.kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
         for key in self.observables:

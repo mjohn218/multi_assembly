@@ -77,7 +77,7 @@ class ReactionNetwork:
         :param bngl_path: path to bngl containing pairwise interactions.
         :param one_step: whether this reaction network should be built as one step or two step
         """
-        self.network: nx.MultiDiGraph() = nx.MultiDiGraph()
+        self.network: nx.DiGraph() = nx.DiGraph()
         self.allowed_edges = {}
         self._node_count = 0
         self._rxn_count = 0
@@ -358,11 +358,10 @@ class ReactionNetwork:
         """
         new_nodes = list(self.network.nodes(data=True))
         while len(new_nodes) > 0:
-            node = new_nodes[0]
+            node = new_nodes.pop(0)
             for anode in list(self.network.nodes(data=True)):
                 if not self.is_hindered(node, anode):
                     new_nodes += self.match_maker(node, anode, self.is_one_step)
-            new_nodes.pop(0)
             # must also try internal bonds
             new_nodes += self.match_maker(node)
 
