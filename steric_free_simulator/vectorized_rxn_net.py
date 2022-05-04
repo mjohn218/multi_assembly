@@ -56,10 +56,11 @@ class VectorizedRxnNet:
         self.initial_copies = self.copies_vec.clone().detach()
         self.assoc_is_param = assoc_is_param
         self.copies_is_param = copies_is_param
+        self.c_params = self.initial_copies[:self.num_monomers]
         if assoc_is_param:
             self.kon = nn.Parameter(self.kon, requires_grad=True)
         if copies_is_param:
-            self.c_params = nn.Parameter(self.initial_copies[:self.num_monomers], requires_grad=True)
+            self.c_params = nn.Parameter(self.c_params, requires_grad=True)
 
         self.reaction_ids = []
         self.to(dev)

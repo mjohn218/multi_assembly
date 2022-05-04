@@ -27,7 +27,8 @@ class VecSim:
 
     def __init__(self, net: VectorizedRxnNet,
                  runtime: float,
-                 device='cuda:0'):
+                 device='cuda:0',
+                 yield_metric='absolute'):
         """
 
         Args:
@@ -51,7 +52,24 @@ class VecSim:
         self.observables = self.rn.observables
         self._constant = 1.
         self.avo = Tensor([6.022e23])
+        self.yield_metric = yield_metric
         self.steps = []
+
+    @staticmethod
+    def _compute_yield(monomer_copies, total_complete, yield_metric):
+        """
+        Args:
+            monomer_copies:
+            yield_metric:   'absolute' - percent of theoretical yield (percent of initial copies of limiting monomer)
+                            'balanced' - percent of average initial concentration of all monomer species.
+        """
+        if yield_metric == 'absolute':
+            possible = torch.min(monomer_copies)
+        elif yield_metric == 'balanced':
+            possible = torch.mean(monomer_copies)
+        else:
+            raise ValueError
+        return total_complete / possible
 
     def simulate(self, verbose=False):
         """
@@ -61,7 +79,6 @@ class VecSim:
         cur_time = 0
         cutoff = 10000000
         # update observables
-        max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
         l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         while cur_time < self.runtime:
             for obs in self.rn.observables.keys():
@@ -90,8 +107,7 @@ class VecSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-        total_complete = self.rn.copies_vec[-1]
-        final_yield = total_complete / max_poss_yield
+        final_yield = self._compute_yield(self.rn.c_params, self.rn.copies_vec.clone()[-1], self.yield_metric)
         return final_yield.to(self.dev)
 
     def plot_observable(self, ax=None):

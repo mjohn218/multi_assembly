@@ -15,7 +15,8 @@ class Optimizer:
                  learning_rate: float,
                  device='cpu',
                  optimize_copies=False,
-                 optimize_rate_constants=True):
+                 optimize_rate_constants=True,
+                 yield_metric='absolute'):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
             print("Using " + device)
@@ -45,8 +46,7 @@ class Optimizer:
         self.yield_per_iter = []
         self.is_optimized = False
         self.dt = None
-
-
+        self.yield_metric = yield_metric
 
     def plot_observable(self, iteration, ax=None):
         t = self.sim_observables[iteration]['steps']
@@ -78,7 +78,8 @@ class Optimizer:
             self.rn.reset()
             sim = self.sim_class(self.rn,
                                  self.sim_runtime,
-                                 device=self._dev_name)
+                                 device=self._dev_name,
+                                 yield_metric=self.yield_metric)
 
             # preform simulation
             self.optimizer.zero_grad()
@@ -93,9 +94,16 @@ class Optimizer:
 
             # preform gradient step
             if i != self.optim_iterations - 1:
-                k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
-                                                            scalar_modifier=1.))
-                physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
+                physics_penalty = 0
+                if self.optimize_rates:
+                    # will add rate physics penalty to optimization target
+                    k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                                scalar_modifier=1.))
+                    physics_penalty = physics_penalty + torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
+                if self.optimize_copies:
+                    # will add copy number physics penalty to optimization target
+                    copies = self.rn.c_params
+                    physics_penalty = physics_penalty + torch.sum(10 * F.relu((-1 * (copies - self.lr)))).to(self.dev)
                 cost = -total_yield + physics_penalty
                 cost.backward()
                 self.optimizer.step()
