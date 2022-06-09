@@ -48,7 +48,7 @@ class EquilibriumSolver:
         self.poly_system, self.symbols = find_eq_eqns(net)
 
     def solve(self, depth=0, init_val=[],verifyBool=True):
-        print(self.poly_system)
+        #print(self.poly_system)
         if depth > 100:
             #raise ValueError('unable to find acceptable solution')
             print("No aceeptable solution found")

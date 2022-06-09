@@ -8,10 +8,11 @@ from .vectorized_rxn_net import VectorizedRxnNet
 from .vec_sim import VecSim
 from .optimizer import Optimizer
 from .EqSolver import EquilibriumSolver
+from .reaction_network import gtostr
 
 __all__ = [
     "EnergyExplorer",
-    "ReactionNetwork",
+    "ReactionNetworka",
     "VecSim",
     "Optimizer",
     "VectorizedRxnNet",
