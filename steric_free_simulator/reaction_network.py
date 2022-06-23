@@ -96,6 +96,8 @@ class ReactionNetwork:
         self.destruction_rxn_data ={}
         self.default_k_destruction = 1e-1
         self.max_subunits = -1
+        self.max_interactions = 2
+        self.monomer_add_only = True
         # default observables are monomers and final complex
         self.observables = dict()
         self.flux_vs_time = dict()
@@ -160,6 +162,10 @@ class ReactionNetwork:
             self.default_k_destruction = items[1]
         elif items[0] == 'max_subunits':
             self.max_subunits = items[1]
+        elif items[0] == 'max_interactions':
+            self.max_interactions = items[1]
+        elif items[0] == 'monomer_add_only':
+            self.monomer_add_only=items[1]
         return items
 
     def parse_species(self, line, params):
@@ -179,7 +185,7 @@ class ReactionNetwork:
             state_net = nx.Graph()
         state_net.add_node(sp_info[0])
         print(state_net.nodes())
-        self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]))
+        self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]),subunits=1)
         self._initial_copies[self._node_count] = Tensor([float(init_pop)])
         self._node_count += 1
 
@@ -316,13 +322,14 @@ class ReactionNetwork:
 
         self.is_energy_set = True
 
-    def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template=None):
+    def _add_graph_state(self, connected_item: nx.Graph, source_1: int, source_2: int = None, template=None,subunits=1):
         """
         Adds a new species defined by connected_item to the graph, if unique.
         :param connected_item: The graph structure reoresenting the product (new node requested)
         :param source_1: reactant 1 node
         :param source_2: reactant 2 node (may be None)
         :param template_edge_id:
+        :param subunits : No. of subunits in the new Node Complex. Added this parameters since it becomes easier to keep track of complex size in homo-oligomers
         :return:
         """
         if type(source_1) is not int:
@@ -333,11 +340,12 @@ class ReactionNetwork:
                        _equal(x[1]['struct'], connected_item)]
         # print("Checking node exists for : ", connected_item.nodes())
         print(node_exists)
+        print("Connected item Edges: ",connected_item.edges())
         new_edges_added = 0
         if len(node_exists) == 0:
             print("New node added--1")
             print(connected_item.nodes())
-            self.network.add_node(self._node_count, struct=connected_item, copies=Tensor([0.]))
+            self.network.add_node(self._node_count, struct=connected_item, copies=Tensor([0.]),subunits=subunits)
             self._initial_copies[self._node_count] = Tensor([0.])
             new_node = self._node_count
             self._node_count += 1
@@ -348,8 +356,10 @@ class ReactionNetwork:
             new_node = node_exists[0][0]
         if self.network.has_edge(source_1, new_node):
             # skip if edge exists failsafe.
+            print("$$$$$$$")
             return None
         if not template:
+            print("&&&&&&&")
             return None
         else:
 
@@ -436,14 +446,19 @@ class ReactionNetwork:
         """
         nodes_added = []
         orig = n1[1]['struct']
+
         if n2 is not None:
             nextn = n2[1]['struct']
             item = nx.compose(orig, nextn)
+            print("Orig edges: ",orig.edges())
+            print("Nextn edges: ",nextn.edges())
+            print("Item edges: ",item.edges())
         else:
             item = orig
         connected_item = item.copy()
         new_bonds = []
         add_to_graph = False
+        complex_size = 0
         for poss_edge in list(self.allowed_edges.keys()):
             print("Allowed edges: ")
             print(poss_edge)
@@ -466,6 +481,10 @@ class ReactionNetwork:
                 # else:
                 connected_item.add_edge(poss_edge[0], poss_edge[1])
                 new_bonds.append(poss_edge)
+                complex_size += n1[1]['subunits']
+                if n2 is not None:
+                    complex_size+=n2[1]['subunits']
+
 
                 #Checking if the graph has a repeated units.
                 #If one node is AA and other is B, then B should form bonds with both A units.
@@ -498,6 +517,7 @@ class ReactionNetwork:
                 print(n1[1]['struct'].edges())
                 print(add_to_graph)
                 new_bonds.append(poss_edge)
+                complex_size+=n1[1]['subunits']   #Only for n1 since n2 is None
 
             elif (n2 is not None) and (True in [orig.has_node(n) for n in poss_edge] and
              True in [nextn.has_node(n) for n in poss_edge]) and item.has_edge(poss_edge[0], poss_edge[1]):
@@ -506,31 +526,117 @@ class ReactionNetwork:
                 print("Item already has edge")
                 #Once you see that item already has edge. Check if the complex has max. subunits
                 #Find no. of edges in the node
-                n_edges = orig.number_of_edges() if orig.number_of_edges() else nextn.number_of_edges()
-                print(n_edges)
-                print(connected_item.edges())
-                if n_edges+1 < self.max_subunits:
-                    print("There is room to add this subunit")
-                    connected_item.add_edge(poss_edge[1], poss_edge[0])
+                #This has to be done separately for monomers and non-monomers
+                #It also depends on the no. of interactions one sub-unit can have.
+                #A linear polymer model will be where each subunit has two interactions(2 interfaces)
+                #A branched polymer will be when the subunit can have more than two interactions
+
+                #CHeck if one node is monomer
+                if orig.number_of_edges() ==0 or nextn.number_of_edges() ==0:
+                    print("One of the reactants is a monomer")
+
+                    n_edges = orig.number_of_edges() if orig.number_of_edges() else nextn.number_of_edges()
+                    print(n_edges)
                     print(connected_item.edges())
+                    total_subunits = n1[1]['subunits'] + n2[1]['subunits']
 
-                    #TO calculate the no. of new bonds to add, we have to loop over each reaction set and see if there exists a reaction between them:
-                    e1 = orig.number_of_edges()
-                    e2 = nextn.number_of_edges()
-                    reactant_set = tuple([r1 for r1 in orig.nodes()] + [r2 for r2 in nextn.nodes()])    #A bit convoluted way of getting the node from each Graph. Have to individually loop over them and join.
 
-                    if reactant_set == poss_edge:
-                        for i in range(e1+1):
-                            for j in range(e2+1):
+                    if total_subunits <= self.max_subunits:
+                        print("There is room to add this subunit")
+
+                        complex_size=total_subunits
+
+
+                        #TO calculate the no. of new bonds to add, we have to loop over each reaction set and see if there exists a reaction between them:
+                        #ALso we have to make sure it does not exceed max_interactions for the new subunits
+                        e1 = orig.number_of_edges()
+                        e2 = nextn.number_of_edges()
+                        reactant_set = tuple([r1 for r1 in orig.nodes()] + [r2 for r2 in nextn.nodes()])    #A bit convoluted way of getting the node from each Graph. Have to individually loop over them and join.
+                        print("Reactant Set: ",reactant_set)
+                        if reactant_set == poss_edge:
+                            #If its a linear polymer. Then only one new bond is formed. Chain elongation
+                            #Since we don't know if n1 is monomer or n2, right now just looping over both subunits to add bonds.
+                            if self.max_interactions ==2:
                                 print("NEW BOND ADDEDDDDDDD")
                                 new_bonds.append(poss_edge)
+                                connected_item.add_edge(poss_edge[1], poss_edge[0])
+                                if total_subunits == self.max_subunits:
+                                    #Checking if addition of one more subunit leads to max-subunits.
+                                    #This means it is a loop closure. So add one more bond
+                                    print("LOOP CLOSUREEEEE")
+                                    new_bonds.append(poss_edge)
+                                    connected_item.add_edge(poss_edge[1], poss_edge[0])
+                                print(connected_item.edges())
+                            else:
+                                print("Forming bonds to achieve max interactions from each sub-unit")
+                                for i in range(n1[1]['subunits']):
+                                    for j in range(n2[1]['subunits']):
+                                        print("NEW BOND ADDEDDDDDDD")
+                                        new_bonds.append(poss_edge)
+                                        connected_item.add_edge(poss_edge[1], poss_edge[0])
 
-                        if n_edges+2 == self.max_subunits:
-                            #Checking if addition of one more subunit leads to max-subunits.
-                            #This means it is a loop closure. So add one more bond
-                            print("LOOP CLOSUREEEEE")
-                            connected_item.add_edge(poss_edge[1], poss_edge[0])
-                    add_to_graph=True
+                                # #In case if more interactions are allowed (max capacity), then we need to add more bonds
+                                # if self.max_interactions>2:
+                                #     #More bonds can be added
+                                #     #How many more?
+                                #     print("Can reach max occupancy")
+                                #     max_bonds = math.comb(total_subunits,2)
+                                #     for i in range(max_bonds-len(new_bonds)):
+                                #         print("New Bond added..")
+                                #         new_bonds.append(poss_edge)
+                                # else:
+                                #     #When max_interactions are 2 i.e. Linear polymer. Have to add one more bond for loop closure.
+                                #     if total_subunits == self.max_subunits:
+                                #         print("HULLLA BALLOOO!!")
+
+                                    # new_bonds.append(poss_edge)
+                        add_to_graph=True
+
+                else:
+                    #Both nodes are not monomers
+                    if self.monomer_add_only == False:
+                        print("NON-MONOMER ADDITION!!!!!")
+                        #Only add reaction if user defined as adding rxn b/w non-monomers
+
+                        #Before adding any edges, one modification has to be done in the new connected_item network graph
+                        #Since the the connected_item is a union of orig and nextn nodes, if edges are common in nextn, then they are excluded.
+                        #For e.g. A-A  + A-A  -> A-A-A-A ; Edges from only one AA complex will be included
+                        #Irrespective of the final topology, the initial number of bonds should include one edge from each AA complex
+                        #Loop over edges of each node and check if common
+                        #Add the edge from nextn
+                        for edge2 in nextn.edges():
+                            connected_item.add_edge(edge2[0],edge2[1])
+
+                        total_subunits = n1[1]['subunits'] + n2[1]['subunits']
+                        if total_subunits <= self.max_subunits:
+                            print("There is room to add this COMPLEX")
+                            complex_size=total_subunits
+                            reactant_set = tuple([r1 for r1 in orig.nodes()] + [r2 for r2 in nextn.nodes()])    #A bit convoluted way of getting the node from each Graph. Have to individually loop over them and join.
+                            print("Reactant Set: ",reactant_set)
+                            print(connected_item.edges())
+                            if reactant_set == poss_edge:
+                                #If its a linear polymer. Then only one new bond is formed. Chain elongation
+                                #Since we don't know if n1 is monomer or n2, right now just looping over both subunits to add bonds.
+                                if self.max_interactions ==2:
+                                    print("NEW BOND ADDEDDDDDDD")
+                                    new_bonds.append(poss_edge)
+                                    connected_item.add_edge(poss_edge[1], poss_edge[0])
+                                    if total_subunits == self.max_subunits:
+                                        #Checking if addition of one more subunit leads to max-subunits.
+                                        #This means it is a loop closure. So add one more bond
+                                        print("LOOP CLOSUREEEEE")
+                                        new_bonds.append(poss_edge)
+                                        connected_item.add_edge(poss_edge[1], poss_edge[0])
+                                    print(connected_item.edges())
+                                else:
+                                    print("Forming bonds to achieve max interactions from each sub-unit")
+                                    for i in range(n1[1]['subunits']):
+                                        for j in range(n2[1]['subunits']):
+                                            print("NEW BOND ADDEDDDDDDD")
+                                            new_bonds.append(poss_edge)
+                                            connected_item.add_edge(poss_edge[1], poss_edge[0])
+
+                            add_to_graph=True
 
 
 
@@ -538,7 +644,7 @@ class ReactionNetwork:
                 continue
         # resolving one step  network
         if one_step and add_to_graph:
-            new_node = self._add_graph_state(connected_item, n1, source_2=n2, template=new_bonds)
+            new_node = self._add_graph_state(connected_item, n1, source_2=n2, template=new_bonds,subunits=complex_size)
             if new_node is not None:
                 nodes_added.append(new_node)
 
@@ -658,10 +764,17 @@ class ReactionNetwork:
                     #To control this addition, we have to deine the max repeating units in a complex. If not there is a chance this will keep on expanding the complex
 
                     #Check condition if the node already has max subunits. This can be checked by the number of edges within the Graph of each node.
-                    if (node[1]['struct'].number_of_edges() < self.max_subunits - 1) and (anode[1]['struct'].number_of_edges() < self.max_subunits - 1) and self.max_subunits >0 :
+                    # if (node[1]['struct'].number_of_edges() < self.max_subunits - 1) and (anode[1]['struct'].number_of_edges() < self.max_subunits - 1) and self.max_subunits >0 :
+                    #     print("Adding another subunit")
+                    #     new_nodes+= self.match_maker(node,anode,self.is_one_step)
+                    # elif ((node[1]['struct'].number_of_edges() >= self.max_subunits -1) or (anode[1]['struct'].number_of_edges() >= self.max_subunits-1)) and self.max_subunits >0:
+                    #     print("Max subunits limit reached")
+                    #     print(node[1]['struct'].edges())
+                    #     print(anode[1]['struct'].edges())
+                    if (node[1]['subunits']+anode[1]['subunits'] <= self.max_subunits) and (self.max_subunits >0):
                         print("Adding another subunit")
                         new_nodes+= self.match_maker(node,anode,self.is_one_step)
-                    elif ((node[1]['struct'].number_of_edges() >= self.max_subunits -1) or (anode[1]['struct'].number_of_edges() >= self.max_subunits-1)) and self.max_subunits >0:
+                    elif (node[1]['subunits']+anode[1]['subunits'] > self.max_subunits) and (self.max_subunits >0):
                         print("Max subunits limit reached")
                         print(node[1]['struct'].edges())
                         print(anode[1]['struct'].edges())
@@ -681,6 +794,7 @@ class ReactionNetwork:
 
         if self.rxn_coupling:
             self.rxn_cid = self.map_coupled_rxns()
+            print("Coupling Reaction ID: ", self.rxn_cid)
         if self.boolCreation_rxn or self.boolDestruction_rxn:
             print("Resolving Creation and Destruction rxns")
             self.resolve_creation_rxn()

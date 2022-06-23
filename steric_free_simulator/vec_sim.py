@@ -8,7 +8,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import matplotlib.colors as mcolors
 import random
-
+from scipy import signal
 import sys
 
 
@@ -64,7 +64,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]]):
         """
         modifies reaction network
         :return:
@@ -76,17 +76,19 @@ class VecSim:
 
         if self.rn.rxn_coupling:
             #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
-            print("Coupling")
+            # print("Coupling")
             for i in range(len(self.rn.kon)):
+                # print(i)
                 if i in self.rn.rx_cid.keys():
                     #new_kon[i] = 1.0
                     self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
-                    # print("Max rate for reaction %s chosen as %.3f" %(i,new_kon[i]))
+                    # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
                 else:
                     self.coupled_kon[i] = self.rn.kon[i]
             l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+            # print("Simulation rates: ",torch.exp(l_k))
 
         while cur_time < self.runtime:
 
@@ -218,6 +220,11 @@ class VecSim:
         # final_yield = total_complete/max_poss_yield
         final_yield = total_complete
 
+        if optim=='flux_coeff':
+            final_yield = self.calc_corr_coeff(corr_rxns)
+            # print(final_yield)
+            return(Tensor([final_yield]).to(self.dev),None)
+
 
         if optim == 'flux':
             if node_str != None:
@@ -268,3 +275,23 @@ class VecSim:
             data[entry[0]] = entry[1]
         df = pd.DataFrame(data)
         df.to_csv(out_path)
+
+    def calc_corr_coeff(self,rid):
+        flux_data=self.uid_flux.detach().numpy()[:-1,:]
+        total_coeff = 0
+        total_lag = 0
+        print(rid)
+        for i in range(len(rid[0])):
+            x=flux_data[:,rid[0][i]]
+            y=flux_data[:,rid[1][i]]
+            # print(x)
+            corr_array = signal.correlate(x,y,mode='full')
+            lag1 = np.argmax(corr_array)-np.floor(corr_array.shape[0]/2)
+            coeff = np.corrcoef(x,y,rowvar=False)
+
+            # print(coeff)
+            total_coeff += coeff[0,1]
+            total_lag+=lag1
+
+        return(total_coeff/len(rid[0]))
+        # return(total_lag/len(rid[0]))

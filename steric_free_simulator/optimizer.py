@@ -7,6 +7,7 @@ from steric_free_simulator import VecSim
 from steric_free_simulator import VectorizedRxnNet
 
 
+
 class Optimizer:
 
     def __init__(self, reaction_network,
@@ -77,20 +78,24 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]]):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
         counter = 0
+        calc_flux_optim=False
+        if optim=='flux_coeff':
+            calc_flux_optim=True
         for i in range(self.optim_iterations):
             # reset for new simulator
             self.rn.reset()
             sim = self.sim_class(self.rn,
                                  self.sim_runtime,
-                                 device=self._dev_name)
+                                 device=self._dev_name,calc_flux=calc_flux_optim)
+            # print(sim.calc_flux)
 
             # preform simulation
             self.optimizer.zero_grad()
-            total_yield,total_flux = sim.simulate(optim,node_str)
+            total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns)
             #print("Type/class of yield: ", type(total_yield))
 
             #Check change in yield from last gradient step. Break if less than a tolerance
@@ -112,6 +117,7 @@ class Optimizer:
 
             if optim =='yield':
                 print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+                print(self.rn.copies_vec)
                 # preform gradient step
                 if i != self.optim_iterations - 1:
                     # if self.rn.coupling:
@@ -133,8 +139,8 @@ class Optimizer:
                     #                                             scalar_modifier=1.))
                     #     physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
                     #     cost = -total_yield + physics_penalty
-                    #
-                    #     cost.backward()
+
+                        # cost.backward()
                     if self.rn.assoc_is_param:
                         k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                             scalar_modifier=1.))
@@ -143,6 +149,10 @@ class Optimizer:
                         c = self.rn.c_params.clone().detach()
                         physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev)
                               # stops zeroing or negating params
+                    elif self.rn.dissoc_is_param:
+                        k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                            scalar_modifier=1.))
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
                     cost = -total_yield + physics_penalty
 
                     cost.backward()
@@ -162,6 +172,9 @@ class Optimizer:
                             self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.copies_is_param:
                         new_params = self.rn.c_params.clone().detach()
+                    elif self.rn.dissoc_is_param:
+                        print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
+                        new_params = self.rn.params_koff.clone().detach()
                     else:
                         new_params = self.rn.kon.clone().detach()
                     #print('New reaction rates: ' + str(self.rn.kon.clone().detach()))
@@ -185,6 +198,26 @@ class Optimizer:
             #         new_params = self.rn.kon.clone().detach()
             #         print('current params: ' + str(new_params))
 
+            elif optim=='flux_coeff':
+                print("Optimizing Flux Correlations")
+                print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item()))
+                if i != self.optim_iterations - 1:
+                        k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                                    scalar_modifier=1.))
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)  # stops zeroing or negating params
+                        cost = -total_yield + physics_penalty
+                        cost.backward()
+                        self.optimizer.step()
+                        new_params = self.rn.kon.clone().detach()
+                        print('current params: ' + str(new_params))
+
+                        # if total_yield-max_yield > 0:
+                        #     self.final_yields.append(total_yield)
+                        #     self.final_solns.append(new_params)
+
+
+
+
             values = psutil.virtual_memory()
             mem = values.available / (1024.0 ** 3)
             if mem < .5:
@@ -194,6 +227,7 @@ class Optimizer:
                 return self.rn
             if i == self.optim_iterations - 1:
                 print("optimization complete")
+                print("Final params: " + str(new_params))
                 return self.rn
 
             del sim
