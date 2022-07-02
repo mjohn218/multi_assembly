@@ -91,10 +91,10 @@ class VectorizedRxnNet:
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
         elif dissoc_is_param:
-            # self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()
-            # self.params_koff = torch.exp(self.rxn_score_vec)*self.kon* self._C0
-            self.params_koff = self.kon*1e-2
-            self.kon = self.params_koff/(self._C0*torch.exp(self.rxn_score_vec))
+            self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()             #kon from input; koff evaluated here
+            self.params_koff = torch.exp(self.rxn_score_vec)*self.kon* self._C0
+            # self.params_koff = self.kon*1e-2                                                      #Koff taken from input and kon calculated
+            # self.kon = self.params_koff/(self._C0*torch.exp(self.rxn_score_vec))
             self.params_koff = nn.Parameter(self.params_koff, requires_grad=True)
             self.initial_params = Tensor(self.params_koff).clone().detach()
         elif dG_is_param:

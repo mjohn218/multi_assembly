@@ -185,6 +185,7 @@ class ReactionNetwork:
             state_net = nx.Graph()
         state_net.add_node(sp_info[0])
         print(state_net.nodes())
+        print(init_pop)
         self.network.add_node(self._node_count, struct=state_net, copies=Tensor([float(init_pop)]),subunits=1)
         self._initial_copies[self._node_count] = Tensor([float(init_pop)])
         self._node_count += 1

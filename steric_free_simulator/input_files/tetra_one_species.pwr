@@ -1,0 +1,14 @@
+begin parameters
+    default_assoc   1.
+    max_subunits  4
+    max_interactions 3
+    monomer_add_only False
+end parameters
+
+begin species
+    A(a,b) 200.0
+end species
+
+begin rules
+    A(a)+A(a)<->A(a!1).A(a!1) G=-20    
+end rules
