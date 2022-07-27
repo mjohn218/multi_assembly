@@ -229,10 +229,10 @@ class VectorizedRxnNet:
             else:
                 return [self.kon]
         elif self.dissoc_is_param:
-            return [self.params_koff]
+            return self.params_koff
             # return [self.params_koff_01,self.params_koff_02]
         elif self.dG_is_param:
-            return [self.params_k]
+            return self.params_k
 
     def to(self, dev):
         self.M = self.M.to(dev)

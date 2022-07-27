@@ -34,7 +34,7 @@ class Optimizer:
         else:
             self.rn = reaction_network
         self.sim_runtime = sim_runtime
-        param_itr = self.rn.get_params()[0]
+        param_itr = self.rn.get_params()
 
         if method =='Adam':
             self.optimizer = torch.optim.Adam(param_itr, learning_rate)
