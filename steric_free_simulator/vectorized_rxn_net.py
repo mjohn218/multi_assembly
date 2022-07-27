@@ -23,7 +23,7 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dissoc_is_param=False, dG_is_param=False,dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
+    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dissoc_is_param=False, dG_is_param=False,cplx_dG=0,dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
         """
 
         :param rn: The reaction network template
@@ -62,6 +62,8 @@ class VectorizedRxnNet:
         self.cid = cid
         self.rx_cid = rn.rxn_cid
         self.coup_map = {}
+        self.rxn_class = rn.rxn_class
+        self.dG_map = rn.dG_map
 
         #Make new param Tensor (that will be optimized) if coupling is True
         if self.coupling == True:
@@ -81,28 +83,84 @@ class VectorizedRxnNet:
             self.params_kon.requires_grad_(True)
 
             self.initial_params = Tensor(self.params_kon).clone().detach()
-        elif self.partial_opt == True:
+        elif self.partial_opt == True and dissoc_is_param == False:
             c_rxn_count = len(self.optim_rates)
             self.params_kon = torch.zeros([c_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
             self.params_rxn_score_vec = torch.zeros([c_rxn_count]).double()
             for i in range(c_rxn_count):
                 self.params_kon[i] = self.kon.clone().detach()[self.optim_rates[i]]
-                self.params_rxn_score_vec[i] = self.rxn_score_vec[i]
+                self.params_rxn_score_vec[i] = self.rxn_score_vec[self.optim_rates[i]]
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
         elif dissoc_is_param:
-            self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()             #kon from input; koff evaluated here
-            self.params_koff = torch.exp(self.rxn_score_vec)*self.kon* self._C0
-            # self.params_koff = self.kon*1e-2                                                      #Koff taken from input and kon calculated
-            # self.kon = self.params_koff/(self._C0*torch.exp(self.rxn_score_vec))
-            self.params_koff = nn.Parameter(self.params_koff, requires_grad=True)
-            self.initial_params = Tensor(self.params_koff).clone().detach()
+            if self.partial_opt == False:
+                # self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()             #kon from input; koff evaluated here
+                # self.params_koff = torch.exp(self.rxn_score_vec)*self.kon* self._C0
+
+                # self.params_koff = self.kon*1e-2                                                      #Koff taken from input and kon calculated
+                # self.kon = self.params_koff/(self._C0*torch.exp(self.rxn_score_vec))
+
+                # self.params_koff = nn.Parameter(self.params_koff, requires_grad=True)
+                # self.initial_params = Tensor(self.params_koff).clone().detach()
+
+                #Code for second parameter group. i.e. Testing only for trimer system
+                #Defining two groups of parameters (i.e. Dimer off rates and Trimer off rates)
+                #This allows for diff learning rates for the two groups
+                #If this works, then need to setup code to have different parameter groups for each layer of ReactionNetwork
+
+                #Old code, harcoded for trimer
+                # self.params_koff_01 = torch.zeros([3],requires_grad=True).double()
+                # self.params_koff_02 = torch.zeros([3],requires_grad=True).double()
+                #
+                # self.params_koff_01 = torch.exp(self.rxn_score_vec[:3])*self.kon[:3]*self._C0
+                # self.params_koff_02 = torch.exp(self.rxn_score_vec[3:])*self.kon[3:]*self._C0
+                #
+                # self.params_koff_01 = nn.Parameter(self.params_koff_01,requires_grad=True)
+                # self.params_koff_02 = nn.Parameter(self.params_koff_02,requires_grad=True)
+                #
+                # self.initial_params = [Tensor(self.params_koff_01).clone().detach(), Tensor(self.params_koff_02).clone().detach()]
+
+                #New code to divide each reaction type into diff parameter groups
+                self.params_koff = []
+                self.initial_params = []
+                for bonds,uids in self.rxn_class.items():
+                    params_koff = torch.zeros([len(uids)],requires_grad = True).double()
+                    params_koff = torch.exp(self.rxn_score_vec[uids])*self.kon[uids]*self._C0
+                    params_koff = nn.Parameter(params_koff,requires_grad=True)
+                    self.params_koff.append(Tensor(params_koff))
+                    self.initial_params.append(Tensor(params_koff).clone().detach())
+                print("DISSOC PARAMS: ",self.params_koff)
+
+                for i in range(len(self.params_koff)):
+                    self.params_koff[i].requires_grad_(True)
+
+
+            else:
+                c_rxn_count = len(self.optim_rates)
+                self.params_koff = torch.zeros([c_rxn_count],requires_grad=True).double()
+                self.params_kon = torch.zeros([c_rxn_count], requires_grad=True).double()
+                self.params_rxn_score_vec = torch.zeros([c_rxn_count]).double()
+                for i in range(c_rxn_count):
+                    self.params_rxn_score_vec[i] = self.rxn_score_vec[self.optim_rates[i]]
+                    self.params_kon[i] = self.kon.clone().detach()[self.optim_rates[i]]
+                    self.params_koff[i] = torch.exp(self.params_rxn_score_vec[i])*self.params_kon[i]*self._C0
+                    self.params_koff = nn.Parameter(self.params_koff, requires_grad=True)
+                    self.initial_params = Tensor(self.params_koff).clone().detach()
         elif dG_is_param:
-            self.initial_dG = self.rxn_score_vec.clones().detach()
-            k_off = self.kon*self._C0*torch.exp(self.rxn_score_vec)
-            self.params_k = torch.cat([self.kon,k_off],dim=0)
-            self.params_k = nn.Parameter(self.params_k, requires_grad=True)
-            self.initial_params = Tensor(self.params_k).clone().detach()
+            self.complx_dG = cplx_dG
+            bimol_rxn_uids = self.rxn_class[1]
+            # self.initial_dG = self.rxn_score_vec.clones().detach()
+            k_off = self.kon[bimol_rxn_uids][:-1]*self._C0*torch.exp(self.rxn_score_vec[bimol_rxn_uids])[:-1]
+
+            k_on = self.kon.clone().detach()[bimol_rxn_uids]
+            k_on = nn.Parameter(k_on,requires_grad=True)
+            k_off = nn.Parameter(k_off,requires_grad=True)
+            # self.params_k = torch.cat([self.kon[bimol_rxn_uids],k_off],dim=0)
+            # self.params_k = nn.Parameter(self.params_k, requires_grad=True)
+
+            self.params_k = [Tensor(k_on),Tensor(k_off)]
+            self.initial_params = [Tensor(k_on).clone().detach(),Tensor(k_off).clone().detach()]
+
 
         else:
             self.initial_params = Tensor(self.kon).clone().detach()
@@ -140,9 +198,14 @@ class VectorizedRxnNet:
             elif self.partial_opt:
                 self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
             elif self.dissoc_is_param:
-                self.params_koff = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+                # self.params_koff = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+                # self.params_koff_01 = nn.Parameter(self.initial_params[0].clone(),requires_grad=True)
+                # self.params_koff_02 = nn.Parameter(self.initial_params[1].clone(),requires_grad=True)
+                for i in range(len(self.initial_params)):
+                    self.params_koff[i] = nn.Parameter(self.initial_params[i].clone(),requires_grad=True)
             elif self.dG_is_param:
-                self.params_k = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+                for i in range(len(self.initial_params)):
+                    self.params_k[i] = nn.Parameter(self.initial_params[i].clone(), requires_grad=True)
             else:
                 self.kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
         for key in self.observables:
@@ -167,6 +230,7 @@ class VectorizedRxnNet:
                 return [self.kon]
         elif self.dissoc_is_param:
             return [self.params_koff]
+            # return [self.params_koff_01,self.params_koff_02]
         elif self.dG_is_param:
             return [self.params_k]
 
@@ -174,12 +238,20 @@ class VectorizedRxnNet:
         self.M = self.M.to(dev)
         if self.coupling:
             self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
-        elif self.partial_opt:
+        elif self.partial_opt and self.assoc_is_param:
             self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
         elif self.dissoc_is_param:
-            self.params_koff = nn.Parameter(self.params_koff.data.clone().detach().to(dev), requires_grad=True)
+            # self.params_koff = nn.Parameter(self.params_koff.data.clone().detach().to(dev), requires_grad=True)
+
+            # self.params_koff_01 = nn.Parameter(self.params_koff_01.data.clone().detach().to(dev),requires_grad=True)
+            # self.params_koff_02 = nn.Parameter(self.params_koff_02.data.clone().detach().to(dev),requires_grad=True)
+
+            for i in range(len(self.params_koff)):
+                self.params_koff[i] = nn.Parameter(self.params_koff[i].data.clone().detach().to(dev),requires_grad=True)
+
         elif self.dG_is_param:
-            self_params_k = nn.Parameter(self.params_k.data.clone().detach().to(dev), requires_grad=True)
+            for i in range(len(self.params_k)):
+                self.params_k[i] = nn.Parameter(self.params_k[i].data.clone().detach().to(dev), requires_grad=True)
         else:
             self.kon = nn.Parameter(self.kon.data.clone().detach().to(dev), requires_grad=True)
         self.copies_vec = self.copies_vec.to(dev)
@@ -279,13 +351,67 @@ class VectorizedRxnNet:
             new_l_k = l_k[:-num_creat_dest_rxn]
             return new_l_k.clone().to(self.dev)
         elif self.dissoc_is_param:
-            new_l_koff = torch.log(self.params_koff)
-            # print("Simulation offrates: ",torch.exp(new_l_koff))
-            new_l_kon = new_l_koff - (dGrxn * scalar_modifier) - torch.log(self._C0)
-            new_l_k = torch.cat([new_l_kon,new_l_koff],dim=0)
-            return(new_l_k.clone().to(self.dev))
+            if self.partial_opt:
+                return l_k.clone().to(self.dev)
+            else:
+
+                # new_l_koff = torch.log(self.params_koff)
+                # new_l_koff_01 = torch.log(self.params_koff_01)
+                # new_l_koff_02 = torch.log(self.params_koff_02)
+
+                # new_l_koff_01 = torch.log(self.params_koff[0])
+                # new_l_koff_02 = torch.log(self.params_koff[1])
+
+                #Have to concatenate the off rates from all the parameter groups.
+                #But first have to get the right order. Can't dirrectly join all the values.
+                rids = torch.Tensor(sum(list(self.rxn_class.values()),[]))
+                order = torch.argsort(rids)
+                # koff_list = torch.Tensor(sum([n.tolist() for n in self.params_koff],[])).double()
+                koff_list = self.params_koff[0]
+                for i in range(1,len(self.params_koff)):
+                    koff_list = torch.cat([koff_list,self.params_koff[i]])
+                koff_list.requires_grad_(True)
+                # print("Ordered koff rates: ",koff_list[order])
+                new_l_koff = torch.log(koff_list[order])
+                # new_l_koff = torch.cat([new_l_koff_01,new_l_koff_02],dim=0)
+                new_l_koff.requires_grad_(True)
+                # print("Simulation offrates: ",torch.exp(new_l_koff))
+                new_l_kon = new_l_koff - (dGrxn * scalar_modifier) - torch.log(self._C0)
+                # print(new_l_kon)
+                new_l_k = torch.cat([new_l_kon,new_l_koff],dim=0)
+                return(new_l_k.clone().to(self.dev))
         elif self.dG_is_param:
-            return(torch.log(self.params_k))
+            mask = torch.ones([len(dGrxn)],dtype=bool)
+            mask[self.rxn_class[1]] = False
+            rxn_kon = self.kon.clone().detach()
+            rxn_kon[self.rxn_class[1]] = self.params_k[0]
+
+            rxn_koff = torch.zeros([len(dGrxn)],requires_grad=True).double()
+            rxn_koff[self.rxn_class[1][:-1]] = self.params_k[1]
+
+            #THe last k_off (or dG) for one dimer will be calculated by the constraint
+            Keq = torch.prod(self.params_k[0][:-1]*self._C0/self.params_k[1])
+            dG_other = self.complx_dG + torch.log(Keq)
+            print("dG of last monomer: ",dG_other)
+            koff_last = torch.exp(dG_other)*self.params_k[0][-1]*self._C0
+            rxn_koff[self.rxn_class[1][-1]] = koff_last
+            other_koff = []
+            # print("Mask: ",mask)
+            for i in range(len(mask)):
+
+                if mask[i]:
+                    mon_rxns = self.dG_map[i]
+                    # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
+                    other_koff.append(torch.prod(rxn_koff[mon_rxns]))
+            other_koff = Tensor(other_koff)
+            other_koff.requires_grad_(True)
+            rxn_koff[mask] = other_koff
+
+            l_rxn_kon = torch.log(rxn_kon)
+            l_rxn_koff = torch.log(rxn_koff)
+            l_final_k = torch.cat([l_rxn_kon,l_rxn_koff],dim=0)
+            # print("Final Vectorized form : ",torch.exp(l_final_k))
+            return l_final_k.clone().to(self.dev)
         else:
             return l_k.clone().to(self.dev)
 

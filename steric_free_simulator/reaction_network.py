@@ -110,7 +110,9 @@ class ReactionNetwork:
 
         self.mon_rxns = dict()
         self.rxn_cid = dict()
-
+        self.rxn_class = dict()     #Classifies reactions into number of bonds being formed. i.e. 1 bond - Dimer formation, 2-bonds - Trimer. Here dict format - no. of bonds:[list of uids]
+        self.mon_rxn_map = dict()
+        self.dG_map = dict()
 
     def get_params(self):
         """
@@ -367,6 +369,17 @@ class ReactionNetwork:
             print("Adding an new edge--",source_1,new_node)
             # print("uid: ", self._rxn_count)
             print("New bonds: ",template)
+            if len(template) in self.rxn_class.keys():
+                self.rxn_class[len(template)].append(self._rxn_count)
+            else:
+                self.rxn_class[len(template)] = [self._rxn_count]
+            if len(template) == 1:
+                self.mon_rxn_map[template[0]]=self._rxn_count
+            else:
+                rids = []
+                for reactants in template:
+                    rids.append(self.mon_rxn_map[reactants])
+                self.dG_map[self._rxn_count] = rids
             dg_coop = sum([self.allowed_edges[tuple(sorted(e))][3] for e in template])
             self.network.add_edge(source_1, new_node,
                                   k_on=self.default_k_on,
@@ -785,6 +798,9 @@ class ReactionNetwork:
             print("Trying internal bonds")
             new_nodes += self.match_maker(node,one_step=self.is_one_step)
 
+        #Calculating dG of final complex
+        #Add code here
+        
         # add default observables
         #Add all nodes as observables
         for i in range(len(self.network.nodes)):

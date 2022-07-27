@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import psutil
 from steric_free_simulator import VecSim
 from steric_free_simulator import VectorizedRxnNet
+from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 
@@ -14,7 +16,7 @@ class Optimizer:
                  sim_runtime: float,
                  optim_iterations: int,
                  learning_rate: float,
-                 device='cpu',method='Adam'):
+                 device='cpu',method='Adam',lr_change_step=None,gamma=None):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
             print("Using " + device)
@@ -32,12 +34,33 @@ class Optimizer:
         else:
             self.rn = reaction_network
         self.sim_runtime = sim_runtime
-        param_itr = self.rn.get_params()
+        param_itr = self.rn.get_params()[0]
+
         if method =='Adam':
             self.optimizer = torch.optim.Adam(param_itr, learning_rate)
         elif method =='RMSprop':
-            self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
-        self.lr = learning_rate
+            if self.rn.dissoc_is_param:
+                param_list = []
+                print(param_itr)
+                for i in range(len(param_itr)):
+                    # print("#####")
+                    # print(param_itr[i])
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*1e-1})
+                # param_list = [{'params':param_itr[0],'lr':learning_rate[0]},{'params':param_itr[1],'lr':learning_rate[1]}]
+                # print("Params List: ")
+                self.optimizer = torch.optim.RMSprop(param_list)
+            elif self.rn.dG_is_param:
+                param_list=[]
+                for i in range(len(param_itr)):
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*1e-2})
+                self.optimizer = torch.optim.RMSprop(param_list)
+            else:
+                self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
+        if self.rn.dissoc_is_param:
+            self.lr = learning_rate[1]
+        else:
+            self.lr = learning_rate
+
         self.optim_iterations = optim_iterations
         self.sim_observables = []
         self.parameter_history = []
@@ -47,6 +70,14 @@ class Optimizer:
         self.dt = None
         self.final_solns = []
         self.final_yields = []
+        if lr_change_step is not None:
+            if gamma == None:
+                gamma = 0.5
+            # self.scheduler = StepLR(self.optimizer,step_size=lr_change_step,gamma=gamma)
+            self.scheduler = ReduceLROnPlateau(self.optimizer,'max',patience=30)
+            self.lr_change_step = lr_change_step
+        else:
+            self.lr_change_step = None
 
     def plot_observable(self, iteration, nodes_list,ax=None):
         t = self.sim_observables[iteration]['steps']
@@ -159,13 +190,39 @@ class Optimizer:
                         cost = -total_yield + physics_penalty
                         cost.backward()
                     elif self.rn.dissoc_is_param:
+                        if self.rn.partial_opt:
+                            k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,scalar_modifier=1.))
+                            new_l_k = torch.cat([k,torch.log(self.rn.params_koff)],dim=0)
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (new_l_k))).to(self.dev)  # stops zeroing or negating params
+                            cost = -total_yield + physics_penalty
+                            cost.backward(retain_graph=True)
+                        else:
+
+                            k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                                scalar_modifier=1.))
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
+                            cost = -total_yield + physics_penalty
+                            # print(self.optimizer.state_dict)
+                            cost.backward()
+                            metric = torch.mean(self.rn.params_koff[0].clone().detach()).item()
+                    elif self.rn.dG_is_param:
                         k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                             scalar_modifier=1.))
+                        print("Current On rates: ", k[:len(self.rn.kon)])
                         physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
                         cost = -total_yield + physics_penalty
-                        cost.backward()
+                        # print(self.optimizer.state_dict)
+                        cost.backward(retain_graph=True)
+                        metric = torch.mean(self.rn.params_k[1].clone().detach()).item()
 
                     self.optimizer.step()
+                    # self.scheduler.step(metric)
+                    #Changing learning rate
+                    if (self.lr_change_step is not None) and (i%100 ==0) and (i>0):
+                        print("New learning rate : ")
+                        for param_groups in self.optimizer.param_groups:
+                            print(param_groups['lr'])
+
                     #print("Previous reaction rates: ",str(self.rn.kon.clone().detach()))
                     if self.rn.coupling:
                         new_params = self.rn.params_kon.clone().detach()
@@ -174,15 +231,26 @@ class Optimizer:
                                 self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[self.rn.cid[rc]]]
                             else:
                                 self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[rc]]
-                    elif self.rn.partial_opt:
+                    elif self.rn.partial_opt and self.rn.assoc_is_param:
                         new_params = self.rn.params_kon.clone().detach()
                         for r in range(len(new_params)):
                             self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.copies_is_param:
                         new_params = self.rn.c_params.clone().detach()
                     elif self.rn.dissoc_is_param:
-                        print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
-                        new_params = self.rn.params_koff.clone().detach()
+                        if self.rn.partial_opt:
+                            new_params = self.rn.params_koff.clone().detach()
+                            self.rn.params_kon = self.rn.params_koff/(self.rn._C0*torch.exp(self.rn.params_rxn_score_vec))
+                            for r in range(len(new_params)):
+                                self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
+                            print("Current On rates: ", self.rn.kon)
+                        else:
+                            print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
+                            new_params = [l.clone().detach() for l in self.rn.params_koff]
+                    elif self.rn.dG_is_param:
+                        # print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
+                        new_params = [l.clone().detach() for l in self.rn.params_k]
+
                     else:
                         new_params = self.rn.kon.clone().detach()
                     #print('New reaction rates: ' + str(self.rn.kon.clone().detach()))
