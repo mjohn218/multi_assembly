@@ -45,14 +45,14 @@ class Optimizer:
                 for i in range(len(param_itr)):
                     # print("#####")
                     # print(param_itr[i])
-                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*1e-1})
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate})
                 # param_list = [{'params':param_itr[0],'lr':learning_rate[0]},{'params':param_itr[1],'lr':learning_rate[1]}]
                 # print("Params List: ")
                 self.optimizer = torch.optim.RMSprop(param_list)
             elif self.rn.dG_is_param:
                 param_list=[]
                 for i in range(len(param_itr)):
-                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*1e-2})
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
