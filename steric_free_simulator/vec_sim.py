@@ -106,7 +106,7 @@ class VecSim:
             #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
-            conc_scale = 0.0001  #Units uM
+            conc_scale = 1  #Units uM
             # if torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]) < conc_scale:
             #     conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
 
