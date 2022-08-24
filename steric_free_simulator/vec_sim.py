@@ -106,7 +106,7 @@ class VecSim:
             #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
-            conc_scale = 1  #Units uM
+            conc_scale = 0.0001  #Units uM
             # if torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]) < conc_scale:
             #     conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
 
@@ -235,19 +235,25 @@ class VecSim:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
             return(final_yield.to(self.dev),None)
 
-    def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None):
+    def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None):
         t = np.array(self.steps)
         colors_list = list(mcolors.CSS4_COLORS.keys())
         random.seed(a=seed)
         if not flux:
+            counter=0
             for key in self.observables.keys():
 
                 if self.observables[key][0] in nodes_list:
                     data = np.array(self.observables[key][1])
-                    if not ax:
-                        plt.plot(t, data, label=self.observables[key][0],color=random.choice(colors_list))
+                    if color_input is not None:
+                        clr=color_input[counter]
                     else:
-                        ax.plot(t, data, label=self.observables[key][0],color=random.choice(colors_list))
+                        clr=random.choice(colors_list)
+                    if not ax:
+                        plt.plot(t, data, label=self.observables[key][0],color=clr)
+                    else:
+                        ax.plot(t, data, label=self.observables[key][0],color=clr)
+                counter+=1
         else:
             for key in self.flux_vs_time.keys():
                 if self.flux_vs_time[key][0] in nodes_list:
