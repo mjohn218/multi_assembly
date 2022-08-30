@@ -175,6 +175,7 @@ class VecSim:
             if cur_time + step > self.runtime:
                 # print("Current time: ",cur_time)
                 print("Next time: ",cur_time + step)
+                print("Number of steps: ", len(self.steps))
                 print("Next time larger than simulation runtime. Ending simulation.")
                 for obs in self.rn.observables.keys():
                     try:
