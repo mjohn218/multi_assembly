@@ -50,10 +50,15 @@ class Optimizer:
                 # print("Params List: ")
                 self.optimizer = torch.optim.RMSprop(param_list)
             elif self.rn.dG_is_param:
-                param_list=[]
-                for i in range(len(param_itr)):
-                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate})
-                self.optimizer = torch.optim.RMSprop(param_list)
+                # torch.autograd.set_detect_anomaly(True)
+                if self.rn.dG_mode==1:
+                    param_list=[]
+                    for i in range(len(param_itr)):
+                        param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                    self.optimizer = torch.optim.RMSprop(param_list)
+                else:
+                    print("Params: ",param_itr)
+                    self.optimizer = torch.optim.RMSprop(param_itr,torch.mean(param_itr[0]).item()*learning_rate)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
@@ -249,7 +254,11 @@ class Optimizer:
                             new_params = [l.clone().detach() for l in self.rn.params_koff]
                     elif self.rn.dG_is_param:
                         # print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
-                        new_params = [l.clone().detach() for l in self.rn.params_k]
+
+                        if self.rn.dG_mode==1:
+                            new_params = [l.clone().detach() for l in self.rn.params_k]
+                        else:
+                            new_params = self.rn.params_k.clone().detach()
 
                     else:
                         new_params = self.rn.kon.clone().detach()
