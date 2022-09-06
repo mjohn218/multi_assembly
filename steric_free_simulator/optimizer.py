@@ -81,7 +81,12 @@ class Optimizer:
                 gamma = 0.5
             # self.scheduler = StepLR(self.optimizer,step_size=lr_change_step,gamma=gamma)
             # self.scheduler = ReduceLROnPlateau(self.optimizer,'max',patience=30)
-            self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda1,self.lambda2])
+            if self.rn.dG_mode==1:
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda1,self.lambda2])
+            elif self.rn.dG_mode==2:
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda1)
+            elif self.rn.dG_mode ==3:
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
             self.lr_change_step = lr_change_step
         else:
             self.lr_change_step = None
@@ -91,8 +96,12 @@ class Optimizer:
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
     def lambda2(self,opt_itr):
-        new_lr = torch.min(self.rn.params_k[1]).item()*0.1
-        curr_lr = self.optimizer.state_dict()['param_groups'][1]['lr']
+        if self.rn.dG_mode==1:
+            new_lr = torch.min(self.rn.params_k[1]).item()*self.lr
+            curr_lr = self.optimizer.state_dict()['param_groups'][1]['lr']
+        else:
+            new_lr = torch.min(self.rn.params_k).item()*self.lr
+            curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
 
 
@@ -234,7 +243,8 @@ class Optimizer:
 
                     self.optimizer.step()
                     # self.scheduler.step(metric)
-                    self.scheduler.step()
+                    if self.lr_change_step is not None:
+                        self.scheduler.step()
                     #Changing learning rate
                     if (self.lr_change_step is not None) and (i%100 ==0) and (i>0):
                         print("New learning rate : ")

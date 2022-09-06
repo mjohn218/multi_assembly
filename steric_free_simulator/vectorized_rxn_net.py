@@ -23,7 +23,7 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
+    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
         """
 
         :param rn: The reaction network template
@@ -159,6 +159,7 @@ class VectorizedRxnNet:
             self.complx_dG = cplx_dG
             bimol_rxn_uids = self.rxn_class[1]
             self.dG_mode=mode
+            self.dG_type = type
             if mode==1:
 
                 #Both kon and koff are params
@@ -180,7 +181,7 @@ class VectorizedRxnNet:
                 #Only kon is parameter
 
                 k_off = self.kon[bimol_rxn_uids][:-1]*self._C0*torch.exp(self.rxn_score_vec[bimol_rxn_uids])[:-1]
-                self.fixed_koff = k_off
+                self.fixed_koff = self.kon*self._C0*torch.exp(self.rxn_score_vec)
 
                 #Getting all the off rates
                 # k_off = self.kon.clone().detach()*self._C0*torch.exp(self.rxn_score_vec)
@@ -194,13 +195,13 @@ class VectorizedRxnNet:
                 print("MODE:2 ->", self.params_k)
             elif mode==3:
 
-                #Only koff is parameter
+                #Only koff is parameter. All 3 koff rates can be changed
 
-                koff = self.kon[bimol_rxn_uids][:-1]*self._C0*torch.exp(self.rxn_score_vec[bimol_rxn_uids])[:-1]
-                self.fixed_koff = self.kon[bimol_rxn_uids][:-1]
-
+                k_off = self.kon[bimol_rxn_uids]*self._C0*torch.exp(self.rxn_score_vec[bimol_rxn_uids])
                 self.params_k = nn.Parameter(k_off,requires_grad=True)
                 self.initial_params = Tensor(self.params_k).clone().detach()
+
+                self.fixed_koff = self.kon*self._C0*torch.exp(self.rxn_score_vec)
 
 
         else:
@@ -448,30 +449,32 @@ class VectorizedRxnNet:
                 koff_last = torch.exp(dG_other)*self.params_k[0][-1]*self._C0
                 rxn_koff[self.rxn_class[1][-1]] = koff_last
 
-                # other_koff = []
-                # # print("Mask: ",mask)
-                # for i in range(len(mask)):
-                #
-                #     if mask[i]:
-                #         mon_rxns = self.dG_map[i]
-                #         n_rxn = len(mon_rxns)-1
-                #         # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
-                #         other_koff.append(rxn_kon[i]*torch.prod(rxn_koff[mon_rxns])/((self._C0**n_rxn)*torch.prod(rxn_kon[mon_rxns])))
-                # other_koff = Tensor(other_koff)
-                # other_koff.requires_grad_(True)
-                # rxn_koff[mask] = other_koff
+                if self.dG_type=='a':
+                    other_koff = []
+                    # print("Mask: ",mask)
+                    for i in range(len(mask)):
 
-                other_kon = []
-                rxn_koff[mask] = self.fixed_koff[mask]
-                for i in range(len(mask)):
-                    if mask[i]:
-                        mon_rxns = self.dG_map[i]
-                        n_rxn = len(mon_rxns)-1
-                        other_kon.append(rxn_koff[i]*torch.prod(rxn_kon[mon_rxns])*(self._C0**n_rxn)/(torch.prod(rxn_koff[mon_rxns])))
-                other_kon = Tensor(other_kon)
-                print("Other kon: ",other_kon)
-                other_kon.requires_grad_(True)
-                rxn_kon[mask] = other_kon
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
+                            other_koff.append(rxn_kon[i]*torch.prod(rxn_koff[mon_rxns])/((self._C0**n_rxn)*torch.prod(rxn_kon[mon_rxns])))
+                    other_koff = Tensor(other_koff)
+                    other_koff.requires_grad_(True)
+                    rxn_koff[mask] = other_koff
+
+                elif self.dG_type=='b':
+                    other_kon = []
+                    rxn_koff[mask] = self.fixed_koff[mask]
+                    for i in range(len(mask)):
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            other_kon.append(rxn_koff[i]*torch.prod(rxn_kon[mon_rxns])*(self._C0**n_rxn)/(torch.prod(rxn_koff[mon_rxns])))
+                    other_kon = Tensor(other_kon)
+                    print("Other kon: ",other_kon)
+                    other_kon.requires_grad_(True)
+                    rxn_kon[mask] = other_kon
 
 
 
@@ -480,46 +483,67 @@ class VectorizedRxnNet:
                 l_final_k = torch.cat([l_rxn_kon,l_rxn_koff],dim=0)
                 # print("Final Vectorized form : ",torch.exp(l_final_k))
             elif self.dG_mode==2:
+
                 mask = torch.ones([len(dGrxn)],dtype=bool)
                 mask[self.rxn_class[1]] = False
-                # rxn_kon = torch.zeros([len(dGrxn)],requires_grad=True).double()
-                rxn_kon = self.kon.clone().detach()
-                rxn_kon[self.rxn_class[1]] = self.params_k
 
-                #Not required when all koff are fixed(except for one dimer)
-                rxn_koff = torch.zeros([len(dGrxn)],requires_grad=True).double()
-                rxn_koff[self.rxn_class[1][:-1]] = self.fixed_koff
-                # rxn_koff = self.fixed_koff
+                if self.dG_type=='a':
+                    # rxn_kon = torch.zeros([len(dGrxn)],requires_grad=True).double()
+                    rxn_kon = self.kon.clone().detach()
+                    rxn_kon[self.rxn_class[1]] = self.params_k
 
-                #THe last k_off (or dG) for one dimer will be calculated by the constraint
-                Keq = torch.prod(self.params_k[:-1]*self._C0/self.fixed_koff)
-                # Keq = torch.prod(self.params_k[:-1]*self._C0/self.fixed_koff[self.rxn_class[1][:-1]])
-                dG_other = self.complx_dG + torch.log(Keq)
-                print("dG of last monomer: ",dG_other)
-                koff_last = torch.exp(dG_other)*self.params_k[-1]*self._C0
-                rxn_koff[self.rxn_class[1][-1]] = koff_last
+                    #Not required when all koff are fixed(except for one dimer)
+                    rxn_koff = torch.zeros([len(dGrxn)],requires_grad=True).double()
+                    rxn_koff[self.rxn_class[1][:-1]] = self.fixed_koff[self.rxn_class[1][:-1]]
+                    # rxn_koff = self.fixed_koff
 
-                other_koff = []
-                for i in range(len(mask)):
+                    #THe last k_off (or dG) for one dimer will be calculated by the constraint
+                    Keq = torch.prod(self.params_k[:-1]*self._C0/self.fixed_koff[self.rxn_class[1][:-1]])
+                    # Keq = torch.prod(self.params_k[:-1]*self._C0/self.fixed_koff[self.rxn_class[1][:-1]])
+                    dG_other = self.complx_dG + torch.log(Keq)
+                    print("dG of last monomer: ",dG_other)
+                    koff_last = torch.exp(dG_other)*self.params_k[-1]*self._C0
+                    rxn_koff[self.rxn_class[1][-1]] = koff_last
 
-                    if mask[i]:
-                        mon_rxns = self.dG_map[i]
-                        n_rxn = len(mon_rxns)-1
-                        # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
-                        other_koff.append(rxn_kon[i]*torch.prod(rxn_koff[mon_rxns])/((self._C0**n_rxn)*torch.prod(rxn_kon[mon_rxns])))
-                other_koff = Tensor(other_koff)
-                other_koff.requires_grad_(True)
-                rxn_koff[mask] = other_koff
+                    other_koff = []
+                    for i in range(len(mask)):
 
-                # other_kon = []
-                # for i in range(len(mask)):
-                #     if mask[i]:
-                #         mon_rxns = self.dG_map[i]
-                #         n_rxn = len(mon_rxns)-1
-                #         other_kon.append(rxn_koff[i]*torch.prod(rxn_kon[mon_rxns])*(self._C0**n_rxn)/(torch.prod(rxn_koff[mon_rxns])))
-                # other_kon=Tensor(other_kon)
-                # other_kon.requires_grad_(True)
-                # rxn_kon[mask]=other_kon
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
+                            other_koff.append(rxn_kon[i]*torch.prod(rxn_koff[mon_rxns])/((self._C0**n_rxn)*torch.prod(rxn_kon[mon_rxns])))
+                    other_koff = Tensor(other_koff)
+                    other_koff.requires_grad_(True)
+                    rxn_koff[mask] = other_koff
+
+                elif self.dG_type=='b':
+                    rxn_kon = self.kon.clone().detach()
+                    rxn_kon[self.rxn_class[1]] = self.params_k
+
+                    rxn_koff = torch.zeros([len(dGrxn)],requires_grad=True).double()
+                    mask2 = torch.ones([len(dGrxn)],dtype=bool)
+                    mask2[[self.rxn_class[1][-1]]] = False
+                    rxn_koff[mask2] = self.fixed_koff[mask2]
+
+                    #THe last k_off (or dG) for one dimer will be calculated by the constraint
+                    Keq = torch.prod(rxn_kon[self.rxn_class[1][:-1]]*self._C0/self.fixed_koff[self.rxn_class[1][:-1]])
+                    # Keq = torch.prod(self.params_k[:-1]*self._C0/self.fixed_koff[self.rxn_class[1][:-1]])
+                    dG_other = self.complx_dG + torch.log(Keq)
+                    print("dG of last monomer: ",dG_other)
+                    koff_last = torch.exp(dG_other)*self.params_k[-1]*self._C0
+                    rxn_koff[self.rxn_class[1][-1]] = koff_last
+
+
+                    other_kon = []
+                    for i in range(len(mask)):
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            other_kon.append(rxn_koff[i]*torch.prod(rxn_kon[mon_rxns])*(self._C0**n_rxn)/(torch.prod(rxn_koff[mon_rxns])))
+                    other_kon=Tensor(other_kon)
+                    other_kon.requires_grad_(True)
+                    rxn_kon[mask]=other_kon
 
                 l_rxn_kon = torch.log(rxn_kon)
                 l_rxn_koff = torch.log(rxn_koff)
@@ -527,7 +551,58 @@ class VectorizedRxnNet:
 
 
             elif self.dG_mode==3:
-                a=None
+                mask = torch.ones([len(dGrxn)],dtype=bool)
+                mask[self.rxn_class[1]] = False
+
+                rxn_kon = self.kon.clone().detach()
+
+                #Not required when all koff are fixed(except for one dimer)
+                rxn_koff = torch.zeros([len(dGrxn)],requires_grad=True).double()
+                rxn_koff[self.rxn_class[1]] = self.params_k
+
+                #Calculating the last kon due to dG constraint
+                Keq = torch.prod(rxn_kon[self.rxn_class[1][:-1]]*self._C0/self.params_k[:-1])
+                dG_other = self.complx_dG + torch.log(Keq)
+                print("dG of last monomer: ",dG_other)
+                kon_last = torch.exp(-1*dG_other)*self.params_k[-1]/self._C0
+
+                rxn_kon[self.rxn_class[1][-1]] = kon_last
+
+                if self.dG_type=='a':
+                    #Mode b:
+                    other_koff = []
+                    for i in range(len(mask)):
+
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
+                            other_koff.append(rxn_kon[i]*torch.prod(rxn_koff[mon_rxns])/((self._C0**n_rxn)*torch.prod(rxn_kon[mon_rxns])))
+                    other_koff = Tensor(other_koff)
+                    other_koff.requires_grad_(True)
+                    rxn_koff[mask] = other_koff
+
+                elif dG_type=='b':
+                    #Mode b:
+                    rxn_koff[mask] = self.fixed_koff[mask]
+                    other_kon = []
+                    for i in range(len(mask)):
+
+                        if mask[i]:
+                            mon_rxns = self.dG_map[i]
+                            n_rxn = len(mon_rxns)-1
+                            # rxn_idx = [self.rxn_class[1].index(r) for r in mon_rxns]
+                            other_kon.append(rxn_koff[i]*torch.prod(rxn_kon[mon_rxns])*(self._C0**n_rxn)/(torch.prod(rxn_koff[mon_rxns])))
+                    other_kon = Tensor(other_kon)
+                    other_kon.requires_grad_(True)
+                    rxn_kon[mask] = other_kon
+
+                l_rxn_kon = torch.log(rxn_kon)
+                l_rxn_koff = torch.log(rxn_koff)
+                l_final_k = torch.cat([l_rxn_kon,l_rxn_koff],dim=0)
+
+
+
             return l_final_k.clone().to(self.dev)
         else:
             return l_k.clone().to(self.dev)
