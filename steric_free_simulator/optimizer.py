@@ -168,6 +168,8 @@ class Optimizer:
     def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]]):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
+
+        print("Optimizer State:",self.optimizer.state_dict)
         counter = 0
         calc_flux_optim=False
         if optim=='flux_coeff':
