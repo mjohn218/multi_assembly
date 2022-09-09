@@ -8,6 +8,7 @@ from steric_free_simulator import VectorizedRxnNet
 from torch.optim.lr_scheduler import StepLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.lr_scheduler import MultiplicativeLR
+import random
 
 
 
@@ -52,14 +53,22 @@ class Optimizer:
                 self.optimizer = torch.optim.RMSprop(param_list)
             elif self.rn.dG_is_param:
                 # torch.autograd.set_detect_anomaly(True)
+                self.lr_group=[]
                 if self.rn.dG_mode==1:
                     param_list=[]
                     for i in range(len(param_itr)):
                         param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate})
                     self.optimizer = torch.optim.RMSprop(param_list)
                 else:
-                    print("Params: ",param_itr)
-                    self.optimizer = torch.optim.RMSprop(param_itr,torch.mean(param_itr[0]).item()*learning_rate)
+                    param_list=[]
+
+                    for i in range(len(param_itr)):
+                        learn_rate = random.uniform(learning_rate,1e-1)
+                        param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learn_rate})
+                        self.lr_group.append(learn_rate)
+                    self.optimizer = torch.optim.RMSprop(param_list)
+                    # print("Params: ",param_itr)
+                    # self.optimizer = torch.optim.RMSprop(param_itr,torch.mean(param_itr[0]).item()*learning_rate)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
@@ -86,7 +95,8 @@ class Optimizer:
             elif self.rn.dG_mode==2:
                 self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda1)
             elif self.rn.dG_mode ==3:
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
+                # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda3,self.lambda4,self.lambda5])
             self.lr_change_step = lr_change_step
         else:
             self.lr_change_step = None
@@ -103,6 +113,26 @@ class Optimizer:
             new_lr = torch.min(self.rn.params_k).item()*self.lr
             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
+
+    def lambda3(self,opt_itr):
+        # alpha = []
+        # for i in range(len(self.rn.params_k)):
+        #     new_lr = self.rn.params_k[i].item()*self.lr_group[i]
+        #     curr_lr = self.optimizer.state_dict()['param_groups'][i]['lr']
+        #     alpha.append(new_lr/curr_lr)
+        new_lr = torch.min(self.rn.params_k[0]).item()*self.lr_group[0]
+        curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+        return(new_lr/curr_lr)
+
+    def lambda4(self,opt_itr):
+        new_lr = torch.min(self.rn.params_k[1]).item()*self.lr_group[1]
+        curr_lr = self.optimizer.state_dict()['param_groups'][1]['lr']
+        return(new_lr/curr_lr)
+    def lambda5(self,opt_itr):
+        new_lr = torch.min(self.rn.params_k[2]).item()*self.lr_group[2]
+        curr_lr = self.optimizer.state_dict()['param_groups'][2]['lr']
+        return(new_lr/curr_lr)
+
 
 
     def plot_observable(self, iteration, nodes_list,ax=None):
@@ -172,6 +202,8 @@ class Optimizer:
             self.sim_observables[-1]['steps'] = np.array(sim.steps)
             self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
 
+
+
             if optim =='yield':
                 print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
                 # print(self.rn.copies_vec)
@@ -234,9 +266,13 @@ class Optimizer:
                     elif self.rn.dG_is_param:
                         k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                             scalar_modifier=1.))
+                        g = self.rn.compute_total_dG(k)
+                        print("Total Complex dG = ",g)
+
+                        dG_penalty = F.relu((g-(self.rn.complx_dG+2))) + F.relu(-1*(g-(self.rn.complx_dG-2)))
                         print("Current On rates: ", k[:len(self.rn.kon)])
                         physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
-                        cost = -total_yield + physics_penalty
+                        cost = -total_yield + physics_penalty + 10*dG_penalty
                         # print(self.optimizer.state_dict)
                         cost.backward(retain_graph=True)
                         metric = torch.mean(self.rn.params_k[1].clone().detach()).item()
@@ -281,7 +317,8 @@ class Optimizer:
                         if self.rn.dG_mode==1:
                             new_params = [l.clone().detach() for l in self.rn.params_k]
                         else:
-                            new_params = self.rn.params_k.clone().detach()
+                            new_params = [l.clone().detach() for l in self.rn.params_k]
+                            # new_params = self.rn.params_k.clone().detach()
 
                     else:
                         new_params = self.rn.kon.clone().detach()

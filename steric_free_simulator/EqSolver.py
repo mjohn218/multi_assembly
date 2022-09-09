@@ -36,6 +36,7 @@ def find_eq_eqns(rn):
             b = sym_buf[r_tup[1]]
             kon = data['k_on']
             koff = data['k_off']
+            # print("Off rates: ",koff)
             eqn = - a * b * kon + c * koff
             eqn_list.append(eqn)
     return eqn_list, sym_buf
