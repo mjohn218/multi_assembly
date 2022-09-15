@@ -820,7 +820,7 @@ class ReactionNetwork:
                                   uid=self._rxn_count)
 
             self.uid_map[self._rxn_count] = tuple(reactants)
-            self.chap_uid_map[self._rxn_count] = 
+            # self.chap_uid_map[self._rxn_count] = 
             self._rxn_count+=1
 
 
