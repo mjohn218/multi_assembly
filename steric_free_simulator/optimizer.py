@@ -96,7 +96,15 @@ class Optimizer:
                 self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda1)
             elif self.rn.dG_mode ==3:
                 # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda3,self.lambda4,self.lambda5])
+                self.lambda_ct = -1
+                lambda_list = []
+                print("*******Using lambda_master for LR Scheduling*****")
+                # for i in range(len(self.rn.params_k)):
+                #     lambda_list.append(self.lambda_master)
+
+                # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda3,self.lambda4,self.lambda5])
+
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda_master for i in range(len(self.rn.params_k))])
             self.lr_change_step = lr_change_step
         else:
             self.lr_change_step = None
@@ -132,6 +140,17 @@ class Optimizer:
         new_lr = torch.min(self.rn.params_k[2]).item()*self.lr_group[2]
         curr_lr = self.optimizer.state_dict()['param_groups'][2]['lr']
         return(new_lr/curr_lr)
+
+    def update_counter(self):
+        lr_ct =1
+        # if self.counter == len(self.rn.params_k):
+        #     self.counter=0
+    def lambda_master(self,opt_itr):
+        # update_counter()
+        # print("***** LAMBDA MASTER:  {:d}*****".format(self.lambda_counter))
+        # self.counter+=
+        self.lambda_ct+=1
+        return(torch.min(self.rn.params_k[self.lambda_ct%len(self.rn.params_k)]).item()*self.lr_group[self.lambda_ct%len(self.rn.params_k)]/self.optimizer.state_dict()['param_groups'][self.lambda_ct%len(self.rn.params_k)]['lr'])
 
 
 

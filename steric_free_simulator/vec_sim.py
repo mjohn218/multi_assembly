@@ -64,7 +64,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]]):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0):
         """
         modifies reaction network
         :return:
@@ -88,7 +88,7 @@ class VecSim:
             l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-            print("Simulation rates: ",torch.exp(l_k))
+            # print("Simulation rates: ",torch.exp(l_k))
 
         while cur_time < self.runtime:
 
@@ -106,7 +106,7 @@ class VecSim:
             #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)
-            conc_scale = 1  #Units uM
+            # conc_scale = 1  #Units uM
             # if torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]) < conc_scale:
             #     conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
 
