@@ -98,6 +98,7 @@ class ReactionNetwork:
         self.max_subunits = -1
         self.max_interactions = 2
         self.monomer_add_only = True
+        self.chaperone=False
         # default observables are monomers and final complex
         self.observables = dict()
         self.flux_vs_time = dict()
@@ -820,7 +821,7 @@ class ReactionNetwork:
                                   uid=self._rxn_count)
 
             self.uid_map[self._rxn_count] = tuple(reactants)
-            # self.chap_uid_map[self._rxn_count] = 
+            # self.chap_uid_map[self._rxn_count] =
             self._rxn_count+=1
 
 
