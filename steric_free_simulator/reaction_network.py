@@ -168,6 +168,9 @@ class ReactionNetwork:
             self.max_interactions = items[1]
         elif items[0] == 'monomer_add_only':
             self.monomer_add_only=items[1]
+        elif items[0] == 'chaperone':
+            self.chaperone=items[1]
+            self.chaperone_rxns = []
         return items
 
     def parse_species(self, line, params):
@@ -194,16 +197,27 @@ class ReactionNetwork:
 
     def parse_rule(self, line, params, seed=None, percent_negative=.5, score_range=100):
         items = re.split(r' |, ', line)
+        print("Parsing rule...")
         #Old split
         # r_info = re.split('\\(.\\)+.|\\(.\\)<->', items[0])
         #New split
         #First splitting it by the reaction arrow. The second splitting the reactants side text to get species. Useful to identify creation ann destruction rxns.
         split_01 = re.split('<->',items[0])
-        r_info = re.split('\\(.\\)+.|\\(.\\)',split_01[0])
-        print("Parsing rule...")
-        print(items)
-        print(r_info)
-        print(split_01)
+
+        #Check if any of the reactants is in bound form
+        if '!' in split_01[0]:
+            r_info = re.split('\+',split_01[0])
+
+            react_1 = "".join(re.split('\\(.\!.\\)|\.',r_info[0]))
+            react_2 = "".join(re.split('|\\(.\\)|\+',r_info[1]))
+
+            print(r_info)
+        else:
+            r_info = re.split('\\(.\\)+.|\\(.\\)',split_01[0])
+            print(r_info)
+            react_1 = r_info[0]
+            react_2 = r_info[1]
+
         if params['default_assoc']:
             self.k_on = params['default_assoc']
         else:
@@ -230,7 +244,7 @@ class ReactionNetwork:
                 self.boolDestruction_rxn=True
                 self.destruction_species.append(species)
         else:
-            self.allowed_edges[tuple(sorted([r_info[0], r_info[1]]))] = [None, None, LOOP_COOP_DEFAULT, score]
+            self.allowed_edges[tuple(sorted([react_1, react_2]))] = [None, None, LOOP_COOP_DEFAULT, score]
 
         if params.get('rxn_coupling') is not None:
             self.rxn_coupling=params['rxn_coupling']
@@ -265,6 +279,7 @@ class ReactionNetwork:
                         self.parse_species(line, parameters)
                     elif cur_block == 'rules':
                         self.parse_rule(line, parameters, seed=None)
+
 
         # attach loop cooperativity param to rules (python 3.6+ only due to dict ordering changes)
         if "loop_coop" in parameters:
@@ -476,6 +491,9 @@ class ReactionNetwork:
         for poss_edge in list(self.allowed_edges.keys()):
             print("Allowed edges: ")
             print(poss_edge)
+            # print(item.nodes())
+            print([item.has_node(n) for n in poss_edge])
+            print(item.has_edge(poss_edge[0], poss_edge[1]))
             if False not in [item.has_node(n) for n in poss_edge] and \
                     (n2 is None or
                      (True in [orig.has_node(n) for n in poss_edge] and
@@ -533,10 +551,8 @@ class ReactionNetwork:
                 new_bonds.append(poss_edge)
                 complex_size+=n1[1]['subunits']   #Only for n1 since n2 is None
 
-            elif (n2 is not None) and (True in [orig.has_node(n) for n in poss_edge] and
-             True in [nextn.has_node(n) for n in poss_edge]) and item.has_edge(poss_edge[0], poss_edge[1]):
-
-             #TODO: Need to insert a condition which checks that this part of the code is only executed if there is a repeating unit in the complex.
+            elif (n2 is not None) and (True in [orig.has_node(n) for n in poss_edge] and True in [nextn.has_node(n) for n in poss_edge]) and item.has_edge(poss_edge[0], poss_edge[1]):
+                #TODO: Need to insert a condition which checks that this part of the code is only executed if there is a repeating unit in the complex.
                 print("Item already has edge")
                 #Once you see that item already has edge. Check if the complex has max. subunits
                 #Find no. of edges in the node
@@ -652,9 +668,26 @@ class ReactionNetwork:
 
                             add_to_graph=True
 
+            elif (True in [item.has_node(n) for n in poss_edge]) and (True in [len(n)>1 for n in poss_edge]) and self.chaperone and n2 is not None:
 
 
-            else:
+
+                #The previous conditionals where it is checking if a node exists using reactants from poss_edge does not work when one of the reactant in poss_edge is a complex
+                #Because item represents the structure of a node. And it will always be composed of monomers as nodes.
+
+                #You need to check this condition if the complex exists in the main network
+                rxn_is_possible=False
+                node_labels= (gtostr(orig),gtostr(nextn))
+
+                if set(node_labels) == set(poss_edge):
+                    print("*******Chaperone Reaction**********")
+                    reactants = sorted((n1[0],n2[0]))
+                    products = sorted(list(item.nodes()))
+                    print(reactants,products)
+
+                    if (reactants,products) not in self.chaperone_rxns:
+                        self.chaperone_rxns.append((reactants,products))
+
                 continue
         # resolving one step  network
         if one_step and add_to_graph:
@@ -743,6 +776,14 @@ class ReactionNetwork:
                                 cid[uid]=[mon_rxn_id]
         return(cid)
 
+    def check_if_node_exists(self,species):
+        for node in self.network.nodes():
+            node_label = gtostr(self.network.nodes[node]['struct'])
+            if node_label == species:
+                return(True)
+        return(False)
+
+
     def resolve_creation_rxn(self):
 
         print(self.creation_species)
@@ -756,6 +797,33 @@ class ReactionNetwork:
                 self.destruction_nodes.append(n)
                 self.destruction_rxn_data[n] = {'uid':self._rxn_count,'k_on':self.default_k_destruction}
                 self._rxn_count+=1
+
+    def resolve_chaperone_rxn(self):
+        print("Resolving Chaperone Rxns::")
+        print(self.chaperone_rxns)
+        for chap in self.chaperone_rxns:
+            reactants = list(chap[0])
+            products=[]
+            for n in self.network.nodes():
+                if (gtostr(self.network.nodes[n]['struct']) in chap[1]) and (n not in reactants):
+                    products.append(n)
+
+            print("Products:",products)
+            print("Reactants: ",reactants)
+            for r in reactants:
+                for p in products:
+                    self.network.add_edge(r, p,
+                                  k_on=self.default_k_on,
+                                  k_off=None,
+                                  lcf=1,
+                                  rxn_score=0,
+                                  uid=self._rxn_count)
+
+            self.uid_map[self._rxn_count] = tuple(reactants)
+            self.chap_uid_map[self._rxn_count] = 
+            self._rxn_count+=1
+
+
     def resolve_tree(self):
         """
         Build the full reaction network from whatever initial info was given
@@ -800,7 +868,7 @@ class ReactionNetwork:
 
         #Calculating dG of final complex
         #Add code here
-        
+
         # add default observables
         #Add all nodes as observables
         for i in range(len(self.network.nodes)):
@@ -821,6 +889,9 @@ class ReactionNetwork:
             print("Destructions Reactions: ")
             print(self.destruction_nodes)
             print(self.destruction_rxn_data)
+
+        if self.chaperone:
+            self.resolve_chaperone_rxn()
 
 if __name__ == '__main__':
     bngls_path = sys.argv[1]  # path to bngl

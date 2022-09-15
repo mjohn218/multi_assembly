@@ -88,7 +88,7 @@ class VecSim:
             l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-            # print("Simulation rates: ",torch.exp(l_k))
+            print("Simulation rates: ",torch.exp(l_k))
 
         while cur_time < self.runtime:
 
