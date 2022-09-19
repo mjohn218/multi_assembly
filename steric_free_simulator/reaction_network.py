@@ -172,6 +172,7 @@ class ReactionNetwork:
         elif items[0] == 'chaperone':
             self.chaperone=items[1]
             self.chaperone_rxns = []
+            self.chap_uid_map = {}
         return items
 
     def parse_species(self, line, params):
@@ -805,9 +806,12 @@ class ReactionNetwork:
         for chap in self.chaperone_rxns:
             reactants = list(chap[0])
             products=[]
+            chap_species = -1
             for n in self.network.nodes():
                 if (gtostr(self.network.nodes[n]['struct']) in chap[1]) and (n not in reactants):
                     products.append(n)
+                elif (gtostr(self.network.nodes[n]['struct']) in chap[1]) and (n in reactants):
+                    chap_species = n
 
             print("Products:",products)
             print("Reactants: ",reactants)
@@ -821,7 +825,7 @@ class ReactionNetwork:
                                   uid=self._rxn_count)
 
             self.uid_map[self._rxn_count] = tuple(reactants)
-            # self.chap_uid_map[self._rxn_count] =
+            self.chap_uid_map[self._rxn_count] = chap_species
             self._rxn_count+=1
 
 

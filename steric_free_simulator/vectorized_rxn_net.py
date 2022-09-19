@@ -23,7 +23,7 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
+    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, chap_is_param=False,dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
         """
 
         :param rn: The reaction network template
@@ -50,10 +50,17 @@ class VectorizedRxnNet:
         self.destruction_nodes = rn.destruction_nodes
         self.destruction_rxn_data = rn.destruction_rxn_data
 
+        self.chaperone = rn.chaperone
+        if self.chaperone:
+            self.chap_uid_map = rn.chap_uid_map
+
         self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
         self.coupling = coupling
         self.rxn_coupling = rn.rxn_coupling
         self.num_monomers = rn.num_monomers
+
+
+
         if optim_rates is not None:
             self.partial_opt = True
             self.optim_rates = optim_rates
@@ -230,6 +237,7 @@ class VectorizedRxnNet:
         self.copies_is_param = copies_is_param
         self.dissoc_is_param = dissoc_is_param
         self.dG_is_param = dG_is_param
+        self.chap_is_param=chap_is_param
         if assoc_is_param:
             if self.coupling:
                 self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)
@@ -240,6 +248,15 @@ class VectorizedRxnNet:
         if copies_is_param:
             print("COPIES ARE PARAMS:::")
             self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
+        if chap_is_param:
+            self.chap_params = []
+            self.initial_params = []
+            for uid,species in rn.chap_uid_map.items():
+                self.chap_params.append(nn.Parameter(self.initial_copies[species],requires_grad=True))
+                self.chap_params.append(nn.Parameter(self.kon[uid], requires_grad=True))
+
+                self.initial_params.append(nn.Parameter(self.initial_copies[species],requires_grad=True))
+                self.initial_params.append(nn.Parameter(self.kon[uid], requires_grad=True))
         self.observables = rn.observables
         self.flux_vs_time = rn.flux_vs_time
         self.is_energy_set = rn.is_energy_set
@@ -272,6 +289,10 @@ class VectorizedRxnNet:
                     for i in range(len(self.initial_params)):
                         self.params_k[i] = nn.Parameter(self.initial_params[i].clone(), requires_grad=True)
                     # self.params_k = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+            elif self.chap_is_param:
+                for i in range(len(self.initial_params)):
+                    self.chap_params[i] = nn.Parameter(self.initial_params[i].clone(), requires_grad=True)
+
             else:
                 self.kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
         for key in self.observables:
@@ -303,6 +324,8 @@ class VectorizedRxnNet:
             else:
                 #return [self.params_k]
                 return self.params_k
+        elif self.chap_is_param:
+            return self.chap_params
 
     def to(self, dev):
         self.M = self.M.to(dev)
@@ -327,6 +350,9 @@ class VectorizedRxnNet:
                 for i in range(len(self.params_k)):
                     self.params_k[i] = nn.Parameter(self.params_k[i].data.clone().detach().to(dev), requires_grad=True)
                 # self.params_k = nn.Parameter(self.params_k.data.clone().detach().to(dev), requires_grad=True)
+        elif self.chap_is_param:
+            for i in range(len(self.chap_params)):
+                self.chap_params[i] = nn.Parameter(self.chap_params[i].data.clone().detach().to(dev), requires_grad=True)
         else:
             self.kon = nn.Parameter(self.kon.data.clone().detach().to(dev), requires_grad=True)
         self.copies_vec = self.copies_vec.to(dev)
@@ -397,6 +423,11 @@ class VectorizedRxnNet:
         # generate the reverse map explicitly
         # M[0,11]=0
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
+
+        if self.chaperone:
+            for uid,chap in self.chap_uid_map.items():
+                M[chap,uid] = 0
+                M[:,uid+rn._rxn_count] = 0
 
         #To adjust for creation reactions. No reversible destruction
         if self.boolCreation_rxn or self.boolDestruction_rxn:
@@ -661,8 +692,10 @@ class VectorizedRxnNet:
             A tensor with shape (rxn_count * 2)
         """
         r_filter = -1 * self.M.T.clone()        #Invert signs of reactants amd products.
+        # r_filter = -1 * M.T.clone()
         r_filter[r_filter == 0] = -1            #Also changing molecules not involved in reactions to -1. After this, only reactants in each rxn are positive.
-
+        r_filter[6,3]=1
+        # print(r_filter)
         #Old code
         # c_temp_mat = torch.mul(r_filter, self.copies_vec)
         # l_c_temp_mat = torch.log(c_temp_mat)
@@ -676,9 +709,10 @@ class VectorizedRxnNet:
         nonreactant_mask = r_filter<0       #Combines condition of Flag1 and Flag2. Basically just selecting all non_reactants w.r.t to each reaction
         c_temp_mat = torch.pow(self.copies_vec,r_filter)        #Different from previous where torch.mul was used. The previous only works for stoich=1, since X^1=X*1. But in mass action kinetics, conc. is raised to the power
         l_c_temp_mat = torch.log(c_temp_mat)                #Same as above
-        l_c_temp_mat[nonreactant_mask]=0                    #Setting all conc. values of non-reactants to zero before taking the sum. Matrix dim - No. of rxn x No. of species
+        l_c_temp_mat[nonreactant_mask]=0
+        # print(l_c_temp_mat)                    #Setting all conc. values of non-reactants to zero before taking the sum. Matrix dim - No. of rxn x No. of species
         l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)       #Summing for each row to get prod of conc. of reactants for each reaction
-
+        # print("Actual Prod: ",torch.exp(l_c_prod_vec))
         return l_c_prod_vec
 
     def update_reaction_net(self, rn, scalar_modifier: int = 1):

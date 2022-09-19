@@ -69,6 +69,11 @@ class Optimizer:
                     self.optimizer = torch.optim.RMSprop(param_list)
                     # print("Params: ",param_itr)
                     # self.optimizer = torch.optim.RMSprop(param_itr,torch.mean(param_itr[0]).item()*learning_rate)
+            elif self.rn.chap_is_param:
+                param_list = []
+                for i in range(len(param_itr)):
+                    param_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                self.optimizer = torch.optim.RMSprop(param_list)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
@@ -268,6 +273,12 @@ class Optimizer:
                         physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev)# stops zeroing or negating params
                         cost = -total_yield + physics_penalty
                         cost.backward()
+                    elif self.rn.chap_is_param:
+                        c = self.rn.chap_params[0].clone().detach()
+                        k = self.rn.chap_params[1].clone().detach()
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
+                        cost = -total_yield + physics_penalty
+                        cost.backward(retain_graph=True)
                     elif self.rn.dissoc_is_param:
                         if self.rn.partial_opt:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,scalar_modifier=1.))
@@ -322,6 +333,8 @@ class Optimizer:
                             self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.copies_is_param:
                         new_params = self.rn.c_params.clone().detach()
+                    elif self.rn.chap_is_param:
+                        new_params = [l.clone().detach() for l in self.rn.chap_params]
                     elif self.rn.dissoc_is_param:
                         if self.rn.partial_opt:
                             new_params = self.rn.params_koff.clone().detach()

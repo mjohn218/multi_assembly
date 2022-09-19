@@ -74,6 +74,12 @@ class VecSim:
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
 
+        if self.rn.chap_is_param:
+            mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
+            for uid,species in self.rn.chap_uid_map.items():
+                mask[species]=False
+            max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
+
         if self.rn.rxn_coupling:
             #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
             # print("Coupling")
@@ -216,6 +222,7 @@ class VecSim:
             #     break
             #     print("Current Time: ",cur_time)
         total_complete = self.rn.copies_vec[-1]/max_poss_yield
+
         # total_complete = torch.max(torch.DoubleTensor([self.rn.copies_vec[3],self.rn.copies_vec[4],self.rn.copies_vec[5]]))
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
         # final_yield = total_complete/max_poss_yield
