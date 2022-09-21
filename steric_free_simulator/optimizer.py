@@ -95,21 +95,24 @@ class Optimizer:
                 gamma = 0.5
             # self.scheduler = StepLR(self.optimizer,step_size=lr_change_step,gamma=gamma)
             # self.scheduler = ReduceLROnPlateau(self.optimizer,'max',patience=30)
-            if self.rn.dG_mode==1:
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda1,self.lambda2])
-            elif self.rn.dG_mode==2:
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda1)
-            elif self.rn.dG_mode ==3:
-                # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
-                self.lambda_ct = -1
-                lambda_list = []
-                print("*******Using lambda_master for LR Scheduling*****")
-                # for i in range(len(self.rn.params_k)):
-                #     lambda_list.append(self.lambda_master)
+            if self.rn.chap_is_param:
+                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda_c,self.lambda_k])
+            elif self.rn.dG_is_param:
+                if self.rn.dG_mode==1:
+                    self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda1,self.lambda2])
+                elif self.rn.dG_mode==2:
+                    self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda1)
+                elif self.rn.dG_mode ==3:
+                    # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.lambda2)
+                    self.lambda_ct = -1
+                    lambda_list = []
+                    print("*******Using lambda_master for LR Scheduling*****")
+                    # for i in range(len(self.rn.params_k)):
+                    #     lambda_list.append(self.lambda_master)
 
-                # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda3,self.lambda4,self.lambda5])
+                    # self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda3,self.lambda4,self.lambda5])
 
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda_master for i in range(len(self.rn.params_k))])
+                    self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda_master for i in range(len(self.rn.params_k))])
             self.lr_change_step = lr_change_step
         else:
             self.lr_change_step = None
@@ -127,18 +130,18 @@ class Optimizer:
             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
 
-    def lambda3(self,opt_itr):
+    def lambda_c(self,opt_itr):
         # alpha = []
         # for i in range(len(self.rn.params_k)):
         #     new_lr = self.rn.params_k[i].item()*self.lr_group[i]
         #     curr_lr = self.optimizer.state_dict()['param_groups'][i]['lr']
         #     alpha.append(new_lr/curr_lr)
-        new_lr = torch.min(self.rn.params_k[0]).item()*self.lr_group[0]
+        new_lr = torch.min(self.rn.chap_params[0]).item()*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
 
-    def lambda4(self,opt_itr):
-        new_lr = torch.min(self.rn.params_k[1]).item()*self.lr_group[1]
+    def lambda_k(self,opt_itr):
+        new_lr = torch.min(self.rn.chap_params[1]).item()*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][1]['lr']
         return(new_lr/curr_lr)
     def lambda5(self,opt_itr):
@@ -276,7 +279,7 @@ class Optimizer:
                     elif self.rn.chap_is_param:
                         c = self.rn.chap_params[0].clone().detach()
                         k = self.rn.chap_params[1].clone().detach()
-                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr))).to(self.dev)
                         cost = -total_yield + physics_penalty
                         cost.backward(retain_graph=True)
                     elif self.rn.dissoc_is_param:

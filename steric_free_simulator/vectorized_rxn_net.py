@@ -251,12 +251,24 @@ class VectorizedRxnNet:
         if chap_is_param:
             self.chap_params = []
             self.initial_params = []
-            for uid,species in rn.chap_uid_map.items():
-                self.chap_params.append(nn.Parameter(self.initial_copies[species],requires_grad=True))
-                self.chap_params.append(nn.Parameter(self.kon[uid], requires_grad=True))
 
-                self.initial_params.append(nn.Parameter(self.initial_copies[species],requires_grad=True))
-                self.initial_params.append(nn.Parameter(self.kon[uid], requires_grad=True))
+            init_copies = torch.zeros((len(rn.chap_uid_map.values())),requires_grad=True).double()
+            rates = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()
+            indx = 0
+            self.paramid_uid_map = {}
+            for uid,species in rn.chap_uid_map.items():
+
+                init_copies[indx]= self.initial_copies[species]
+                rates[indx] = self.kon[uid]
+                self.paramid_uid_map[indx]=uid
+
+            init_copies = nn.Parameter(init_copies,requires_grad=True)
+            rates = nn.Parameter(rates, requires_grad=True)
+            self.chap_params.append(Tensor(init_copies))
+            self.chap_params.append(Tensor(rates))
+
+            self.initial_params.append(init_copies.clone().detach())
+            self.initial_params.append(rates.clone().detach())
         self.observables = rn.observables
         self.flux_vs_time = rn.flux_vs_time
         self.is_energy_set = rn.is_energy_set
@@ -269,6 +281,9 @@ class VectorizedRxnNet:
         self.copies_vec = self.initial_copies.clone()
         if self.copies_is_param:
             self.copies_vec[:self.num_monomers] = self.c_params.clone()
+
+        if self.chap_is_param:
+            self.copies_vec[3] = self.chap_params[0].clone()
         # print("Initial copies: ", self.initial_copies.clone())
         if reset_params:
             if self.coupling:
@@ -458,6 +473,16 @@ class VectorizedRxnNet:
             num_creat_dest_rxn = len(self.creation_rxn_data) + len(self.destruction_rxn_data)
             new_l_k = l_k[:-num_creat_dest_rxn]
             return new_l_k.clone().to(self.dev)
+        elif self.chap_is_param:
+
+            for i in range(len(self.chap_params[1])):
+                kon[self.paramid_uid_map[i]]= self.chap_params[1][i]
+            l_kon = torch.log(kon)  # umol-1 s-1
+
+            l_koff = (dGrxn * scalar_modifier) + l_kon + torch.log(self._C0)
+            l_k = torch.cat([l_kon, l_koff], dim=0)
+            return(l_k)
+
         elif self.dissoc_is_param:
             if self.partial_opt:
                 return l_k.clone().to(self.dev)
