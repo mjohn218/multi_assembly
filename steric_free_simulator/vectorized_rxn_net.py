@@ -256,11 +256,14 @@ class VectorizedRxnNet:
             rates = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()
             indx = 0
             self.paramid_uid_map = {}
+            self.paramid_copy_map = {}
             for uid,species in rn.chap_uid_map.items():
 
                 init_copies[indx]= self.initial_copies[species]
                 rates[indx] = self.kon[uid]
                 self.paramid_uid_map[indx]=uid
+                self.paramid_copy_map[indx]=species
+                indx+=1
 
             init_copies = nn.Parameter(init_copies,requires_grad=True)
             rates = nn.Parameter(rates, requires_grad=True)
@@ -284,6 +287,8 @@ class VectorizedRxnNet:
 
         if self.chap_is_param:
             self.copies_vec[3] = self.chap_params[0].clone()
+            # for ind,sp in self.paramid_copy_map.items():
+            #     self.copies_vec[sp] = self.chap_params[0][ind].clone()
         # print("Initial copies: ", self.initial_copies.clone())
         if reset_params:
             if self.coupling:
@@ -475,6 +480,7 @@ class VectorizedRxnNet:
             return new_l_k.clone().to(self.dev)
         elif self.chap_is_param:
 
+            # print(self.chap_params)
             for i in range(len(self.chap_params[1])):
                 kon[self.paramid_uid_map[i]]= self.chap_params[1][i]
             l_kon = torch.log(kon)  # umol-1 s-1

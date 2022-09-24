@@ -136,7 +136,7 @@ class Optimizer:
         #     new_lr = self.rn.params_k[i].item()*self.lr_group[i]
         #     curr_lr = self.optimizer.state_dict()['param_groups'][i]['lr']
         #     alpha.append(new_lr/curr_lr)
-        new_lr = torch.min(self.rn.chap_params[0]).item()*self.lr
+        new_lr = torch.min(self.rn.chap_params[0]).item()*10*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
 
@@ -279,7 +279,8 @@ class Optimizer:
                     elif self.rn.chap_is_param:
                         c = self.rn.chap_params[0].clone().detach()
                         k = self.rn.chap_params[1].clone().detach()
-                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr))).to(self.dev)
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
+                        print("Penalty: ",physics_penalty)
                         cost = -total_yield + physics_penalty
                         cost.backward(retain_graph=True)
                     elif self.rn.dissoc_is_param:
@@ -306,7 +307,7 @@ class Optimizer:
 
                         dG_penalty = F.relu((g-(self.rn.complx_dG+2))) + F.relu(-1*(g-(self.rn.complx_dG-2)))
                         print("Current On rates: ", k[:len(self.rn.kon)])
-                        physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev)
+                        physics_penalty = torch.sum(1 * F.relu(-1 * (k - self.lr * 10))).to(self.dev) + torch.sum(100 * F.relu((k - 1e2))).to(self.dev)
                         cost = -total_yield + physics_penalty + 10*dG_penalty
                         # print(self.optimizer.state_dict)
                         cost.backward(retain_graph=True)
