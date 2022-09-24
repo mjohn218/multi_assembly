@@ -307,7 +307,7 @@ class Optimizer:
 
                         dG_penalty = F.relu((g-(self.rn.complx_dG+2))) + F.relu(-1*(g-(self.rn.complx_dG-2)))
                         print("Current On rates: ", k[:len(self.rn.kon)])
-                        physics_penalty = torch.sum(1 * F.relu(-1 * (k - self.lr * 10))).to(self.dev) + torch.sum(100 * F.relu((k - 1e2))).to(self.dev)
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev) + torch.sum(100 * F.relu((k - 1e2))).to(self.dev)
                         cost = -total_yield + physics_penalty + 10*dG_penalty
                         # print(self.optimizer.state_dict)
                         cost.backward(retain_graph=True)
