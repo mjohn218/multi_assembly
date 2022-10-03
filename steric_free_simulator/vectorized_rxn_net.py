@@ -253,17 +253,21 @@ class VectorizedRxnNet:
             self.initial_params = []
 
             init_copies = torch.zeros((len(rn.chap_uid_map.values())),requires_grad=True).double()
-            rates = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()
-            indx = 0
+            rates = torch.zeros((2*len(rn.chap_uid_map.keys())),requires_grad=True).double()
+            c_indx = 0
+            r_indx=0
             self.paramid_uid_map = {}
             self.paramid_copy_map = {}
-            for uid,species in rn.chap_uid_map.items():
+            for species,uids in rn.chap_uid_map.items():
 
-                init_copies[indx]= self.initial_copies[species]
-                rates[indx] = self.kon[uid]
-                self.paramid_uid_map[indx]=uid
-                self.paramid_copy_map[indx]=species
-                indx+=1
+                init_copies[c_indx]= self.initial_copies[species]
+                self.paramid_copy_map[c_indx]=species
+                c_indx+=1
+                for id in uids:
+                    rates[r_indx] = self.kon[id]
+                    self.paramid_uid_map[r_indx]=id
+
+                    r_indx+=1
 
             init_copies = nn.Parameter(init_copies,requires_grad=True)
             rates = nn.Parameter(rates, requires_grad=True)
@@ -286,9 +290,9 @@ class VectorizedRxnNet:
             self.copies_vec[:self.num_monomers] = self.c_params.clone()
 
         if self.chap_is_param:
-            self.copies_vec[3] = self.chap_params[0].clone()
-            # for ind,sp in self.paramid_copy_map.items():
-            #     self.copies_vec[sp] = self.chap_params[0][ind].clone()
+            # self.copies_vec[3] = self.chap_params[0].clone()
+            for ind,sp in self.paramid_copy_map.items():
+                self.copies_vec[sp] = self.chap_params[0][ind].clone()
         # print("Initial copies: ", self.initial_copies.clone())
         if reset_params:
             if self.coupling:
@@ -440,13 +444,20 @@ class VectorizedRxnNet:
                         M[n,reaction_id] = 1.
                         for r in r_tup:
                             M[r,reaction_id] = -2.
+                    else:
+                        #If edges are zero then this species is a monomer.
+                        #If it has only one reactant then it is in a dissociation. Possibly chaperone
+                        if self.chaperone:
+                            M[n,reaction_id] = 1.
+                            M[r_tup[0],reaction_id] = -1.
+
         # generate the reverse map explicitly
         # M[0,11]=0
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
 
         if self.chaperone:
             for uid,chap in self.chap_uid_map.items():
-                M[chap,uid] = 0
+                # M[chap,uid] = 0
                 M[:,uid+rn._rxn_count] = 0
 
         #To adjust for creation reactions. No reversible destruction
@@ -725,7 +736,7 @@ class VectorizedRxnNet:
         r_filter = -1 * self.M.T.clone()        #Invert signs of reactants amd products.
         # r_filter = -1 * M.T.clone()
         r_filter[r_filter == 0] = -1            #Also changing molecules not involved in reactions to -1. After this, only reactants in each rxn are positive.
-        r_filter[6,3]=1
+        # r_filter[6,3]=1
         # print(r_filter)
         #Old code
         # c_temp_mat = torch.mul(r_filter, self.copies_vec)

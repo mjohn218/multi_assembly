@@ -90,6 +90,10 @@ class Optimizer:
         self.dt = None
         self.final_solns = []
         self.final_yields = []
+        self.final_t50 = []
+        self.final_t85 = []
+        self.final_t95 = []
+        self.final_t99 = []
         if lr_change_step is not None:
             if gamma == None:
                 gamma = 0.5
@@ -136,7 +140,7 @@ class Optimizer:
         #     new_lr = self.rn.params_k[i].item()*self.lr_group[i]
         #     curr_lr = self.optimizer.state_dict()['param_groups'][i]['lr']
         #     alpha.append(new_lr/curr_lr)
-        new_lr = torch.min(self.rn.chap_params[0]).item()*10*self.lr
+        new_lr = torch.min(self.rn.chap_params[0]).item()*100*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
 
@@ -279,7 +283,7 @@ class Optimizer:
                     elif self.rn.chap_is_param:
                         c = self.rn.chap_params[0].clone().detach()
                         k = self.rn.chap_params[1].clone().detach()
-                        physics_penalty = torch.sum(10 * F.relu(-1 * (c))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
+                        physics_penalty = torch.sum(10 * F.relu(-1 * (c-1e-4))).to(self.dev) + torch.sum(10 * F.relu(-1 * (k - self.lr))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
                         print("Penalty: ",physics_penalty)
                         cost = -total_yield + physics_penalty
                         cost.backward(retain_graph=True)
@@ -367,6 +371,10 @@ class Optimizer:
                     if total_yield-max_yield > 0:
                         self.final_yields.append(total_yield)
                         self.final_solns.append(new_params)
+                        self.final_t50.append(total_flux[0])
+                        self.final_t85.append(total_flux[1])
+                        self.final_t95.append(total_flux[2])
+                        self.final_t99.append(total_flux[3])
 
             # elif optim =='flux':
             #     print('Flux on sim iteration ' + str(i) + ' was ' + str(total_flux.item()))

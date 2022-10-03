@@ -73,10 +73,18 @@ class VecSim:
         cutoff = 10000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
+        t95_flag=True
+        t85_flag=True
+        t50_flag=True
+        t99_flag=True
+        t85=-1
+        t95=-1
+        t50=-1
+        t99=-1
 
         if self.rn.chap_is_param:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
-            for uid,species in self.rn.chap_uid_map.items():
+            for species,uids in self.rn.chap_uid_map.items():
                 mask[species]=False
             max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
 
@@ -201,6 +209,19 @@ class VecSim:
             #     switch=False
 
             cur_time = cur_time + step*conc_scale
+
+            if self.rn.copies_vec[-1]/max_poss_yield > 0.5 and t50_flag:
+                t50=cur_time
+                t50_flag=False
+            if self.rn.copies_vec[-1]/max_poss_yield > 0.85 and t85_flag:
+                t85=cur_time
+                t85_flag=False
+            if self.rn.copies_vec[-1]/max_poss_yield > 0.95 and t95_flag:
+                t95=cur_time
+                t95_flag=False
+            if self.rn.copies_vec[-1]/max_poss_yield > 0.99 and t99_flag:
+                t99=cur_time
+                t99_flag=False
             self.steps.append(cur_time.item())
             if self.calc_flux:
                 self.uid_flux = torch.cat((self.uid_flux,rxn_flux),0)
@@ -221,13 +242,16 @@ class VecSim:
             # if len(self.steps)%10==0:
             #     break
             #     print("Current Time: ",cur_time)
-        total_complete = self.rn.copies_vec[-1]/max_poss_yield
+        if self.rn.chaperone:
+            total_complete = self.rn.copies_vec[-2]/max_poss_yield
+        else:
+            total_complete = self.rn.copies_vec[-1]/max_poss_yield
 
         # total_complete = torch.max(torch.DoubleTensor([self.rn.copies_vec[3],self.rn.copies_vec[4],self.rn.copies_vec[5]]))
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
         # final_yield = total_complete/max_poss_yield
         final_yield = total_complete
-
+        print("Final Yield: ", final_yield)
         if optim=='flux_coeff':
             final_yield = self.calc_corr_coeff(corr_rxns)
             # print(final_yield)
@@ -241,7 +265,7 @@ class VecSim:
                 return(final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
         else:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
-            return(final_yield.to(self.dev),None)
+            return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
     def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None):
         t = np.array(self.steps)

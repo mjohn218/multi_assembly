@@ -173,6 +173,7 @@ class ReactionNetwork:
             self.chaperone=items[1]
             self.chaperone_rxns = []
             self.chap_uid_map = {}
+            self.chap_int_spec_map = {}
         return items
 
     def parse_species(self, line, params):
@@ -513,6 +514,11 @@ class ReactionNetwork:
                 #     new_bonds.append(poss_edge)
                 #     add_to_graph=True
                 # else:
+
+                if self.chaperone and True in [item.has_node(sp) for sp in list(self.chap_int_spec_map.keys())]:
+                    #If there are chaperone rxns, then there will a species present which has an intermediate which has the chaperone on it.
+                    #Then this species cannot add more bonds to it. It should only dissociate.
+                    continue
                 connected_item.add_edge(poss_edge[0], poss_edge[1])
                 new_bonds.append(poss_edge)
                 complex_size += n1[1]['subunits']
@@ -673,7 +679,7 @@ class ReactionNetwork:
             elif (True in [item.has_node(n) for n in poss_edge]) and (True in [len(n)>1 for n in poss_edge]) and self.chaperone and n2 is not None:
 
 
-
+                #Chaperone
                 #The previous conditionals where it is checking if a node exists using reactants from poss_edge does not work when one of the reactant in poss_edge is a complex
                 #Because item represents the structure of a node. And it will always be composed of monomers as nodes.
 
@@ -688,7 +694,20 @@ class ReactionNetwork:
                     print(reactants,products)
 
                     if (reactants,products) not in self.chaperone_rxns:
+                        #Adding reactants and products for the final step of chaperone rxn
                         self.chaperone_rxns.append((reactants,products))
+
+                        #Add an enzyme subtrate complex to the graph state. This is the MM model
+
+                        connected_item = item.copy()
+                        new_bonds.append(poss_edge)
+
+                        sp_len = [len(e) for e in poss_edge]
+                        print(sp_len)
+                        connected_item.add_edge(poss_edge[sp_len.index(1)][0],poss_edge[sp_len.index(1)])
+                        self.chap_int_spec_map[poss_edge[sp_len.index(1)]] =  self._node_count
+
+                        add_to_graph=True
 
                 continue
         # resolving one step  network
@@ -804,29 +823,37 @@ class ReactionNetwork:
         print("Resolving Chaperone Rxns::")
         print(self.chaperone_rxns)
         for chap in self.chaperone_rxns:
-            reactants = list(chap[0])
+            reactant = chap[0]
             products=[]
             chap_species = -1
             for n in self.network.nodes():
-                if (gtostr(self.network.nodes[n]['struct']) in chap[1]) and (n not in reactants):
+                sp_label = gtostr(self.network.nodes[n]['struct'])
+                if ( sp_label in chap[1]):
                     products.append(n)
-                elif (gtostr(self.network.nodes[n]['struct']) in chap[1]) and (n in reactants):
+                if (n in reactant) and (sp_label in list(self.chap_int_spec_map.keys())):
                     chap_species = n
+                    r = self.chap_int_spec_map[sp_label]
 
             print("Products:",products)
-            print("Reactants: ",reactants)
-            for r in reactants:
-                for p in products:
-                    self.network.add_edge(r, p,
-                                  k_on=self.default_k_on,
-                                  k_off=None,
-                                  lcf=1,
-                                  rxn_score=0,
-                                  uid=self._rxn_count)
+            print("Reactants: ",r)
 
-            self.uid_map[self._rxn_count] = tuple(reactants)
-            self.chap_uid_map[self._rxn_count] = chap_species
+            for p in products:
+                self.network.add_edge(r, p,
+                              k_on=self.default_k_on,
+                              k_off=None,
+                              lcf=1,
+                              rxn_score=torch.Tensor([float(-100)]),
+                              uid=self._rxn_count)
+
+            self.uid_map[self._rxn_count] = reactant
+            self.chap_uid_map[chap_species] = [self._rxn_count]
             self._rxn_count+=1
+
+            for edge in self.network.in_edges(r):
+                data = self.network.get_edge_data(edge[0],edge[1])
+                uid = data['uid']
+                if uid not in self.chap_uid_map[chap_species]:
+                    self.chap_uid_map[chap_species].append(uid)
 
 
     def resolve_tree(self):
