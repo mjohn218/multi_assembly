@@ -58,6 +58,7 @@ class VectorizedRxnNet:
         self.coupling = coupling
         self.rxn_coupling = rn.rxn_coupling
         self.num_monomers = rn.num_monomers
+        self.max_subunits = rn.max_subunits
 
 
 

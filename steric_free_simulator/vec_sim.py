@@ -73,6 +73,10 @@ class VecSim:
         cutoff = 10000000
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
+
+        if self.rn.max_subunits !=-1:
+            max_poss_yield = max_poss_yield/self.rn.max_subunits
+            print("Max Poss Yield: ",max_poss_yield)
         t95_flag=True
         t85_flag=True
         t50_flag=True
