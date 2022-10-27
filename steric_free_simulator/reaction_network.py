@@ -505,7 +505,7 @@ class ReactionNetwork:
                 print("############################3")
                 repeat_units=False
 
-                if self.monomer_add_only:
+                if self.monomer_add_only==True:
                     if (orig.number_of_edges() ==0 or nextn.number_of_edges() ==0):
                         # if n2 is None and True in [item.has_node(n) for n in poss_edge]: #For internal bonds, treated as repeating Units
                         #     #Add a node
@@ -544,7 +544,7 @@ class ReactionNetwork:
                         add_to_graph=True
                         # print("Connected Nodes: ",connected_item.nodes())
                         # print("Connected Edges: ",connected_item.edges())
-                else:
+                elif self.monomer_add_only==-1:
                     if self.chaperone and True in [item.has_node(sp) for sp in list(self.chap_int_spec_map.keys())]:
                         #If there are chaperone rxns, then there will a species present which has an intermediate which has the chaperone on it.
                         #Then this species cannot add more bonds to it. It should only dissociate.
@@ -569,6 +569,32 @@ class ReactionNetwork:
                         new_bonds.append(poss_edge)
 
                     add_to_graph=True
+                else:
+                    if (orig.number_of_edges() > 0 and nextn.number_of_edges() >0):
+                        if self.chaperone and True in [item.has_node(sp) for sp in list(self.chap_int_spec_map.keys())]:
+                            #If there are chaperone rxns, then there will a species present which has an intermediate which has the chaperone on it.
+                            #Then this species cannot add more bonds to it. It should only dissociate.
+                            continue
+                        connected_item.add_edge(poss_edge[0], poss_edge[1])
+                        new_bonds.append(poss_edge)
+                        complex_size += n1[1]['subunits']
+                        if n2 is not None:
+                            complex_size+=n2[1]['subunits']
+
+
+                        #Checking if the graph has a repeated units.
+                        #If one node is AA and other is B, then B should form bonds with both A units.
+                        #So another edge has to be added with same reactants.
+                        #Can identify this by checking the edges and not nodes. Since "AA" node does not appear, but A-A eddge is allowed
+                        for (u,v) in item.edges:
+                            if u==v:
+                                print("Repeat Units")
+                                repeat_units = True
+                        if repeat_units:
+                            connected_item.add_edge(poss_edge[1], poss_edge[0])
+                            new_bonds.append(poss_edge)
+
+                        add_to_graph=True
 
 
             elif True in [item.has_node(n) for n in poss_edge] and (n2 is None) and item.has_edge(poss_edge[0], poss_edge[1]):
