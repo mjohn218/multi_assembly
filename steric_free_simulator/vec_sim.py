@@ -29,7 +29,7 @@ class VecSim:
 
     def __init__(self, net: VectorizedRxnNet,
                  runtime: float,
-                 device='cuda:0',calc_flux=False):
+                 device='cuda:0',calc_flux=False,rate_step=False):
         """
 
         Args:
@@ -59,6 +59,8 @@ class VecSim:
         self.switch=False
         self.uid_flux = torch.zeros(1,2*self.rn.reaction_network._rxn_count)
         self.calc_flux=calc_flux
+        self.rate_step=rate_step
+        self.rate_step_array = []
 
         if self.rn.rxn_coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
@@ -189,6 +191,9 @@ class VecSim:
 
 
             step = torch.exp(l_step)
+            if self.rate_step:
+                self.rate_step_array.append(rate_step)
+
             # print("Full step: ",step)
             if cur_time + step > self.runtime:
                 # print("Current time: ",cur_time)
