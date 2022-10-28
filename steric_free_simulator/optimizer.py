@@ -278,7 +278,7 @@ class Optimizer:
                         else:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                             scalar_modifier=1.))
-                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - 10))).to(self.dev)
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - self.lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - 10))).to(self.dev)
                             # var_penalty = 100*F.relu(1 * (torch.var(k[:3])))
                             # ratio_penalty = 1000*F.relu(1*((torch.max(k[3:])/torch.min(k[:3])) - 500 ))
                             # print("Var penalty: ",var_penalty,torch.var(k[:3]))
