@@ -202,7 +202,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -281,13 +281,18 @@ class Optimizer:
                                                             scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                             physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
-                            # var_penalty = 100*F.relu(1 * (torch.var(k[:3])))
+                            if lowvar:
+                                mon_rxn = self.rn.rxn_class[1]
+                                var_penalty = 100*F.relu(1 * (torch.var(k[mon_rxn])))
+                                print("Var penalty: ",var_penalty,torch.var(k[:3]))
+                            else:
+                                var_penalty=0
                             # ratio_penalty = 1000*F.relu(1*((torch.max(k[3:])/torch.min(k[:3])) - 500 ))
                             # print("Var penalty: ",var_penalty,torch.var(k[:3]))
                             # print("Ratio penalty: ",ratio_penalty,torch.max(k[3:])/torch.min(k[:3]))
 
                             # dimer_penalty = 10*F.relu(1*(k[16] - self.lr*20))+10*F.relu(1*(k[17] - self.lr*20))+10*F.relu(1*(k[18] - self.lr*20))
-                            cost = -total_yield + physics_penalty #+ dimer_penalty#+ var_penalty #+ ratio_penalty
+                            cost = -total_yield + physics_penalty + var_penalty #+ dimer_penalty#+ var_penalty #+ ratio_penalty
                             cost.backward()
                     elif self.rn.copies_is_param:
                         c = self.rn.c_params.clone().detach()
