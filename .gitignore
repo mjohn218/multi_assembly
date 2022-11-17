@@ -27,3 +27,5 @@ Thumbs.db
 #locally stored objects
 steric_free_simulator/local_saves
 
+#Results section
+steric_free_simulator/results
