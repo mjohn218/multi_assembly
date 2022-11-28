@@ -106,6 +106,13 @@ class VecSim:
                 else:
                     self.coupled_kon[i] = self.rn.kon[i]
             l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+        elif self.rn.homo_rates:
+            counter=0
+            for k,rids in self.rn.rxn_class.items():
+                for r in rids:
+                    self.rn.kon[r] = self.rn.params_kon[counter]
+                counter+=1
+            l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
             print("Simulation rates: ",torch.exp(l_k))

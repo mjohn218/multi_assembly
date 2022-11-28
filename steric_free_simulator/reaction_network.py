@@ -99,6 +99,7 @@ class ReactionNetwork:
         self.max_interactions = 2
         self.monomer_add_only = True
         self.chaperone=False
+        self.homo_rates=False
         # default observables are monomers and final complex
         self.observables = dict()
         self.flux_vs_time = dict()
@@ -174,6 +175,8 @@ class ReactionNetwork:
             self.chaperone_rxns = []
             self.chap_uid_map = {}
             self.chap_int_spec_map = {}
+        elif items[0]== 'homo_rates':
+            self.homo_rates=items[1]
         return items
 
     def parse_species(self, line, params):
