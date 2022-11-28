@@ -273,20 +273,20 @@ class Optimizer:
                         if self.rn.partial_opt:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 1))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
                             cost = -total_yield + physics_penalty
                             cost.backward(retain_graph=True)
                         elif self.rn.homo_rates:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 1))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
                             cost = -total_yield + physics_penalty
                             cost.backward(retain_graph=True)
                         else:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                             scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 1))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
                             if lowvar:
                                 mon_rxn = self.rn.rxn_class[1]
                                 var_penalty = 100*F.relu(1 * (torch.var(k[mon_rxn])))
