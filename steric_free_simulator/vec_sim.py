@@ -62,7 +62,7 @@ class VecSim:
         self.rate_step=rate_step
         self.rate_step_array = []
 
-        if self.rn.rxn_coupling:
+        if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
@@ -94,17 +94,19 @@ class VecSim:
                 mask[species]=False
             max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
 
-        if self.rn.rxn_coupling:
+        if self.rn.coupling:
             #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
             # print("Coupling")
             for i in range(len(self.rn.kon)):
                 # print(i)
                 if i in self.rn.rx_cid.keys():
                     #new_kon[i] = 1.0
-                    self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
+                    # self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
+                    self.coupled_kon[i] = max(self.rn.params_kon[self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
                     # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
                 else:
-                    self.coupled_kon[i] = self.rn.kon[i]
+                    # self.coupled_kon[i] = self.rn.kon[i]
+                    self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
             l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
         elif self.rn.homo_rates:
             counter=0

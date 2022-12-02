@@ -55,8 +55,8 @@ class VectorizedRxnNet:
             self.chap_uid_map = rn.chap_uid_map
 
         self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
-        self.coupling = coupling
-        self.rxn_coupling = rn.rxn_coupling
+        self.rxn_coupling = coupling
+        self.coupling = rn.rxn_coupling
         self.num_monomers = rn.num_monomers
         self.max_subunits = rn.max_subunits
         self.homo_rates = rn.homo_rates
@@ -76,19 +76,19 @@ class VectorizedRxnNet:
 
         #Make new param Tensor (that will be optimized) if coupling is True
         if self.coupling == True:
-            c_rxn_count = len(cid.values())
-            ind_rxn_count = rn._rxn_count - c_rxn_count
+            # c_rxn_count = len(rn.rxn_cid.keys())
+            ind_rxn_count = len(rn.rxn_class[1])
             self.params_kon = torch.zeros([ind_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
             self.params_rxn_score_vec = torch.zeros([ind_rxn_count]).double()
             #self.kon.requires_grad_(False)
             rid=0
-            for i in range(rn._rxn_count):
-                if i not in cid.keys():
+            for i in range(ind_rxn_count):
+                # if i not in cid.keys():
                     ##Independent reactions
-                    self.params_kon[rid] = self.kon.clone().detach()[i]
-                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[i]
-                    self.coup_map[i]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
-                    rid+=1
+                self.params_kon[rid] = self.kon.clone().detach()[rn.rxn_class[1][i]]
+                self.params_rxn_score_vec[rid] = self.rxn_score_vec[rn.rxn_class[1][i]]
+                self.coup_map[rn.rxn_class[1][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
+                rid+=1
             self.params_kon.requires_grad_(True)
 
             self.initial_params = Tensor(self.params_kon).clone().detach()
