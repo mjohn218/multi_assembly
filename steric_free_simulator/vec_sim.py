@@ -204,6 +204,19 @@ class VecSim:
             # print("Full step: ",step)
             if cur_time + step > self.runtime:
                 # print("Current time: ",cur_time)
+
+                if self.rn.copies_vec[-1]/max_poss_yield > 0.5 and t50_flag:
+                    t50=cur_time
+                    t50_flag=False
+                if self.rn.copies_vec[-1]/max_poss_yield > 0.85 and t85_flag:
+                    t85=cur_time
+                    t85_flag=False
+                if self.rn.copies_vec[-1]/max_poss_yield > 0.95 and t95_flag:
+                    t95=cur_time
+                    t95_flag=False
+                if self.rn.copies_vec[-1]/max_poss_yield > 0.99 and t99_flag:
+                    t99=cur_time
+                    t99_flag=False
                 print("Next time: ",cur_time + step)
                 print("Number of steps: ", len(self.steps))
                 print("Next time larger than simulation runtime. Ending simulation.")
