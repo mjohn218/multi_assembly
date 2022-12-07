@@ -691,7 +691,8 @@ class ReactionNetwork:
 
                 else:
                     #Both nodes are not monomers
-                    if self.monomer_add_only == False:
+                    print("BOTH NODES ARE NOT MONOMERS!!")
+                    if self.monomer_add_only == -1:
                         print("NON-MONOMER ADDITION!!!!!")
                         #Only add reaction if user defined as adding rxn b/w non-monomers
 

@@ -220,6 +220,7 @@ class VecSim:
                     t99=cur_time
                     t99_flag=False
                 print("Next time: ",cur_time + step)
+                print("Curr_time:",cur_time)
                 print("Number of steps: ", len(self.steps))
                 print("Next time larger than simulation runtime. Ending simulation.")
                 for obs in self.rn.observables.keys():

@@ -23,7 +23,7 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, chap_is_param=False,dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},optim_rates=None):
+    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, chap_is_param=False,dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},std_c=1e6,optim_rates=None):
         """
 
         :param rn: The reaction network template
@@ -38,7 +38,7 @@ class VectorizedRxnNet:
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K
         self._T = Tensor([273.15])  # K
-        self._C0 = Tensor([1e6])    #Std. Conc in uM
+        self._C0 = Tensor([std_c])    #Std. Conc in uM
 
         #Variables for zeroth order reactions
         self.boolCreation_rxn = rn.boolCreation_rxn
