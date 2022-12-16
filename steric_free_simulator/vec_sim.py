@@ -148,7 +148,7 @@ class VecSim:
 
 
 
-            if (torch.min(self.rn.copies_vec + delta_copies) < 1e-6):
+            if (torch.min(self.rn.copies_vec[:self.rn.num_monomers] + delta_copies[:self.rn.num_monomers]) < 0):
                 temp_copies = self.rn.copies_vec + delta_copies
                 min_idx = torch.argmin(temp_copies)
                 min_value = self.rn.copies_vec[min_idx]
@@ -156,8 +156,8 @@ class VecSim:
                 delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
                 modulator = min_value/abs(delta_copy)
 
-                # print("Taking smaller timestep")
-                # print(self.rn.copies_vec + delta_copies)
+                print("Taking smaller timestep")
+                print(self.rn.copies_vec + delta_copies)
                 # print("Previous rate step: ",rate_step)
 
                 #Take a smaller time step
