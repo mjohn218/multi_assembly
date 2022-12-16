@@ -156,8 +156,8 @@ class VecSim:
                 delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
                 modulator = min_value/abs(delta_copy)
 
-                print("Taking smaller timestep")
-                print(self.rn.copies_vec + delta_copies)
+                # print("Taking smaller timestep")
+                # print(self.rn.copies_vec + delta_copies)
                 # print("Previous rate step: ",rate_step)
 
                 #Take a smaller time step
