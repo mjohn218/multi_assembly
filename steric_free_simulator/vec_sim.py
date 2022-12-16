@@ -148,7 +148,7 @@ class VecSim:
 
 
 
-            if (torch.min(self.rn.copies_vec + delta_copies) < 0):
+            if (torch.min(self.rn.copies_vec + delta_copies) < 1e-6):
                 temp_copies = self.rn.copies_vec + delta_copies
                 min_idx = torch.argmin(temp_copies)
                 min_value = self.rn.copies_vec[min_idx]
