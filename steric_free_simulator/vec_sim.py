@@ -66,7 +66,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0):
         """
         modifies reaction network
         :return:
@@ -154,7 +154,7 @@ class VecSim:
                 min_value = self.rn.copies_vec[min_idx]
 
                 delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                modulator = min_value/abs(delta_copy)
+                modulator = mod_factor*min_value/abs(delta_copy)
 
                 # print("Taking smaller timestep")
                 # print(self.rn.copies_vec + delta_copies)
