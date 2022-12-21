@@ -197,7 +197,7 @@ class VecSim:
             # print("delta_copies: ", delta_copies)
             # print("SUM: ",torch.sum(delta_copies))
             #
-            print("Current time: ",cur_time)
+            # print("Current time: ",cur_time)
             # Prevent negative copy cumbers explicitly (possible due to local linear approximation)
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
