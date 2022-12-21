@@ -120,7 +120,7 @@ class VecSim:
             print("Simulation rates: ",torch.exp(l_k))
 
         while cur_time < self.runtime:
-
+            conc_counter=1
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
@@ -149,25 +149,34 @@ class VecSim:
 
 
             if (torch.min(self.rn.copies_vec + delta_copies) < 0):
-                temp_copies = self.rn.copies_vec + delta_copies
-                min_idx = torch.argmin(temp_copies)
-                min_value = self.rn.copies_vec[min_idx]
-
-                delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                modulator = mod_factor*min_value/abs(delta_copy)
-
-                # print("Taking smaller timestep")
-                # print(self.rn.copies_vec + delta_copies)
+                # temp_copies = self.rn.copies_vec + delta_copies
+                # min_idx = torch.argmin(temp_copies)
+                # min_value = self.rn.copies_vec[min_idx]
+                #
+                # delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                # modulator = mod_factor*min_value/abs(delta_copy)
+                #
+                print("Taking smaller timestep")
+                print("Previous slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
+                # # print(self.rn.copies_vec + delta_copies)
                 # print("Previous rate step: ",rate_step)
-
-                #Take a smaller time step
-                # l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
-                l_total_rate = l_total_rate - torch.log(modulator)
-                l_step = 0 - l_total_rate
-                rate_step = torch.exp(l_rxn_rates + l_step)
-                delta_copies = torch.matmul(self.rn.M, rate_step)
-
+                #
+                # #Take a smaller time step
+                # # l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
+                # print("Modulator: ",modulator)
+                # l_total_rate = l_total_rate - torch.log(modulator)
+                # l_step = 0 - l_total_rate
+                # rate_step = torch.exp(l_rxn_rates + l_step)
+                # delta_copies = torch.matmul(self.rn.M, rate_step)
+                #
                 # print("New rate step: ",rate_step)
+
+                conc_scale = conc_scale/2
+                conc_counter+=1
+                print("New Conc Scale: ",conc_scale)
+                delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+                print("New Delta Copies: ",delta_copies)
+                print("New slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
 
 
             # print("-----------------------------")
@@ -182,13 +191,13 @@ class VecSim:
             # print("Rate step: ",rate_step)
             # print("Copies: ",self.rn.copies_vec)
             #
-            # print("Next step size: ",l_step)
+            # print("Next step size: ",torch.exp(l_step))
             # print("Sum of steps: ", torch.sum(rate_step))
             # print("Matrix: ",self.rn.M)
             # print("delta_copies: ", delta_copies)
             # print("SUM: ",torch.sum(delta_copies))
             #
-            # print("Current time: ",cur_time)
+            print("Current time: ",cur_time)
             # Prevent negative copy cumbers explicitly (possible due to local linear approximation)
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
@@ -204,7 +213,7 @@ class VecSim:
                 self.rate_step_array.append(rate_step)
 
             # print("Full step: ",step)
-            if cur_time + step > self.runtime:
+            if cur_time + step*conc_scale > self.runtime:
                 # print("Current time: ",cur_time)
 
                 if self.rn.copies_vec[-1]/max_poss_yield > 0.5 and t50_flag:
@@ -221,6 +230,7 @@ class VecSim:
                     t99_flag=False
                 print("Next time: ",cur_time + step)
                 print("Curr_time:",cur_time)
+                print("Final Conc Scale: ",conc_scale)
                 print("Number of steps: ", len(self.steps))
                 print("Next time larger than simulation runtime. Ending simulation.")
                 for obs in self.rn.observables.keys():

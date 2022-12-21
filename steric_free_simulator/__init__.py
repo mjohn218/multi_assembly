@@ -9,6 +9,7 @@ from .vec_sim import VecSim
 from .optimizer import Optimizer
 from .EqSolver import EquilibriumSolver
 from .reaction_network import gtostr
+from .trap_metric import TrapMetric
 
 __all__ = [
     "EnergyExplorer",
@@ -16,5 +17,6 @@ __all__ = [
     "VecSim",
     "Optimizer",
     "VectorizedRxnNet",
-    "EquilibriumSolver"
+    "EquilibriumSolver",
+    "TrapMetric"
 ]
