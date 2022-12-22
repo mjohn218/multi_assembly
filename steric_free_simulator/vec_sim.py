@@ -66,7 +66,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5):
         """
         modifies reaction network
         :return:
@@ -171,7 +171,7 @@ class VecSim:
                 #
                 # print("New rate step: ",rate_step)
 
-                if conc_scale<1e-5:
+                if conc_scale<conc_thresh:
                     conc_scale = conc_scale/mod_factor
                     # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
                     print("New Conc Scale: ",conc_scale)
