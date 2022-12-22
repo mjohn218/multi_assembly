@@ -171,7 +171,7 @@ class VecSim:
                 #
                 # print("New rate step: ",rate_step)
 
-                if conc_scale<conc_thresh:
+                if conc_scale>conc_thresh:
                     conc_scale = conc_scale/mod_factor
                     # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
                     print("New Conc Scale: ",conc_scale)
