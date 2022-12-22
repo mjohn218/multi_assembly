@@ -156,7 +156,7 @@ class VecSim:
                 # delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
                 # modulator = mod_factor*min_value/abs(delta_copy)
                 #
-                print("Taking smaller timestep")
+                # print("Taking smaller timestep")
                 # print("Previous slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
                 # # print(self.rn.copies_vec + delta_copies)
                 # print("Previous rate step: ",rate_step)
@@ -188,7 +188,7 @@ class VecSim:
 
                     delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
                     l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
-                    print("Modulator: ",modulator)
+                    # print("Modulator: ",modulator)
                     l_total_rate = l_total_rate - torch.log(modulator)
                     l_step = 0 - l_total_rate
                     rate_step = torch.exp(l_rxn_rates + l_step)
