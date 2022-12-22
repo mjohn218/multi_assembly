@@ -171,7 +171,8 @@ class VecSim:
                 #
                 # print("New rate step: ",rate_step)
 
-                conc_scale = conc_scale/2
+                conc_scale = conc_scale/mod_factor
+                # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
                 conc_counter+=1
                 print("New Conc Scale: ",conc_scale)
                 delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
