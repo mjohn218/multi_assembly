@@ -198,6 +198,7 @@ class VecSim:
                     print("Delta_Copies: ",delta_copies[-1])
                     if mod_flag:
                         self.mod_start=cur_time
+                        mod_flag=False
 
 
 
