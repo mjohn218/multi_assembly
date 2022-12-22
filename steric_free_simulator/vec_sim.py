@@ -183,7 +183,7 @@ class VecSim:
                     min_value = self.rn.copies_vec[min_idx]
 
                     delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                    modulator = mod_factor*min_value/abs(delta_copy)
+                    modulator = min_value/abs(delta_copy)
                     min_value = self.rn.copies_vec[min_idx]
 
                     delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
