@@ -171,13 +171,29 @@ class VecSim:
                 #
                 # print("New rate step: ",rate_step)
 
-                conc_scale = conc_scale/mod_factor
-                # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
-                conc_counter+=1
-                print("New Conc Scale: ",conc_scale)
-                delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
-                print("New Delta Copies: ",delta_copies)
-                print("New slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
+                if conc_scale<1e-4:
+                    conc_scale = conc_scale/mod_factor
+                    # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
+                    print("New Conc Scale: ",conc_scale)
+                    delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+                    print("New Delta Copies: ",delta_copies)
+                else:
+                    temp_copies = self.rn.copies_vec + delta_copies
+                    min_idx = torch.argmin(temp_copies)
+                    min_value = self.rn.copies_vec[min_idx]
+
+                    delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                    modulator = mod_factor*min_value/abs(delta_copy)
+                    min_value = self.rn.copies_vec[min_idx]
+
+                    delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                    l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
+                    print("Modulator: ",modulator)
+                    l_total_rate = l_total_rate - torch.log(modulator)
+                    l_step = 0 - l_total_rate
+                    rate_step = torch.exp(l_rxn_rates + l_step)
+                    delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+
 
 
             # print("-----------------------------")
