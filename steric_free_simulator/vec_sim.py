@@ -191,6 +191,10 @@ class VecSim:
                     rate_step = torch.exp(l_rxn_rates + l_step)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
 
+                    print("Current Time Step: ",torch.exp(l_step)*conc_scale)
+                    print("Copies : ",self.rn.copies_vec[-1])
+                    print("Delta_Copies: ",delta_copies[-1])
+
 
 
             # print("-----------------------------")
