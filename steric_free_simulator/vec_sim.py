@@ -157,7 +157,7 @@ class VecSim:
                 # modulator = mod_factor*min_value/abs(delta_copy)
                 #
                 print("Taking smaller timestep")
-                print("Previous slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
+                # print("Previous slope: ",delta_copies/(torch.exp(l_step)*conc_scale))
                 # # print(self.rn.copies_vec + delta_copies)
                 # print("Previous rate step: ",rate_step)
                 #
@@ -171,7 +171,7 @@ class VecSim:
                 #
                 # print("New rate step: ",rate_step)
 
-                if conc_scale<1e-4:
+                if conc_scale<1e-5:
                     conc_scale = conc_scale/mod_factor
                     # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
                     print("New Conc Scale: ",conc_scale)
