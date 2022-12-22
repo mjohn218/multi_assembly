@@ -90,13 +90,13 @@ class TrapMetric:
 
         return(new_time,new_conc_complx)
 
-    def get_time_bounds(self,time,eq_time,grad,l_grad,l_grad2,tan_thresh=89):
+    def get_time_bounds(self,time,eq_time,grad,l_grad,l_grad2,tan_thresh=89,n_traps=1):
         peak_indx = np.argmax(l_grad)
         mask_eq = time < eq_time
         eq_indx = np.argwhere(mask_eq)[-1][0]
         flag_min = False
         flag_max = True
-
+        count=0
         for i in range(len(l_grad2)):
             if flag_max and l_grad2[i]<0:
                 flag_min=True
@@ -106,7 +106,11 @@ class TrapMetric:
                 split_time = time[i]
                 split_indx=i
                 flag_min=False
-                break
+                flag_max=True
+                count+=1
+
+                if count==n_traps:
+                    break
         second_region_grad = l_grad[split_indx:eq_indx]
 
         # tan_inv = np.degrees(np.arctan(second_region_grad))

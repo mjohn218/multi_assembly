@@ -61,6 +61,7 @@ class VecSim:
         self.calc_flux=calc_flux
         self.rate_step=rate_step
         self.rate_step_array = []
+        self.mod_start=-1
 
         if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
@@ -194,6 +195,7 @@ class VecSim:
                     print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     print("Copies : ",self.rn.copies_vec[-1])
                     print("Delta_Copies: ",delta_copies[-1])
+                    self.mod_start=curr_time
 
 
 
