@@ -195,7 +195,7 @@ class VecSim:
                     print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     print("Copies : ",self.rn.copies_vec[-1])
                     print("Delta_Copies: ",delta_copies[-1])
-                    self.mod_start=curr_time
+                    self.mod_start=cur_time
 
 
 
