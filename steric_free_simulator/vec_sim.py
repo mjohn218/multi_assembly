@@ -74,6 +74,7 @@ class VecSim:
         """
         cur_time = 0
         cutoff = 10000000
+        mod_flag = True
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
 
@@ -195,7 +196,8 @@ class VecSim:
                     print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     print("Copies : ",self.rn.copies_vec[-1])
                     print("Delta_Copies: ",delta_copies[-1])
-                    self.mod_start=cur_time
+                    if mod_flag:
+                        self.mod_start=cur_time
 
 
 
