@@ -66,7 +66,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False):
         """
         modifies reaction network
         :return:
@@ -177,22 +177,22 @@ class VecSim:
                     print("New Conc Scale: ",conc_scale)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     print("New Delta Copies: ",delta_copies)
-                # else:
-                #     temp_copies = self.rn.copies_vec + delta_copies
-                #     min_idx = torch.argmin(temp_copies)
-                #     min_value = self.rn.copies_vec[min_idx]
-                #
-                #     delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                #     modulator = mod_factor*min_value/abs(delta_copy)
-                #     min_value = self.rn.copies_vec[min_idx]
-                #
-                #     delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                #     l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
-                #     # print("Modulator: ",modulator)
-                #     l_total_rate = l_total_rate - torch.log(modulator)
-                #     l_step = 0 - l_total_rate
-                #     rate_step = torch.exp(l_rxn_rates + l_step)
-                #     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+                elif mod_bool:
+                    temp_copies = self.rn.copies_vec + delta_copies
+                    min_idx = torch.argmin(temp_copies)
+                    min_value = self.rn.copies_vec[min_idx]
+
+                    delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                    modulator = mod_factor*min_value/abs(delta_copy)
+                    min_value = self.rn.copies_vec[min_idx]
+
+                    delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                    l_total_rate = l_total_rate - torch.log(torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]))
+                    # print("Modulator: ",modulator)
+                    l_total_rate = l_total_rate - torch.log(modulator)
+                    l_step = 0 - l_total_rate
+                    rate_step = torch.exp(l_rxn_rates + l_step)
+                    delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
 
 
 
