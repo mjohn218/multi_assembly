@@ -176,9 +176,9 @@ class VecSim:
                 if conc_scale>conc_thresh:
                     conc_scale = conc_scale/mod_factor
                     # conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
-                    print("New Conc Scale: ",conc_scale)
+                    # print("New Conc Scale: ",conc_scale)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
-                    print("New Delta Copies: ",delta_copies)
+                    # print("New Delta Copies: ",delta_copies)
                 elif mod_bool:
                     temp_copies = self.rn.copies_vec + delta_copies
                     min_idx = torch.argmin(temp_copies)
@@ -252,8 +252,8 @@ class VecSim:
                     t99=cur_time
                     t99_flag=False
                 print("Next time: ",cur_time + step)
-                print("Curr_time:",cur_time)
-                print("Final Conc Scale: ",conc_scale)
+                # print("Curr_time:",cur_time)
+                # print("Final Conc Scale: ",conc_scale)
                 print("Number of steps: ", len(self.steps))
                 print("Next time larger than simulation runtime. Ending simulation.")
                 for obs in self.rn.observables.keys():
