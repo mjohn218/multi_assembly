@@ -255,7 +255,7 @@ class VecSim:
                     t99_flag=False
                 print("Next time: ",cur_time + step)
                 # print("Curr_time:",cur_time)
-                if verbose"
+                if verbose:
                     print("Final Conc Scale: ",conc_scale)
                     print("Number of steps: ", len(self.steps))
                     print("Next time larger than simulation runtime. Ending simulation.")
