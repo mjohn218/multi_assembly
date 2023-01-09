@@ -308,7 +308,8 @@ class VecSim:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
             if len(self.steps)%10000==0:
-                print("Current Time: ",cur_time)
+                if verbose:
+                    print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
         else:
