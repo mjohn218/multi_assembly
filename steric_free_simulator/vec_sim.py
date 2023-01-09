@@ -80,7 +80,8 @@ class VecSim:
 
         if self.rn.max_subunits !=-1:
             max_poss_yield = max_poss_yield/self.rn.max_subunits
-            print("Max Poss Yield: ",max_poss_yield)
+            if verbose:
+                print("Max Poss Yield: ",max_poss_yield)
         t95_flag=True
         t85_flag=True
         t50_flag=True
@@ -119,7 +120,8 @@ class VecSim:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-            print("Simulation rates: ",torch.exp(l_k))
+            if verbose:
+                print("Simulation rates: ",torch.exp(l_k))
 
         while cur_time < self.runtime:
             conc_counter=1
@@ -253,9 +255,10 @@ class VecSim:
                     t99_flag=False
                 print("Next time: ",cur_time + step)
                 # print("Curr_time:",cur_time)
-                # print("Final Conc Scale: ",conc_scale)
-                print("Number of steps: ", len(self.steps))
-                print("Next time larger than simulation runtime. Ending simulation.")
+                if verbose"
+                    print("Final Conc Scale: ",conc_scale)
+                    print("Number of steps: ", len(self.steps))
+                    print("Next time larger than simulation runtime. Ending simulation.")
                 for obs in self.rn.observables.keys():
                     try:
                         self.rn.observables[obs][1].pop()
@@ -315,7 +318,8 @@ class VecSim:
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
         # final_yield = total_complete/max_poss_yield
         final_yield = total_complete
-        print("Final Yield: ", final_yield)
+        if verbose:
+            print("Final Yield: ", final_yield)
         if optim=='flux_coeff':
             final_yield = self.calc_corr_coeff(corr_rxns)
             # print(final_yield)

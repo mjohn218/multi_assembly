@@ -202,7 +202,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,verbose=False):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -221,7 +221,7 @@ class Optimizer:
 
             # preform simulation
             self.optimizer.zero_grad()
-            total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns)
+            total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             #print("Type/class of yield: ", type(total_yield))
 
             #Check change in yield from last gradient step. Break if less than a tolerance
