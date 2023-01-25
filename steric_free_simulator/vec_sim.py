@@ -67,7 +67,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,yield_species=-1):
         """
         modifies reaction network
         :return:
@@ -241,16 +241,16 @@ class VecSim:
             if cur_time + step*conc_scale > self.runtime:
                 # print("Current time: ",cur_time)
 
-                if self.rn.copies_vec[-1]/max_poss_yield > 0.5 and t50_flag:
+                if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                     t50=cur_time
                     t50_flag=False
-                if self.rn.copies_vec[-1]/max_poss_yield > 0.85 and t85_flag:
+                if self.rn.copies_vec[yield_species]/max_poss_yield > 0.85 and t85_flag:
                     t85=cur_time
                     t85_flag=False
-                if self.rn.copies_vec[-1]/max_poss_yield > 0.95 and t95_flag:
+                if self.rn.copies_vec[yield_species]/max_poss_yield > 0.95 and t95_flag:
                     t95=cur_time
                     t95_flag=False
-                if self.rn.copies_vec[-1]/max_poss_yield > 0.99 and t99_flag:
+                if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99 and t99_flag:
                     t99=cur_time
                     t99_flag=False
                 print("Next time: ",cur_time + step)
@@ -278,16 +278,16 @@ class VecSim:
 
             cur_time = cur_time + step*conc_scale
 
-            if self.rn.copies_vec[-1]/max_poss_yield > 0.5 and t50_flag:
+            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
                 t50_flag=False
-            if self.rn.copies_vec[-1]/max_poss_yield > 0.85 and t85_flag:
+            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.85 and t85_flag:
                 t85=cur_time
                 t85_flag=False
-            if self.rn.copies_vec[-1]/max_poss_yield > 0.95 and t95_flag:
+            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.95 and t95_flag:
                 t95=cur_time
                 t95_flag=False
-            if self.rn.copies_vec[-1]/max_poss_yield > 0.99 and t99_flag:
+            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99 and t99_flag:
                 t99=cur_time
                 t99_flag=False
             self.steps.append(cur_time.item())
@@ -313,7 +313,7 @@ class VecSim:
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
         else:
-            total_complete = self.rn.copies_vec[-1]/max_poss_yield
+            total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
 
         # total_complete = torch.max(torch.DoubleTensor([self.rn.copies_vec[3],self.rn.copies_vec[4],self.rn.copies_vec[5]]))
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
