@@ -351,9 +351,9 @@ class VecSim:
                     else:
                         clr=random.choice(colors_list)
                     if not ax:
-                        plt.plot(t, data, label=self.observables[key][0],color=clr)
+                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=4.0)
                     else:
-                        ax.plot(t, data, label=self.observables[key][0],color=clr)
+                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=4.0)
                 counter+=1
         else:
             for key in self.flux_vs_time.keys():
