@@ -182,9 +182,9 @@ class VecSim:
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     # print("New Delta Copies: ",delta_copies)
                 elif mod_bool:
-                    print("Previous rate step : ",rate_step,torch.sum(rate_step))
-                    print("Old copies : ",self.rn.copies_vec + delta_copies)
-                    print("Old delta copies: ",delta_copies)
+                    # print("Previous rate step : ",rate_step,torch.sum(rate_step))
+                    # print("Old copies : ",self.rn.copies_vec + delta_copies)
+                    # print("Old delta copies: ",delta_copies)
 
                     temp_copies = self.rn.copies_vec + delta_copies
                     mask_neg = temp_copies<0
@@ -203,17 +203,17 @@ class VecSim:
                     # delta_copy = torch.matmul(self.rn.M[sp_indx,:],rate_step)
 
                     # modulator = min_value/abs(delta_copy)
-                    print(min_value)
-                    print("Modulator: ",modulator)
+                    # print(min_value)
+                    # print("Modulator: ",modulator)
                     # print("SPecies: ",sp_indx)
                     # print("Modulator: ",modulator)
                     l_total_rate = l_total_rate - torch.log(0.99/min_modulator)
                     l_step = 0 - l_total_rate
                     rate_step = torch.exp(l_rxn_rates + l_step)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
-                    print("New rate step : ",rate_step,torch.sum(rate_step))
-                    print("New copies : ",self.rn.copies_vec + delta_copies)
-                    print("New delta copies: ",delta_copies)
+                    # print("New rate step : ",rate_step,torch.sum(rate_step))
+                    # print("New copies : ",self.rn.copies_vec + delta_copies)
+                    # print("New delta copies: ",delta_copies)
                     # print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     # print("Copies : ",self.rn.copies_vec[-1])
                     # print("Delta_Copies: ",delta_copies[-1])
