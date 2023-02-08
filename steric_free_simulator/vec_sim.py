@@ -197,7 +197,7 @@ class VecSim:
                     min_value = self.rn.copies_vec
 
                     modulator = torch.abs(neg_species)/min_value
-                    min_modulator = torch.min(modulator[torch.nonzero(modulator)]).item()
+                    min_modulator = torch.min(modulator[torch.nonzero(modulator)])
                     # min_idx = torch.argmin(temp_copies)
                     # min_value = self.rn.copies_vec[min_idx]
                     # delta_copy = torch.matmul(self.rn.M[sp_indx,:],rate_step)
@@ -206,7 +206,7 @@ class VecSim:
                     print("Modulator: ",modulator)
                     # print("SPecies: ",sp_indx)
                     # print("Modulator: ",modulator)
-                    l_total_rate = l_total_rate - torch.log(min_modulator)
+                    l_total_rate = l_total_rate - torch.log(1/min_modulator)
                     l_step = 0 - l_total_rate
                     rate_step = torch.exp(l_rxn_rates + l_step)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
