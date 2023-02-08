@@ -189,7 +189,7 @@ class VecSim:
                     mask_neg = temp_copies<0
                     max_delta = torch.max(delta_copies[mask_neg])
 
-                    zeros = torch.zeros([len(delta_copies)])
+                    zeros = torch.zeros([len(delta_copies)]).double()
                     neg_species = torch.where(mask_neg,delta_copies,zeros)    #Get delta copies of all species that have neg copies
                     sp_indx = torch.argmax(neg_species)
                     min_value = self.rn.copies_vec[sp_indx]
