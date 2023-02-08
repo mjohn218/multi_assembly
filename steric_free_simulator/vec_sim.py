@@ -186,11 +186,14 @@ class VecSim:
                     print("Old copies : ",self.rn.copies_vec + delta_copies)
 
                     temp_copies = self.rn.copies_vec + delta_copies
-                    min_idx = torch.argmin(temp_copies)
-                    min_value = self.rn.copies_vec[min_idx]
+                    mask_neg = temp_copies<0
+                    max_delta = torch.max(delta_copies[mask_neg])
 
-                    delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
-                    modulator = min_value/abs(delta_copy)
+                    # min_idx = torch.argmin(temp_copies)
+                    # min_value = self.rn.copies_vec[min_idx]
+                    # delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+
+                    modulator = min_value/abs(max_delta)
 
                     print("SPecies: ",min_idx)
                     # print("Modulator: ",modulator)
