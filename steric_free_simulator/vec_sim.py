@@ -184,6 +184,7 @@ class VecSim:
                 elif mod_bool:
                     print("Previous rate step : ",rate_step,torch.sum(rate_step))
                     print("Old copies : ",self.rn.copies_vec + delta_copies)
+                    print("Old delta copies: ",delta_copies)
 
                     temp_copies = self.rn.copies_vec + delta_copies
                     mask_neg = temp_copies<0
@@ -191,7 +192,7 @@ class VecSim:
 
                     zeros = torch.zeros([len(delta_copies)]).double()
                     neg_species = torch.where(mask_neg,delta_copies,zeros)   #Get delta copies of all species that have neg copies
-                    print("Neg species: ",neg_species)
+                    # print("Neg species: ",neg_species)
 
                     sp_indx = torch.argmin(neg_species)
                     min_value = self.rn.copies_vec[sp_indx]
@@ -210,6 +211,7 @@ class VecSim:
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     print("New rate step : ",rate_step,torch.sum(rate_step))
                     print("New copies : ",self.rn.copies_vec + delta_copies)
+                    print("New delta copies: ",delta_copies)
                     # print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     # print("Copies : ",self.rn.copies_vec[-1])
                     # print("Delta_Copies: ",delta_copies[-1])
