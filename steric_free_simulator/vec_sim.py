@@ -187,7 +187,7 @@ class VecSim:
 
                     temp_copies = self.rn.copies_vec + delta_copies
                     mask_neg = temp_copies<0
-                    max_delta = torch.max(delta_copies[mask_neg])
+                    # max_delta = torch.max(delta_copies[mask_neg])
 
                     zeros = torch.zeros([len(delta_copies)]).double()
                     neg_species = torch.where(mask_neg,delta_copies,zeros)    #Get delta copies of all species that have neg copies
@@ -196,7 +196,7 @@ class VecSim:
 
                     # min_idx = torch.argmin(temp_copies)
                     # min_value = self.rn.copies_vec[min_idx]
-                    # delta_copy = torch.matmul(self.rn.M[min_idx,:],rate_step)
+                    delta_copy = torch.matmul(self.rn.M[sp_idx,:],rate_step)
 
                     modulator = min_value/abs(max_delta)
 
