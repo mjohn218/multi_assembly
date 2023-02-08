@@ -203,6 +203,9 @@ class VecSim:
                     min_val = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
                     conc_scale = min_val/mod_factor
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+
+                    print("New Conc scale = ",conc_scale)
+                    print("Copies : ",self.rn.copies_vec)
                     if mod_flag:
                         self.mod_start=cur_time
                         mod_flag=False
