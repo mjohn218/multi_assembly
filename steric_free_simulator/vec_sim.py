@@ -182,7 +182,7 @@ class VecSim:
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     # print("New Delta Copies: ",delta_copies)
                 elif mod_bool:
-                    print("Previous rate step : ",rate_step,np.sum(rate_step))
+                    print("Previous rate step : ",rate_step,torch.sum(rate_step))
                     print("Old copies : ",self.rn.copies_vec + delta_copies)
 
                     temp_copies = self.rn.copies_vec + delta_copies
@@ -198,7 +198,7 @@ class VecSim:
                     l_step = 0 - l_total_rate
                     rate_step = torch.exp(l_rxn_rates + l_step)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
-                    print("New rate step : ",rate_step,np.sum(rate_step))
+                    print("New rate step : ",rate_step,torch.sum(rate_step))
                     print("New copies : ",self.rn.copies_vec + delta_copies)
                     # print("Current Time Step: ",torch.exp(l_step)*conc_scale)
                     # print("Copies : ",self.rn.copies_vec[-1])
