@@ -207,7 +207,7 @@ class VecSim:
                     print("Modulator: ",modulator)
                     # print("SPecies: ",sp_indx)
                     # print("Modulator: ",modulator)
-                    l_total_rate = l_total_rate - torch.log(1/min_modulator)
+                    l_total_rate = l_total_rate - torch.log(0.99/min_modulator)
                     l_step = 0 - l_total_rate
                     rate_step = torch.exp(l_rxn_rates + l_step)
                     delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
