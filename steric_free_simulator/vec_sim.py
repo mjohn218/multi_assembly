@@ -10,6 +10,7 @@ import matplotlib.colors as mcolors
 import random
 from scipy import signal
 import sys
+import math
 
 
 def _make_finite(t):
@@ -90,6 +91,8 @@ class VecSim:
         t95=-1
         t50=-1
         t99=-1
+        if self.rn.boolCreation_rxn:
+            creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
 
         if self.rn.chap_is_param:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
@@ -144,6 +147,9 @@ class VecSim:
             #     conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)]).item()
 
             delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
+
+
+
             #Calculate rxn_flux
             if self.calc_flux:
                 rxn_flux = self.rn.get_reaction_flux()
@@ -227,6 +233,22 @@ class VecSim:
                     if mod_flag:
                         self.mod_start=cur_time
                         mod_flag=False
+            # elif self.rn.boolCreation_rxn:
+            #     if conc_scale > (torch.min(self.rn.copies_vec)):
+            #         print("Warning!!! Conc_scale greater than min conc.")
+            #         print("Current Time: ",cur_time)
+            #         print(self.rn.copies_vec)
+            #
+            #         if len(torch.nonzero(self.rn.copies_vec))!=0:
+            #
+            #             conc_scale = torch.min(self.rn.copies_vec[torch.nonzero(self.rn.copies_vec)])
+            #             print("New conc_scale: ",conc_scale)
+            #     elif conc_scale < (torch.min(self.rn.copies_vec)):
+            #         min_copies = torch.min(self.rn.copies_vec).detach().numpy()
+            #         power = math.floor(np.log10(min_copies))
+            #         conc_scale = 1*10**(power)
+
+                    # print("Conc Scale INCREASED: ",conc_scale)
 
 
 
@@ -256,12 +278,24 @@ class VecSim:
             self.rn.copies_vec = torch.max(self.rn.copies_vec + delta_copies, torch.zeros(self.rn.copies_vec.shape,
                                                                                           dtype=torch.double,
                                                                                           device=self.dev))
+
+            #Calculating total amount of each species titrated. Required for calculating yield
+            if self.rn.boolCreation_rxn:
+                for node,data in self.rn.creation_rxn_data.items():
+                    cr_rid = data['uid']
+                    curr_path_contri = rate_step[cr_rid].detach().numpy()
+
+                    creation_amount[node]+=  np.sum(curr_path_contri)*conc_scale
+
+
             # print("Final copies: ", self.rn.copies_vec)
 
 
             step = torch.exp(l_step)
             if self.rate_step:
                 self.rate_step_array.append(rate_step)
+
+
 
             # print("Full step: ",step)
             if cur_time + step*conc_scale > self.runtime:
@@ -285,6 +319,12 @@ class VecSim:
                     print("Final Conc Scale: ",conc_scale)
                     print("Number of steps: ", len(self.steps))
                     print("Next time larger than simulation runtime. Ending simulation.")
+
+                    if self.rn.boolCreation_rxn:
+                        print("MASS Conservation: ")
+                        print("A added: ",creation_amount[0])
+                        print("Total amount of A in system: ",self.rn.copies_vec[0]+self.rn.copies_vec[3]+self.rn.copies_vec[4]+self.rn.copies_vec[-1])
+
                 for obs in self.rn.observables.keys():
                     try:
                         self.rn.observables[obs][1].pop()
@@ -338,6 +378,11 @@ class VecSim:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
+        elif self.rn.boolCreation_rxn:
+            all_amounts = np.array(list(creation_amount.values()))
+
+            total_complete = self.rn.copies_vec[yield_species]/np.min(all_amounts)
+            unused_monomer = (np.min(all_amounts) - self.rn.copies_vec[yield_species])/np.min(all_amounts)
         else:
             total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
 
@@ -360,7 +405,10 @@ class VecSim:
                 return(final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
         else:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
-            return(final_yield.to(self.dev),(t50,t85,t95,t99))
+            if self.rn.boolCreation_rxn:
+                return(final_yield.to(self.dev),unused_monomer.to(self.dev),(t50,t85,t95,t99))
+            else:
+                return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
     def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None):
         t = np.array(self.steps)

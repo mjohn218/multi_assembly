@@ -209,6 +209,7 @@ class ReactionNetwork:
         #New split
         #First splitting it by the reaction arrow. The second splitting the reactants side text to get species. Useful to identify creation ann destruction rxns.
         split_01 = re.split('<->',items[0])
+        print("SPLIT_01: ",split_01)
 
         #Check if any of the reactants is in bound form
         if '!' in split_01[0]:
@@ -219,10 +220,18 @@ class ReactionNetwork:
 
             print(r_info)
         else:
-            r_info = re.split('\\(.\\)+.|\\(.\\)',split_01[0])
-            print(r_info)
-            react_1 = r_info[0]
-            react_2 = r_info[1]
+            #If no bound reactants, then check if creation or destruction is present
+            if 'null' in split_01:
+                #Parsing for creation and Destruction done below
+                pass
+            else:
+                #No bound reactnats, No creation or destruction. Parse reactants normally
+                r_info = re.split('\\(.\\)+.|\\(.\\)',split_01[0])
+                print(r_info)
+                react_1 = r_info[0]
+                react_2 = r_info[1]
+
+
 
         if params['default_assoc']:
             self.k_on = params['default_assoc']
@@ -236,21 +245,24 @@ class ReactionNetwork:
             if seed:
                 torch.random.manual_seed(seed)
             score = (rand(1, dtype=torch.double) - percent_negative) * score_range
-        if 'null' in split_01:
-            if split_01[0]=='null':
-                print("Found Creation rxn")
-                species = re.split('\\(.\\)',split_01[1])[0]
-                self.allowed_edges[tuple(['null',species])] = [None, None, LOOP_COOP_DEFAULT, score]
-                self.boolCreation_rxn=True
-                self.creation_species.append(species)
-            elif split_01[1]=='null':
-                print("Found Destruction rxn")
-                species=re.split('\\(.\\)',split_01[0])[0]
-                self.allowed_edges[tuple([species,'null'])] = [None, None, LOOP_COOP_DEFAULT, score]
-                self.boolDestruction_rxn=True
-                self.destruction_species.append(species)
+
+        #After parsing reactions add to reaction network
+        #Parsing for creation and destruction is done here
+        if split_01[0]=='null':
+            print("Found Creation rxn")
+            species = re.split('\\(.\\)',split_01[1])[0]
+            self.allowed_edges[tuple(['null',species])] = [None, None, LOOP_COOP_DEFAULT, score]
+            self.boolCreation_rxn=True
+            self.creation_species.append(species)
+        elif split_01[1]=='null':
+            print("Found Destruction rxn")
+            species=re.split('\\(.\\)',split_01[0])[0]
+            self.allowed_edges[tuple([species,'null'])] = [None, None, LOOP_COOP_DEFAULT, score]
+            self.boolDestruction_rxn=True
+            self.destruction_species.append(species)
         else:
             self.allowed_edges[tuple(sorted([react_1, react_2]))] = [None, None, LOOP_COOP_DEFAULT, score]
+
 
         if params.get('rxn_coupling') is not None:
             self.rxn_coupling=params['rxn_coupling']

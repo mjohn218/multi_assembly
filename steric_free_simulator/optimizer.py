@@ -202,7 +202,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,verbose=False):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,verbose=False,change_runtime=False):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -214,14 +214,31 @@ class Optimizer:
         for i in range(self.optim_iterations):
             # reset for new simulator
             self.rn.reset()
-            sim = self.sim_class(self.rn,
-                                 self.sim_runtime,
-                                 device=self._dev_name,calc_flux=calc_flux_optim)
-            # print(sim.calc_flux)
+
+            if self.rn.boolCreation_rxn and change_runtime:
+                #Change the runtime so that the simulation is stopped after a certain number of molecules have been dumped.
+                final_conc = 100
+                #Get current rates of dumping
+                min_rate = torch.min(self.rn.get_params()[0])
+                new_runtime = final_conc/min_rate
+
+                print("New Runtime: ",new_runtime)
+                sim = self.sim_class(self.rn,
+                                     new_runtime,
+                                     device=self._dev_name,calc_flux=calc_flux_optim)
+                # print(sim.calc_flux)
+            else:
+                sim = self.sim_class(self.rn,
+                                     self.sim_runtime,
+                                     device=self._dev_name,calc_flux=calc_flux_optim)
+
 
             # preform simulation
             self.optimizer.zero_grad()
-            total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+            if self.rn.boolCreation_rxn:
+                total_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+            else:
+                total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             #print("Type/class of yield: ", type(total_yield))
 
             #Check change in yield from last gradient step. Break if less than a tolerance
@@ -277,10 +294,15 @@ class Optimizer:
                             cost = -total_yield + physics_penalty
                             cost.backward()
                         elif self.rn.partial_opt:
+                            if self.rn.boolCreation_rxn:
+                                unused_penalty = 100*F.relu((unused_monomer-0.01))
+                                print("Unused Penalty: ",unused_penalty)
+                            else:
+                                unused_penalty=0
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                             physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
-                            cost = -total_yield + physics_penalty
+                            cost = -total_yield + physics_penalty + unused_penalty
                             cost.backward(retain_graph=True)
                         elif self.rn.homo_rates:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
