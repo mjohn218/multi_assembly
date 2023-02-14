@@ -295,7 +295,7 @@ class Optimizer:
                             cost.backward()
                         elif self.rn.partial_opt:
                             if self.rn.boolCreation_rxn:
-                                unused_penalty = 100*F.relu((unused_monomer-0.01))
+                                unused_penalty = unused_monomer
                                 print("Unused Penalty: ",unused_penalty)
                             else:
                                 unused_penalty=0
