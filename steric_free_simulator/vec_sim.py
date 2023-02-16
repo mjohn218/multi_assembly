@@ -93,6 +93,10 @@ class VecSim:
         t99=-1
         if self.rn.boolCreation_rxn:
             creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
+            if self.rn.titration_end_time!=-1:
+                self.titrationBool=True
+            else:
+                self.titrationBool=True
 
         if self.rn.chap_is_param:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
@@ -279,13 +283,7 @@ class VecSim:
                                                                                           dtype=torch.double,
                                                                                           device=self.dev))
 
-            #Calculating total amount of each species titrated. Required for calculating yield
-            if self.rn.boolCreation_rxn:
-                for node,data in self.rn.creation_rxn_data.items():
-                    cr_rid = data['uid']
-                    curr_path_contri = rate_step[cr_rid].detach().numpy()
 
-                    creation_amount[node]+=  np.sum(curr_path_contri)*conc_scale
 
 
             # print("Final copies: ", self.rn.copies_vec)
@@ -296,6 +294,21 @@ class VecSim:
                 self.rate_step_array.append(rate_step)
 
 
+            #Calculating total amount of each species titrated. Required for calculating yield
+            if self.rn.boolCreation_rxn:
+                for node,data in self.rn.creation_rxn_data.items():
+                    cr_rid = data['uid']
+                    curr_path_contri = rate_step[cr_rid].detach().numpy()
+                    creation_amount[node]+=  np.sum(curr_path_contri)*conc_scale
+                if self.titrationBool:
+
+                    if cur_time + step*conc_scale > self.rn.titration_end_time:
+                        for node,data in self.rn.creation_rxn_data.items():
+                            self.rn.kon[data['uid']]=self.rn.kon[data['uid']]*0
+                        print("Ending Titration !!")
+                        print(self.rn.kon)
+                        l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+                        self.titrationBool=False
 
             # print("Full step: ",step)
             if cur_time + step*conc_scale > self.runtime:
@@ -425,9 +438,9 @@ class VecSim:
                     else:
                         clr=random.choice(colors_list)
                     if not ax:
-                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=4.0)
+                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=8.0)
                     else:
-                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=4.0)
+                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=8.0)
                 counter+=1
         else:
             for key in self.flux_vs_time.keys():

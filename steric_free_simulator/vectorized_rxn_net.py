@@ -44,6 +44,7 @@ class VectorizedRxnNet:
         self.boolCreation_rxn = rn.boolCreation_rxn
         self.creation_nodes = rn.creation_nodes
         self.creation_rxn_data = rn.creation_rxn_data
+        self.titration_end_time=rn.titration_end_time
 
         #Variables for Destruction order reactions
         self.boolDestruction_rxn = rn.boolDestruction_rxn

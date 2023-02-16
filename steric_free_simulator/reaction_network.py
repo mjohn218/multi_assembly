@@ -89,6 +89,7 @@ class ReactionNetwork:
         self.creation_species = []
         self.creation_nodes = []
         self.creation_rxn_data ={}
+        self.titration_end_time=-1
         self.default_k_creation = 1e-1
         self.boolDestruction_rxn = False
         self.destruction_species = []
@@ -177,6 +178,9 @@ class ReactionNetwork:
             self.chap_int_spec_map = {}
         elif items[0]== 'homo_rates':
             self.homo_rates=items[1]
+        elif items[0]=='titration_time_int':
+            print("Setting Totration ENd Point")
+            self.titration_end_time=items[1]
         return items
 
     def parse_species(self, line, params):
@@ -401,18 +405,24 @@ class ReactionNetwork:
 
             print("Adding an new edge--",source_1,new_node)
             # print("uid: ", self._rxn_count)
-            print("New bonds: ",template)
-            if len(template) in self.rxn_class.keys():
-                self.rxn_class[len(template)].append(self._rxn_count)
-            else:
-                self.rxn_class[len(template)] = [self._rxn_count]
-            if len(template) == 1:
-                self.mon_rxn_map[template[0]]=self._rxn_count
-            else:
-                rids = []
-                for reactants in template:
-                    rids.append(self.mon_rxn_map[reactants])
-                self.dG_map[self._rxn_count] = rids
+
+            #Creates a rxn_class, dG_map and monomer rxn map.
+            #But it is based on number of bonds formed. Does not apply for different topologies
+            #Instead this is now handles by the create_rxn_class
+            
+            # print("New bonds: ",template)
+            # if len(template) in self.rxn_class.keys():
+            #     self.rxn_class[len(template)].append(self._rxn_count)
+            # else:
+            #     self.rxn_class[len(template)] = [self._rxn_count]
+            # if len(template) == 1:
+            #     self.mon_rxn_map[template[0]]=self._rxn_count
+            # else:
+            #     rids = []
+            #     for reactants in template:
+            #         rids.append(self.mon_rxn_map[reactants])
+            #     self.dG_map[self._rxn_count] = rids
+
             dg_coop = sum([self.allowed_edges[tuple(sorted(e))][3] for e in template])
             self.network.add_edge(source_1, new_node,
                                   k_on=self.default_k_on,
@@ -927,6 +937,39 @@ class ReactionNetwork:
                 if uid not in self.chap_uid_map[chap_species]:
                     self.chap_uid_map[chap_species].append(uid)
 
+    def create_rxn_class(self):
+        uid_dict = {}
+        uid_reactants = {}
+        for n in rn.network.nodes():
+        #print(n)
+        #print(rn.network.nodes()[n])
+        for k,v in rn.network[n].items():
+            uid = v['uid']
+            r1 = set(gtostr(rn.network.nodes[n]['struct']))
+            p = set(gtostr(rn.network.nodes[k]['struct']))
+            r2 = p-r1
+            reactants = (r1,r2)
+            uid_val = {'uid':uid,'reactants':reactants,'kon':v['k_on'],'score':v['rxn_score'],'koff':v['k_off']}
+            uid_reactants[uid]=reactants
+            if uid not in uid_dict.keys():
+                uid_dict[uid] = uid_val
+
+        final_rxn_class = {}
+        for key,rnts in sorted(uid_reactants.items()):
+        #     print(key,"\t\t",rnts)
+
+            l1 = len(rnts[0])
+            l2 = len(rnts[1])
+
+
+            if (l1,l2) in final_rxn_class.keys():
+                final_rxn_class[(l1,l2)].append(key)
+            elif (l2,l1) in final_rxn_class.keys():
+                final_rxn_class[(l2,l1)].append(key)
+            else:
+                final_rxn_class[(l1,l2)] = [key]
+        self.rxn_class = final_rxn_class
+
 
     def resolve_tree(self):
         """
@@ -980,6 +1023,9 @@ class ReactionNetwork:
             self.flux_vs_time[i] = (gtostr(self.network.nodes[i]['struct']), [])
         # fin_dex = len(self.network.nodes) - 1
         # self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
+
+        #Create rxn class dict; Used for parametrizing homogeneous model
+        create_rxn_class()
 
         if self.rxn_coupling:
             self.rxn_cid = self.map_coupled_rxns()
