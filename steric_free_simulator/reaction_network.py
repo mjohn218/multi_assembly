@@ -409,7 +409,7 @@ class ReactionNetwork:
             #Creates a rxn_class, dG_map and monomer rxn map.
             #But it is based on number of bonds formed. Does not apply for different topologies
             #Instead this is now handles by the create_rxn_class
-            
+
             # print("New bonds: ",template)
             # if len(template) in self.rxn_class.keys():
             #     self.rxn_class[len(template)].append(self._rxn_count)
@@ -941,18 +941,18 @@ class ReactionNetwork:
         uid_dict = {}
         uid_reactants = {}
         for n in rn.network.nodes():
-        #print(n)
-        #print(rn.network.nodes()[n])
-        for k,v in rn.network[n].items():
-            uid = v['uid']
-            r1 = set(gtostr(rn.network.nodes[n]['struct']))
-            p = set(gtostr(rn.network.nodes[k]['struct']))
-            r2 = p-r1
-            reactants = (r1,r2)
-            uid_val = {'uid':uid,'reactants':reactants,'kon':v['k_on'],'score':v['rxn_score'],'koff':v['k_off']}
-            uid_reactants[uid]=reactants
-            if uid not in uid_dict.keys():
-                uid_dict[uid] = uid_val
+            #print(n)
+            #print(rn.network.nodes()[n])
+            for k,v in rn.network[n].items():
+                uid = v['uid']
+                r1 = set(gtostr(rn.network.nodes[n]['struct']))
+                p = set(gtostr(rn.network.nodes[k]['struct']))
+                r2 = p-r1
+                reactants = (r1,r2)
+                uid_val = {'uid':uid,'reactants':reactants,'kon':v['k_on'],'score':v['rxn_score'],'koff':v['k_off']}
+                uid_reactants[uid]=reactants
+                if uid not in uid_dict.keys():
+                    uid_dict[uid] = uid_val
 
         final_rxn_class = {}
         for key,rnts in sorted(uid_reactants.items()):
