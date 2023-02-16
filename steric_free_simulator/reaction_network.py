@@ -940,13 +940,13 @@ class ReactionNetwork:
     def create_rxn_class(self):
         uid_dict = {}
         uid_reactants = {}
-        for n in rn.network.nodes():
+        for n in self.network.nodes():
             #print(n)
             #print(rn.network.nodes()[n])
-            for k,v in rn.network[n].items():
+            for k,v in self.network[n].items():
                 uid = v['uid']
-                r1 = set(gtostr(rn.network.nodes[n]['struct']))
-                p = set(gtostr(rn.network.nodes[k]['struct']))
+                r1 = set(gtostr(self.network.nodes[n]['struct']))
+                p = set(gtostr(self.network.nodes[k]['struct']))
                 r2 = p-r1
                 reactants = (r1,r2)
                 uid_val = {'uid':uid,'reactants':reactants,'kon':v['k_on'],'score':v['rxn_score'],'koff':v['k_off']}
