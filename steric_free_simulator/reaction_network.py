@@ -1025,7 +1025,7 @@ class ReactionNetwork:
         # self.observables[fin_dex] = (gtostr(self.network.nodes[fin_dex]['struct']), [])
 
         #Create rxn class dict; Used for parametrizing homogeneous model
-        create_rxn_class()
+        self.create_rxn_class()
 
         if self.rxn_coupling:
             self.rxn_cid = self.map_coupled_rxns()
