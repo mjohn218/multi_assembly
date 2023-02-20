@@ -66,6 +66,7 @@ class VecSim:
         self.mod_start=-1
         self.cur_time=0
         self.titration_end_time=self.rn.titration_end_time
+        self.titrationBool=False
 
         if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
