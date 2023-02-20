@@ -3,6 +3,7 @@ from steric_free_simulator import ReactionNetwork
 import numpy as np
 
 from torch import DoubleTensor as Tensor
+from torch.nn import functional as F
 import torch
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -63,6 +64,8 @@ class VecSim:
         self.rate_step=rate_step
         self.rate_step_array = []
         self.mod_start=-1
+        self.cur_time=0
+        self.titration_end_time=self.rn.titration_end_time
 
         if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
@@ -74,6 +77,7 @@ class VecSim:
         :return:
         """
         cur_time = 0
+        self.cur_time=Tensor([0.])
         cutoff = 10000000
         mod_flag = True
         # update observables
@@ -93,10 +97,10 @@ class VecSim:
         t99=-1
         if self.rn.boolCreation_rxn:
             creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
-            if self.rn.titration_end_time!=-1:
+            if self.titration_end_time!=-1:
                 self.titrationBool=True
             else:
-                self.titrationBool=True
+                self.titrationBool=False
 
         if self.rn.chap_is_param:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
@@ -132,6 +136,13 @@ class VecSim:
 
         while cur_time < self.runtime:
             conc_counter=1
+
+            if self.titrationBool:
+                array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
+                activator_arr = torch.ones((array_dim),requires_grad=True).double()
+                for r in range(len(self.rn.params_kon)):
+                    # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
+                    activator_arr[self.rn.optim_rates[r]] = self.activate_titration()
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
@@ -141,7 +152,9 @@ class VecSim:
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
-            l_rxn_rates = l_conc_prod_vec + l_k
+            # print("Prod Conc: ",l_conc_prod_vec)
+            l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+            # print("Rates: ",l_rxn_rates)
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
             #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
             l_step = 0 - l_total_rate
@@ -300,15 +313,6 @@ class VecSim:
                     cr_rid = data['uid']
                     curr_path_contri = rate_step[cr_rid].detach().numpy()
                     creation_amount[node]+=  np.sum(curr_path_contri)*conc_scale
-                if self.titrationBool:
-
-                    if cur_time + step*conc_scale > self.rn.titration_end_time:
-                        for node,data in self.rn.creation_rxn_data.items():
-                            self.rn.kon[data['uid']]=self.rn.kon[data['uid']]*0
-                        print("Ending Titration !!")
-                        print(self.rn.kon)
-                        l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-                        self.titrationBool=False
 
             # print("Full step: ",step)
             if cur_time + step*conc_scale > self.runtime:
@@ -356,6 +360,7 @@ class VecSim:
             #     switch=False
 
             cur_time = cur_time + step*conc_scale
+            self.cur_time = cur_time
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
@@ -419,7 +424,7 @@ class VecSim:
         else:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
             if self.rn.boolCreation_rxn:
-                return(final_yield.to(self.dev),unused_monomer.to(self.dev),(t50,t85,t95,t99))
+                return(final_yield.to(self.dev)/cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
@@ -489,3 +494,15 @@ class VecSim:
 
         return(total_coeff/len(rid[0]))
         # return(total_lag/len(rid[0]))
+
+    def activate_titration(self):
+        k_new=1e-6
+        el = torch.nn.ELU(k_new)
+        if self.titrationBool and (self.titration_end_time < self.cur_time.item()):
+            print("Ending Titration!")
+            self.titrationBool=False
+        delta_t = Tensor([self.titration_end_time]) - self.cur_time
+        # return((1/delta_t)*(F.relu(delta_t)))
+        if not self.titrationBool:
+            print("New rate: ",(1/delta_t)*(el(delta_t)))
+        return((1/delta_t)*(el(delta_t)))

@@ -34,9 +34,10 @@ def find_eq_eqns(rn):
             data = rn.network.get_edge_data(r_tup[0], n)
             a = sym_buf[r_tup[0]]
             b = sym_buf[r_tup[1]]
+
             kon = data['k_on']
             koff = data['k_off']
-            # print("Off rates: ",koff)
+            print("Off rates: ",koff)
             eqn = - a * b * kon + c * koff
             eqn_list.append(eqn)
     return eqn_list, sym_buf

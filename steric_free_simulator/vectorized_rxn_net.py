@@ -78,7 +78,7 @@ class VectorizedRxnNet:
         #Make new param Tensor (that will be optimized) if coupling is True
         if self.coupling == True:
             # c_rxn_count = len(rn.rxn_cid.keys())
-            ind_rxn_count = len(rn.rxn_class[1])
+            ind_rxn_count = len(rn.rxn_class[(1,1)])
             self.params_kon = torch.zeros([ind_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
             self.params_rxn_score_vec = torch.zeros([ind_rxn_count]).double()
             #self.kon.requires_grad_(False)
@@ -86,9 +86,9 @@ class VectorizedRxnNet:
             for i in range(ind_rxn_count):
                 # if i not in cid.keys():
                     ##Independent reactions
-                self.params_kon[rid] = self.kon.clone().detach()[rn.rxn_class[1][i]]
-                self.params_rxn_score_vec[rid] = self.rxn_score_vec[rn.rxn_class[1][i]]
-                self.coup_map[rn.rxn_class[1][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
+                self.params_kon[rid] = self.kon.clone().detach()[rn.rxn_class[(1,1)][i]]
+                self.params_rxn_score_vec[rid] = self.rxn_score_vec[rn.rxn_class[(1,1)][i]]
+                self.coup_map[rn.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
                 rid+=1
             self.params_kon.requires_grad_(True)
 

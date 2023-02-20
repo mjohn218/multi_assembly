@@ -220,8 +220,9 @@ class Optimizer:
                 final_conc = 100
                 #Get current rates of dumping
                 min_rate = torch.min(self.rn.get_params()[0])
-                new_runtime = final_conc/min_rate
-
+                titration_end = final_conc/min_rate
+                self.rn.titration_end_time=titration_end
+                new_runtime=titration_end+1
                 print("New Runtime: ",new_runtime)
                 sim = self.sim_class(self.rn,
                                      new_runtime,
