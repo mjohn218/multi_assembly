@@ -138,12 +138,7 @@ class VecSim:
         while cur_time < self.runtime:
             conc_counter=1
 
-            if self.titrationBool:
-                array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
-                activator_arr = torch.ones((array_dim),requires_grad=True).double()
-                for r in range(len(self.rn.params_kon)):
-                    # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
-                    activator_arr[self.rn.optim_rates[r]] = self.activate_titration()
+
             for obs in self.rn.observables.keys():
                 try:
                     self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
@@ -154,7 +149,15 @@ class VecSim:
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
             # print("Prod Conc: ",l_conc_prod_vec)
-            l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+            if self.titrationBool:
+                array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
+                activator_arr = torch.ones((array_dim),requires_grad=True).double()
+                for r in range(len(self.rn.params_kon)):
+                    # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
+                    activator_arr[self.rn.optim_rates[r]] = self.activate_titration()
+                l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+            else:
+                l_rxn_rates = l_conc_prod_vec + l_k
             # print("Rates: ",l_rxn_rates)
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
             #l_total_rate = l_total_rate + torch.log(torch.min(self.rn.copies_vec))
