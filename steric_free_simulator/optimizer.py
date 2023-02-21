@@ -94,6 +94,7 @@ class Optimizer:
         self.final_t85 = []
         self.final_t95 = []
         self.final_t99 = []
+        self.final_unused_mon = []
         if lr_change_step is not None:
             if gamma == None:
                 gamma = 0.5
@@ -296,13 +297,17 @@ class Optimizer:
                             cost.backward()
                         elif self.rn.partial_opt:
                             if self.rn.boolCreation_rxn:
-                                unused_penalty = unused_monomer
+                                unused_penalty = max_thresh*unused_monomer
+                                k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
+                                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                                physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
+
                                 print("Unused Penalty: ",unused_penalty)
                             else:
                                 unused_penalty=0
-                            k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
-                            curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                            physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
+                                k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
+                                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                                physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params ; Second term prevents exceeding a max_thresh
                             cost = -total_yield + physics_penalty + unused_penalty
                             cost.backward(retain_graph=True)
                         elif self.rn.homo_rates:
@@ -427,11 +432,14 @@ class Optimizer:
 
                     if total_yield-max_yield > 0:
                         self.final_yields.append(total_yield)
+
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
                         self.final_t85.append(total_flux[1])
                         self.final_t95.append(total_flux[2])
                         self.final_t99.append(total_flux[3])
+                        if self.rn.boolCreation_rxn:
+                            self.final_unused_mon.append(unused_monomer)
 
             # elif optim =='flux':
             #     print('Flux on sim iteration ' + str(i) + ' was ' + str(total_flux.item()))
