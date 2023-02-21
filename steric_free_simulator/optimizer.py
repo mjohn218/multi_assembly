@@ -90,6 +90,7 @@ class Optimizer:
         self.dt = None
         self.final_solns = []
         self.final_yields = []
+        self.abs_yield= []
         self.final_t50 = []
         self.final_t85 = []
         self.final_t95 = []
@@ -238,7 +239,7 @@ class Optimizer:
             # preform simulation
             self.optimizer.zero_grad()
             if self.rn.boolCreation_rxn:
-                total_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+                abs_yield,total_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             else:
                 total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             #print("Type/class of yield: ", type(total_yield))
@@ -440,6 +441,7 @@ class Optimizer:
                         self.final_t99.append(total_flux[3])
                         if self.rn.boolCreation_rxn:
                             self.final_unused_mon.append(unused_monomer)
+                            self.abs_yield.append(abs_yield)
 
             # elif optim =='flux':
             #     print('Flux on sim iteration ' + str(i) + ' was ' + str(total_flux.item()))
