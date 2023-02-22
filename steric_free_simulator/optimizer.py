@@ -309,15 +309,16 @@ class Optimizer:
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
-
+                                cost = -total_yield*100 + physics_penalty + unused_penalty
+                                cost.backward(retain_graph=True)
                                 print("Unused Penalty: ",unused_penalty)
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params ; Second term prevents exceeding a max_thresh
-                            cost = -total_yield + physics_penalty + unused_penalty
-                            cost.backward(retain_graph=True)
+                                cost = -total_yield + physics_penalty + unused_penalty
+                                cost.backward(retain_graph=True)
                         elif self.rn.homo_rates:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
