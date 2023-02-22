@@ -149,7 +149,7 @@ class VecSim:
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
             # print("Prod Conc: ",l_conc_prod_vec)
-            if self.titrationBool:
+            if self.rn.boolCreation_rxn:
                 array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
                 activator_arr = torch.ones((array_dim),requires_grad=True).double()
                 for r in range(len(self.rn.params_kon)):
@@ -507,6 +507,6 @@ class VecSim:
             self.titrationBool=False
         delta_t = Tensor([self.titration_end_time]) - self.cur_time
         # return((1/delta_t)*(F.relu(delta_t)))
-        if not self.titrationBool:
-            print("New rate: ",(1/delta_t)*(el(delta_t)))
+        # if not self.titrationBool:
+        #     print("New rate: ",(1/delta_t)*(el(delta_t)))
         return((1/delta_t)*(el(delta_t)))

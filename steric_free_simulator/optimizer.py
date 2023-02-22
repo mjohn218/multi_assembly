@@ -75,7 +75,14 @@ class Optimizer:
                     param_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
-                self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
+                if self.rn.partial_opt:
+                    params_list=[]
+                    print("Params: ",param_itr)
+                    for i in range(len(param_itr)):
+                        params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                    self.optimizer = torch.optim.RMSprop(params_list)
+                else:
+                    self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
             self.lr = learning_rate[1]
         else:
