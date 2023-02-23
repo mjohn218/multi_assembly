@@ -211,7 +211,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,verbose=False,change_runtime=False):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,verbose=False,change_runtime=False,yield_species=-1):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -246,9 +246,9 @@ class Optimizer:
             # preform simulation
             self.optimizer.zero_grad()
             if self.rn.boolCreation_rxn:
-                total_yield,abs_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+                abs_yield,total_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             else:
-                total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+                total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             #print("Type/class of yield: ", type(total_yield))
 
             #Check change in yield from last gradient step. Break if less than a tolerance
@@ -309,7 +309,7 @@ class Optimizer:
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
-                                cost = total_yield*100 + physics_penalty + unused_penalty
+                                cost = -total_yield*100 + physics_penalty + unused_penalty
                                 cost.backward(retain_graph=True)
                                 print("Unused Penalty: ",unused_penalty)
                             else:
