@@ -246,7 +246,8 @@ class Optimizer:
             # preform simulation
             self.optimizer.zero_grad()
             if self.rn.boolCreation_rxn:
-                abs_yield,total_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+
+                total_yield,abs_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             else:
                 total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             #print("Type/class of yield: ", type(total_yield))
