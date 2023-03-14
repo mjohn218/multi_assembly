@@ -349,7 +349,7 @@ class VecSim:
                 # print("Curr_time:",cur_time)
                 if verbose:
                     print("Final Conc Scale: ",conc_scale)
-                    print("Number of steps: ", len(self.steps))
+                    print("Number of steps: ", n_steps)
                     print("Next time larger than simulation runtime. Ending simulation.")
                     values = psutil.virtual_memory()
                     print("Memory Used: ",values.percent)
