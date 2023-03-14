@@ -378,6 +378,7 @@ class VecSim:
 
             cur_time = cur_time + step*conc_scale
             self.cur_time = cur_time
+            n_steps+=1
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
@@ -430,7 +431,7 @@ class VecSim:
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
         # final_yield = total_complete/max_poss_yield
         final_yield = total_complete
-        n_steps+=1
+
         if verbose:
             print("Final Yield: ", final_yield)
         if optim=='flux_coeff':
