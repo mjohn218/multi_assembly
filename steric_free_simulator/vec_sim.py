@@ -72,7 +72,7 @@ class VecSim:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,yield_species=-1):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=False,yield_species=-1,store_interval=-1):
         """
         modifies reaction network
         :return:
@@ -81,6 +81,7 @@ class VecSim:
         self.cur_time=Tensor([0.])
         cutoff = 10000000
         mod_flag = True
+        n_steps=0
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
 
@@ -138,13 +139,23 @@ class VecSim:
         while cur_time < self.runtime:
             conc_counter=1
 
+            #Storing observables
+            if store_interval==-1:
+                for obs in self.rn.observables.keys():
+                    try:
+                        self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                        #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
+                    except IndexError:
+                        print('bkpt')
+            else:
+                if n_steps%store_interval==0:
+                    for obs in self.rn.observables.keys():
+                        try:
+                            self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                            #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
+                        except IndexError:
+                            print('bkpt')
 
-            for obs in self.rn.observables.keys():
-                try:
-                    self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
-                    #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
-                except IndexError:
-                    print('bkpt')
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
@@ -340,6 +351,8 @@ class VecSim:
                     print("Final Conc Scale: ",conc_scale)
                     print("Number of steps: ", len(self.steps))
                     print("Next time larger than simulation runtime. Ending simulation.")
+                    values = psutil.virtual_memory()
+                    print("Memory Used: ",values.percent)
 
                     if self.rn.boolCreation_rxn:
                         print("MASS Conservation: ")
@@ -378,7 +391,12 @@ class VecSim:
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99 and t99_flag:
                 t99=cur_time
                 t99_flag=False
-            self.steps.append(cur_time.item())
+
+            if store_interval==-1:
+                self.steps.append(cur_time.item())
+            else:
+                if n_steps%store_interval==0:
+                    self.steps.append(cur_time.item())
             if self.calc_flux:
                 self.uid_flux = torch.cat((self.uid_flux,rxn_flux),0)
 
@@ -395,7 +413,7 @@ class VecSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-            if len(self.steps)%10000==0:
+            if n_steps%10000==0:
                 if verbose:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
@@ -412,6 +430,7 @@ class VecSim:
         # final_yield = torch.abs(0.66932 - (total_complete / max_poss_yield))
         # final_yield = total_complete/max_poss_yield
         final_yield = total_complete
+        n_steps+=1
         if verbose:
             print("Final Yield: ", final_yield)
         if optim=='flux_coeff':
