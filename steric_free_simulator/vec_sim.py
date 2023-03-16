@@ -140,24 +140,6 @@ class VecSim:
         while cur_time < self.runtime:
             conc_counter=1
 
-            #Storing observables
-            if store_interval==-1 or n_steps<=1:
-                for obs in self.rn.observables.keys():
-                    try:
-                        self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
-                        #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
-                    except IndexError:
-                        print('bkpt')
-            elif n_steps>1:
-                print(cur_time,prev_time)
-                if (cur_time/prev_time)>=store_interval:
-                    for obs in self.rn.observables.keys():
-                        try:
-                            self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
-                            #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
-                        except IndexError:
-                            print('bkpt')
-
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
@@ -361,12 +343,12 @@ class VecSim:
                         print("A added: ",creation_amount[0])
                         print("Total amount of A in system: ",self.rn.copies_vec[0]+self.rn.copies_vec[3]+self.rn.copies_vec[4]+self.rn.copies_vec[-1])
 
-                for obs in self.rn.observables.keys():
-                    try:
-                        self.rn.observables[obs][1].pop()
-                    except IndexError:
-                        print('bkpt')
-                break
+                # for obs in self.rn.observables.keys():
+                #     try:
+                #         self.rn.observables[obs][1].pop()
+                #     except IndexError:
+                #         print('bkpt')
+                # break
 
             #Add a switching criteria. Jump rates to optimized value
             # if switch and (cur_time + step > switch_time):
@@ -397,10 +379,23 @@ class VecSim:
 
             if store_interval==-1:
                 self.steps.append(cur_time.item())
+                for obs in self.rn.observables.keys():
+                    try:
+                        self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                        #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
+                    except IndexError:
+                        print('bkpt')
             else:
                 if n_steps>1:
                     if (cur_time/prev_time)>=store_interval:
                         self.steps.append(cur_time.item())
+                        for obs in self.rn.observables.keys():
+                            try:
+                                self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
+                                #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
+                            except IndexError:
+                                print('bkpt')
+
                         prev_time=cur_time
                 else:
                     self.steps.append(cur_time.item())
