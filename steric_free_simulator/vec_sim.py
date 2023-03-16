@@ -149,6 +149,7 @@ class VecSim:
                     except IndexError:
                         print('bkpt')
             elif n_steps>1:
+                print(cur_time,prev_time)
                 if (cur_time/prev_time)>=store_interval:
                     for obs in self.rn.observables.keys():
                         try:
