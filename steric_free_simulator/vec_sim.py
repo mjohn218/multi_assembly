@@ -148,7 +148,7 @@ class VecSim:
                         #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
                     except IndexError:
                         print('bkpt')
-            else:
+            elif n_steps>1:
                 if (cur_time/prev_time)>=store_interval:
                     for obs in self.rn.observables.keys():
                         try:
