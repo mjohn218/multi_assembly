@@ -78,6 +78,7 @@ class VecSim:
         :return:
         """
         cur_time = 0
+        prev_time=0
         self.cur_time=Tensor([0.])
         cutoff = 10000000
         mod_flag = True
@@ -148,7 +149,7 @@ class VecSim:
                     except IndexError:
                         print('bkpt')
             else:
-                if n_steps%store_interval==0:
+                if (cur_time/prev_time)>=store_interval:
                     for obs in self.rn.observables.keys():
                         try:
                             self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
@@ -396,12 +397,14 @@ class VecSim:
             if store_interval==-1:
                 self.steps.append(cur_time.item())
             else:
-                if n_steps%store_interval==0:
+                if (cur_time/prev_time)>=store_interval:
                     self.steps.append(cur_time.item())
+                    prev_time=cur_time
             if self.calc_flux:
                 self.uid_flux = torch.cat((self.uid_flux,rxn_flux),0)
 
-
+            if n_steps==1:
+                prev_time = cur_time
             # print("Current time: ",cur_time)
             #Calculate the flux
             # self.net_flux = self.rn.calculate_total_flux()
