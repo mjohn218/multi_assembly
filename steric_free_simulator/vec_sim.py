@@ -377,7 +377,7 @@ class VecSim:
                 t99=cur_time
                 t99_flag=False
 
-            if store_interval==-1:
+            if store_interval==-1 or n_steps<=1:
                 self.steps.append(cur_time.item())
                 for obs in self.rn.observables.keys():
                     try:
@@ -385,6 +385,7 @@ class VecSim:
                         #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
                     except IndexError:
                         print('bkpt')
+                prev_time=cur_time
             else:
                 if n_steps>1:
                     if (cur_time/prev_time)>=store_interval:
@@ -397,9 +398,6 @@ class VecSim:
                                 print('bkpt')
 
                         prev_time=cur_time
-                else:
-                    self.steps.append(cur_time.item())
-                    prev_time=cur_time
             if self.calc_flux:
                 self.uid_flux = torch.cat((self.uid_flux,rxn_flux),0)
 
