@@ -141,14 +141,14 @@ class VecSim:
             conc_counter=1
 
             #Storing observables
-            if store_interval==-1:
+            if store_interval==-1 or n_steps<=1:
                 for obs in self.rn.observables.keys():
                     try:
                         self.rn.observables[obs][1].append(self.rn.copies_vec[int(obs)].item())
                         #self.flux_vs_time[obs][1].append(self.net_flux[self.flux_vs_time[obs][0]])
                     except IndexError:
                         print('bkpt')
-            elif n_steps>0:
+            elif n_steps>1:
                 if (cur_time/prev_time)>=store_interval:
                     for obs in self.rn.observables.keys():
                         try:
@@ -397,7 +397,11 @@ class VecSim:
             if store_interval==-1:
                 self.steps.append(cur_time.item())
             else:
-                if (cur_time/prev_time)>=store_interval:
+                if n_steps>1:
+                    if (cur_time/prev_time)>=store_interval:
+                        self.steps.append(cur_time.item())
+                        prev_time=cur_time
+                else:
                     self.steps.append(cur_time.item())
                     prev_time=cur_time
             if self.calc_flux:
