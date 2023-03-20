@@ -354,7 +354,7 @@ class VectorizedRxnNet:
             if self.coupling:
                 return [self.params_kon]
             elif self.partial_opt:
-                return [self.params_kon]
+                return self.params_kon
             elif self.homo_rates:
                 return [self.params_kon]
             else:
