@@ -44,9 +44,9 @@ class Optimizer:
                 print("Params: ",param_itr)
                 for i in range(len(param_itr)):
                     params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
-                self.optimizer = torch.optim.RMSprop(params_list)
+                self.optimizer = torch.optim.Adam(params_list)
             else:
-                self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
+                self.optimizer = torch.optim.Adam(param_itr, learning_rate)
         elif method =='RMSprop':
             if self.rn.dissoc_is_param:
                 param_list = []
@@ -326,6 +326,7 @@ class Optimizer:
                                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                     physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev)
                                     cost = (creat_yield - total_yield) + physics_penalty
+                                    cost.backward(retain_graph=True)
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
