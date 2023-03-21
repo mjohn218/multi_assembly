@@ -102,6 +102,10 @@ class VectorizedRxnNet:
                 self.params_rxn_score_vec[i] = self.rxn_score_vec[self.optim_rates[i]]
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
+
+
+            # self.params_kon = []
+
         elif self.homo_rates == True:
             self.params_kon = torch.zeros([len(self.rxn_class.keys())],requires_grad=True).double()
             self.params_rxn_score_vec = torch.zeros([len(self.rxn_class.keys())]).double()
@@ -354,7 +358,7 @@ class VectorizedRxnNet:
             if self.coupling:
                 return [self.params_kon]
             elif self.partial_opt:
-                return self.params_kon
+                return [self.params_kon]
             elif self.homo_rates:
                 return [self.params_kon]
             else:
