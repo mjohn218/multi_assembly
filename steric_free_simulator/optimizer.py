@@ -86,7 +86,7 @@ class Optimizer:
                     params_list=[]
                     print("Params: ",param_itr)
                     for i in range(len(param_itr)):
-                        print("Learn Rate: ",learning_rate)
+                        # print("Learn Rate: ",learning_rate)
                         learn_rate = random.uniform(learning_rate,1e-1)
                         params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
                     self.optimizer = torch.optim.RMSprop(params_list)
@@ -330,10 +330,10 @@ class Optimizer:
                                 else:
                                     cost = (creat_yield - total_yield) + physics_penalty
                                     cost.backward(retain_graph=True)
-                                    print("Grad: ",end="")
-                                    for r in range(len(self.rn.params_kon)):
-                                        print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
-                                    print("")
+                                    # print("Grad: ",end="")
+                                    # for r in range(len(self.rn.params_kon)):
+                                    #     print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                    # print("")
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
@@ -429,8 +429,8 @@ class Optimizer:
                     elif self.rn.partial_opt and self.rn.assoc_is_param:
                         # new_params = self.rn.params_kon.clone().detach()
                         new_params = [p.clone().detach() for p in self.rn.params_kon]
-                        for r in range(len(self.rn.params_kon)):
-                            print("Is leaf : ",self.rn.params_kon[r].is_leaf, "Grad: ",self.rn.params_kon[r].requires_grad)
+                        # for r in range(len(self.rn.params_kon)):
+                        #     print("Is leaf : ",self.rn.params_kon[r].is_leaf, "Grad: ",self.rn.params_kon[r].requires_grad)
                             # self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.homo_rates and self.rn.assoc_is_param:
                         new_params = self.rn.params_kon.clone().detach()

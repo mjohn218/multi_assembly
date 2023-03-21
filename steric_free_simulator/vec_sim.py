@@ -135,7 +135,7 @@ class VecSim:
         elif self.rn.partial_opt:
             # local_kon = torch.zeros(len(self.kon),requires_grad=True).double()
             for r in range(len(self.rn.params_kon)):
-                print("is_leaf: ",self.rn.kon[r].is_leaf, "is_grad: ",self.rn.kon[r].requires_grad)
+                # print("is_leaf: ",self.rn.kon[r].is_leaf, "is_grad: ",self.rn.kon[r].requires_grad)
                 self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
 
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
