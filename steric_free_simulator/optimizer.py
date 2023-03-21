@@ -86,7 +86,9 @@ class Optimizer:
                     params_list=[]
                     print("Params: ",param_itr)
                     for i in range(len(param_itr)):
-                        params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                        print("Learn Rate: ",learning_rate)
+                        learn_rate = random.uniform(learning_rate,1e-1)
+                        params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
                     self.optimizer = torch.optim.RMSprop(params_list)
                 else:
                     self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
@@ -313,20 +315,25 @@ class Optimizer:
                             cost.backward()
                         elif self.rn.partial_opt:
                             if self.rn.boolCreation_rxn:
+                                # local_kon = torch.zeros([len(self.rn.params_kon)], requires_grad=True).double()
+                                # for r in range(len(local_kon)):
+                                #     local_kon[r]=self.rn.params_kon[r]
+                                # k = torch.exp(self.rn.compute_log_constants(local_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
+                                # curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                                # physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
+                                physics_penalty = 0
                                 if creat_yield==-1:
                                     unused_penalty = max_thresh*unused_monomer
-                                    k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
-                                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                                    physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
                                     cost = -total_yield + physics_penalty + unused_penalty
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
-                                    k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
-                                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                                    physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev)
                                     cost = (creat_yield - total_yield) + physics_penalty
                                     cost.backward(retain_graph=True)
+                                    print("Grad: ",end="")
+                                    for r in range(len(self.rn.params_kon)):
+                                        print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                    print("")
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
@@ -420,9 +427,11 @@ class Optimizer:
                         #     else:
                         #         self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[rc]]
                     elif self.rn.partial_opt and self.rn.assoc_is_param:
-                        new_params = self.rn.params_kon.clone().detach()
-                        for r in range(len(new_params)):
-                            self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
+                        # new_params = self.rn.params_kon.clone().detach()
+                        new_params = [p.clone().detach() for p in self.rn.params_kon]
+                        for r in range(len(self.rn.params_kon)):
+                            print("Is leaf : ",self.rn.params_kon[r].is_leaf, "Grad: ",self.rn.params_kon[r].requires_grad)
+                            # self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.homo_rates and self.rn.assoc_is_param:
                         new_params = self.rn.params_kon.clone().detach()
                     elif self.rn.copies_is_param:

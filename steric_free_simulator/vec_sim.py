@@ -132,6 +132,13 @@ class VecSim:
                     self.rn.kon[r] = self.rn.params_kon[counter]
                 counter+=1
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+        elif self.rn.partial_opt:
+            # local_kon = torch.zeros(len(self.kon),requires_grad=True).double()
+            for r in range(len(self.rn.params_kon)):
+                print("is_leaf: ",self.rn.kon[r].is_leaf, "is_grad: ",self.rn.kon[r].requires_grad)
+                self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
+
+            l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
             if verbose:
@@ -147,10 +154,10 @@ class VecSim:
             if self.rn.boolCreation_rxn:
                 array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
                 activator_arr = torch.ones((array_dim),requires_grad=True).double()
-                for r in range(len(self.rn.params_kon)):
-                    # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
-                    activator_arr[self.rn.optim_rates[r]] = self.activate_titration()
-                l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+                # for r in range(len(self.rn.params_kon)):
+                #     # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
+                #     activator_arr[self.rn.optim_rates[r]] = self.activate_titration()
+                l_rxn_rates = l_conc_prod_vec + l_k #+ torch.log(activator_arr)
             else:
                 l_rxn_rates = l_conc_prod_vec + l_k
             # print("Rates: ",l_rxn_rates)
