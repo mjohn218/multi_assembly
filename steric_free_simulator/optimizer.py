@@ -84,11 +84,13 @@ class Optimizer:
             else:
                 if self.rn.partial_opt:
                     params_list=[]
+                    self.lr_group=[]
                     print("Params: ",param_itr)
                     for i in range(len(param_itr)):
                         # print("Learn Rate: ",learning_rate)
-                        learn_rate = random.uniform(learning_rate,learning_rate*1e2)
-                        params_list.append({'params':param_itr[i], 'lr':learn_rate})
+                        learn_rate = random.uniform(learning_rate,1e-1)
+                        params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
+                        self.lr_group.append(learn_rate)
                     self.optimizer = torch.optim.RMSprop(params_list)
                 else:
                     self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
@@ -118,7 +120,11 @@ class Optimizer:
             # self.scheduler = StepLR(self.optimizer,step_size=lr_change_step,gamma=gamma)
             # self.scheduler = ReduceLROnPlateau(self.optimizer,'max',patience=30)
             if self.rn.assoc_is_param:
-                self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.assoc_lambda)
+                if self.rn.partial_opt:
+                    self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.creat_lambda for i in range(len(self.rn.params_kon))])
+                    self.lambda_ct=-1
+                else:
+                    self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.assoc_lambda)
             if self.rn.chap_is_param:
                 self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.lambda_c,self.lambda_k])
             elif self.rn.dG_is_param:
@@ -145,6 +151,13 @@ class Optimizer:
         new_lr = torch.min(self.rn.kon).item()*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
         return(new_lr/curr_lr)
+    def creat_lambda(self,opt_itr):
+        # self.lambda_ct+=1
+        # new_lr = self.rn.params_kon[self.lambda_ct%len(self.rn.params_kon)].item()*1e-2
+
+        # curr_lr = self.optimizer.state_dict()['params_groups'][self.lambda_ct%len(self.rn.params_kon)]['lr']
+        return(0.8)
+        # return(1e-1)
     def lambda1(self,opt_itr):
         new_lr = torch.min(self.rn.params_k[0]).item()*self.lr
         curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
@@ -413,7 +426,7 @@ class Optimizer:
                     if self.lr_change_step is not None:
                         self.scheduler.step()
                     #Changing learning rate
-                    if (self.lr_change_step is not None) and (i%100 ==0) and (i>0):
+                    if (self.lr_change_step is not None) and (i%2 ==0) and (i>0):
                         print("New learning rate : ")
                         for param_groups in self.optimizer.param_groups:
                             print(param_groups['lr'])
