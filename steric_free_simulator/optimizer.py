@@ -428,10 +428,16 @@ class Optimizer:
                     self.optimizer.step()
                     # self.scheduler.step(metric)
                     if (self.lr_change_step is not None) and (total_yield>=0.97):
-                        self.scheduler.step()
-                        print("New learning rate : ")
+                        change_lr = True
+                        print("Curr learning rate : ")
                         for param_groups in self.optimizer.param_groups:
                             print(param_groups['lr'])
+                            if param_groups['lr'] < 1e-4:
+                                change_lr=False
+                        if change_lr:
+                            self.scheduler.step()
+
+
                     #Changing learning rate
                     if (self.lr_change_step is not None) and (i%self.lr_change_step ==0) and (i>0):
                         print("New learning rate : ")
