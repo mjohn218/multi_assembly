@@ -323,11 +323,54 @@ class Optimizer:
                     #     cost = -total_yield + physics_penalty
 
                         # cost.backward()
+                    if self.rn.coupling:
+                        new_params = self.rn.params_kon.clone().detach()
+                        # for rc in range(len(self.rn.kon)):
+                        #     if rc in self.rn.cid.keys():
+                        #         self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[self.rn.cid[rc]]]
+                        #     else:
+                        #         self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[rc]]
+                    elif self.rn.partial_opt and self.rn.assoc_is_param:
+                        # new_params = self.rn.params_kon.clone().detach()
+                        new_params = [p.clone().detach() for p in self.rn.params_kon]
+                        # for r in range(len(self.rn.params_kon)):
+                        #     print("Is leaf : ",self.rn.params_kon[r].is_leaf, "Grad: ",self.rn.params_kon[r].requires_grad)
+                            # self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
+                    elif self.rn.homo_rates and self.rn.assoc_is_param:
+                        new_params = self.rn.params_kon.clone().detach()
+                    elif self.rn.copies_is_param:
+                        new_params = self.rn.c_params.clone().detach()
+                    elif self.rn.chap_is_param:
+                        new_params = [l.clone().detach() for l in self.rn.chap_params]
+                    elif self.rn.dissoc_is_param:
+                        if self.rn.partial_opt:
+                            new_params = self.rn.params_koff.clone().detach()
+                            self.rn.params_kon = self.rn.params_koff/(self.rn._C0*torch.exp(self.rn.params_rxn_score_vec))
+                            for r in range(len(new_params)):
+                                self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
+                            print("Current On rates: ", self.rn.kon)
+                        else:
+                            print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
+                            new_params = [l.clone().detach() for l in self.rn.params_koff]
+                    elif self.rn.dG_is_param:
+                        # print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
 
+                        if self.rn.dG_mode==1:
+                            new_params = [l.clone().detach() for l in self.rn.params_k]
+                        else:
+                            new_params = [l.clone().detach() for l in self.rn.params_k]
+                            # new_params = self.rn.params_k.clone().detach()
+
+                    else:
+                        new_params = self.rn.kon.clone().detach()
+                    #print('New reaction rates: ' + str(self.rn.kon.clone().detach()))
+                    # new_params = self.rn.kon.clone().detach()
+                    print('current params: ' + str(new_params))
                     #Store yield and params data
                     if total_yield-max_yield > 0:
                         self.final_yields.append(total_yield)
-
+                        if i==0:
+                            self.final_solns.append()
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
                         self.final_t85.append(total_flux[1])
@@ -461,49 +504,7 @@ class Optimizer:
                     self.optimizer.step()
 
                     #print("Previous reaction rates: ",str(self.rn.kon.clone().detach()))
-                    if self.rn.coupling:
-                        new_params = self.rn.params_kon.clone().detach()
-                        # for rc in range(len(self.rn.kon)):
-                        #     if rc in self.rn.cid.keys():
-                        #         self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[self.rn.cid[rc]]]
-                        #     else:
-                        #         self.rn.kon[rc] = self.rn.params_kon[self.rn.coup_map[rc]]
-                    elif self.rn.partial_opt and self.rn.assoc_is_param:
-                        # new_params = self.rn.params_kon.clone().detach()
-                        new_params = [p.clone().detach() for p in self.rn.params_kon]
-                        # for r in range(len(self.rn.params_kon)):
-                        #     print("Is leaf : ",self.rn.params_kon[r].is_leaf, "Grad: ",self.rn.params_kon[r].requires_grad)
-                            # self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
-                    elif self.rn.homo_rates and self.rn.assoc_is_param:
-                        new_params = self.rn.params_kon.clone().detach()
-                    elif self.rn.copies_is_param:
-                        new_params = self.rn.c_params.clone().detach()
-                    elif self.rn.chap_is_param:
-                        new_params = [l.clone().detach() for l in self.rn.chap_params]
-                    elif self.rn.dissoc_is_param:
-                        if self.rn.partial_opt:
-                            new_params = self.rn.params_koff.clone().detach()
-                            self.rn.params_kon = self.rn.params_koff/(self.rn._C0*torch.exp(self.rn.params_rxn_score_vec))
-                            for r in range(len(new_params)):
-                                self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
-                            print("Current On rates: ", self.rn.kon)
-                        else:
-                            print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
-                            new_params = [l.clone().detach() for l in self.rn.params_koff]
-                    elif self.rn.dG_is_param:
-                        # print("Current On rates: ", torch.exp(k)[:len(self.rn.kon)])
 
-                        if self.rn.dG_mode==1:
-                            new_params = [l.clone().detach() for l in self.rn.params_k]
-                        else:
-                            new_params = [l.clone().detach() for l in self.rn.params_k]
-                            # new_params = self.rn.params_k.clone().detach()
-
-                    else:
-                        new_params = self.rn.kon.clone().detach()
-                    #print('New reaction rates: ' + str(self.rn.kon.clone().detach()))
-                    # new_params = self.rn.kon.clone().detach()
-                    print('current params: ' + str(new_params))
 
 
 
