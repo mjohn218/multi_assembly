@@ -369,8 +369,7 @@ class Optimizer:
                     #Store yield and params data
                     if total_yield-max_yield > 0:
                         self.final_yields.append(total_yield)
-                        if i==0:
-                            self.final_solns.append()
+                        
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
                         self.final_t85.append(total_flux[1])
