@@ -41,9 +41,13 @@ class Optimizer:
         if method =='Adam':
             if self.rn.partial_opt:
                 params_list=[]
+                self.lr_group=[]
                 print("Params: ",param_itr)
                 for i in range(len(param_itr)):
-                    params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                    # print("Learn Rate: ",learning_rate)
+                    learn_rate = random.uniform(learning_rate,learning_rate*10)
+                    params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
+                    self.lr_group.append(learn_rate)
                 self.optimizer = torch.optim.Adam(params_list)
             else:
                 self.optimizer = torch.optim.Adam(param_itr, learning_rate)
@@ -123,6 +127,7 @@ class Optimizer:
                 if self.rn.partial_opt:
                     self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=[self.creat_lambda for i in range(len(self.rn.params_kon))])
                     self.lambda_ct=-1
+                    self.gamma=gamma
                 else:
                     self.scheduler = MultiplicativeLR(self.optimizer,lr_lambda=self.assoc_lambda)
             if self.rn.chap_is_param:
@@ -155,7 +160,7 @@ class Optimizer:
         # self.lambda_ct+=1
         # new_lr = self.rn.params_kon[self.lambda_ct%len(self.rn.params_kon)].item()*1e-2
         # curr_lr = self.optimizer.state_dict()['params_groups'][self.lambda_ct%len(self.rn.params_kon)]['lr']
-        return(0.8)
+        return(self.gamma)
         # return(1e-1)
     def lambda1(self,opt_itr):
         new_lr = torch.min(self.rn.params_k[0]).item()*self.lr
@@ -336,7 +341,7 @@ class Optimizer:
                                 physics_penalty = 0
                                 if creat_yield==-1:
                                     unused_penalty = max_thresh*unused_monomer
-                                    cost = -total_yield + physics_penalty + unused_penalty
+                                    cost = -abs + physics_penalty #+ unused_penalty
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
@@ -422,8 +427,11 @@ class Optimizer:
 
                     self.optimizer.step()
                     # self.scheduler.step(metric)
-                    if self.lr_change_step is not None:
+                    if (self.lr_change_step is not None) and (total_yield>=0.97):
                         self.scheduler.step()
+                        print("New learning rate : ")
+                        for param_groups in self.optimizer.param_groups:
+                            print(param_groups['lr'])
                     #Changing learning rate
                     if (self.lr_change_step is not None) and (i%self.lr_change_step ==0) and (i>0):
                         print("New learning rate : ")
