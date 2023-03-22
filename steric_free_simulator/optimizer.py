@@ -432,7 +432,7 @@ class Optimizer:
                         print("Curr learning rate : ")
                         for param_groups in self.optimizer.param_groups:
                             print(param_groups['lr'])
-                            if param_groups['lr'] < 1e-4:
+                            if param_groups['lr'] < 1e-2:
                                 change_lr=False
                         if change_lr:
                             self.scheduler.step()
