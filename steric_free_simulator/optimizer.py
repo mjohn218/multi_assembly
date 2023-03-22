@@ -18,7 +18,7 @@ class Optimizer:
                  sim_runtime: float,
                  optim_iterations: int,
                  learning_rate: float,
-                 device='cpu',method='Adam',lr_change_step=None,gamma=None):
+                 device='cpu',method='Adam',lr_change_step=None,gamma=None,mom=0):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
             print("Using " + device)
@@ -91,7 +91,7 @@ class Optimizer:
                         learn_rate = random.uniform(learning_rate,learning_rate*10)
                         params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
                         self.lr_group.append(learn_rate)
-                    self.optimizer = torch.optim.RMSprop(params_list,momentum=0.9)
+                    self.optimizer = torch.optim.RMSprop(params_list,momentum=mom)
                 else:
                     self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
