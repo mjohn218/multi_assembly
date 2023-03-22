@@ -323,6 +323,20 @@ class Optimizer:
                     #     cost = -total_yield + physics_penalty
 
                         # cost.backward()
+
+                    #Store yield and params data
+                    if total_yield-max_yield > 0:
+                        self.final_yields.append(total_yield)
+
+                        self.final_solns.append(new_params)
+                        self.final_t50.append(total_flux[0])
+                        self.final_t85.append(total_flux[1])
+                        self.final_t95.append(total_flux[2])
+                        self.final_t99.append(total_flux[3])
+                        if self.rn.boolCreation_rxn:
+                            self.final_unused_mon.append(unused_monomer)
+                            self.abs_yield.append(abs_yield)
+
                     if self.rn.assoc_is_param:
                         if self.rn.coupling:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
@@ -341,16 +355,16 @@ class Optimizer:
                                 physics_penalty = 0
                                 if creat_yield==-1:
                                     unused_penalty = max_thresh*unused_monomer
-                                    cost = -abs + physics_penalty #+ unused_penalty
+                                    cost = -abs_yield + physics_penalty #+ unused_penalty
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
                                     cost = (creat_yield - total_yield) + physics_penalty
                                     cost.backward(retain_graph=True)
-                                    # print("Grad: ",end="")
-                                    # for r in range(len(self.rn.params_kon)):
-                                    #     print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
-                                    # print("")
+                                    print("Grad: ",end="")
+                                    for r in range(len(self.rn.params_kon)):
+                                        print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                    print("")
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
@@ -425,7 +439,7 @@ class Optimizer:
                         cost.backward(retain_graph=True)
                         metric = torch.mean(self.rn.params_k[1].clone().detach()).item()
 
-                    self.optimizer.step()
+
                     # self.scheduler.step(metric)
                     if (self.lr_change_step is not None) and (total_yield>=0.97):
                         change_lr = True
@@ -443,6 +457,8 @@ class Optimizer:
                         print("New learning rate : ")
                         for param_groups in self.optimizer.param_groups:
                             print(param_groups['lr'])
+
+                    self.optimizer.step()
 
                     #print("Previous reaction rates: ",str(self.rn.kon.clone().detach()))
                     if self.rn.coupling:
@@ -489,17 +505,7 @@ class Optimizer:
                     # new_params = self.rn.kon.clone().detach()
                     print('current params: ' + str(new_params))
 
-                    if total_yield-max_yield > 0:
-                        self.final_yields.append(total_yield)
 
-                        self.final_solns.append(new_params)
-                        self.final_t50.append(total_flux[0])
-                        self.final_t85.append(total_flux[1])
-                        self.final_t95.append(total_flux[2])
-                        self.final_t99.append(total_flux[3])
-                        if self.rn.boolCreation_rxn:
-                            self.final_unused_mon.append(unused_monomer)
-                            self.abs_yield.append(abs_yield)
 
             # elif optim =='flux':
             #     print('Flux on sim iteration ' + str(i) + ' was ' + str(total_flux.item()))
