@@ -91,7 +91,7 @@ class Optimizer:
                         learn_rate = random.uniform(learning_rate,1e-1)
                         params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
                         self.lr_group.append(learn_rate)
-                    self.optimizer = torch.optim.RMSprop(params_list)
+                    self.optimizer = torch.optim.RMSprop(params_list,momentum=0.9)
                 else:
                     self.optimizer = torch.optim.RMSprop(param_itr, learning_rate)
         if self.rn.dissoc_is_param:
@@ -154,7 +154,6 @@ class Optimizer:
     def creat_lambda(self,opt_itr):
         # self.lambda_ct+=1
         # new_lr = self.rn.params_kon[self.lambda_ct%len(self.rn.params_kon)].item()*1e-2
-
         # curr_lr = self.optimizer.state_dict()['params_groups'][self.lambda_ct%len(self.rn.params_kon)]['lr']
         return(0.8)
         # return(1e-1)
@@ -426,7 +425,7 @@ class Optimizer:
                     if self.lr_change_step is not None:
                         self.scheduler.step()
                     #Changing learning rate
-                    if (self.lr_change_step is not None) and (i%2 ==0) and (i>0):
+                    if (self.lr_change_step is not None) and (i%self.lr_change_step ==0) and (i>0):
                         print("New learning rate : ")
                         for param_groups in self.optimizer.param_groups:
                             print(param_groups['lr'])
