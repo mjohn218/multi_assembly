@@ -306,8 +306,8 @@ class VecSim:
 
 
             # print("Final copies: ", self.rn.copies_vec)
-            values = psutil.virtual_memory()
-            print("Memory Used: ",values.percent)
+            # values = psutil.virtual_memory()
+            # print("Memory Used: ",values.percent)
 
 
             step = torch.exp(l_step)
