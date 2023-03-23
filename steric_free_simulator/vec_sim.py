@@ -306,6 +306,8 @@ class VecSim:
 
 
             # print("Final copies: ", self.rn.copies_vec)
+            values = psutil.virtual_memory()
+            print("Memory Used: ",values.percent)
 
 
             step = torch.exp(l_step)
@@ -456,7 +458,7 @@ class VecSim:
         else:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
             if self.rn.boolCreation_rxn:
-                return(final_yield.to(self.dev),final_yield.to(self.dev)/cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
+                return(final_yield.to(self.dev),cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 

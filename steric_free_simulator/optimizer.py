@@ -273,7 +273,7 @@ class Optimizer:
             self.optimizer.zero_grad()
             if self.rn.boolCreation_rxn:
 
-                total_yield,abs_yield,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+                total_yield,cur_time,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             else:
                 total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             #print("Type/class of yield: ", type(total_yield))
@@ -369,7 +369,7 @@ class Optimizer:
                     #Store yield and params data
                     if total_yield-max_yield > 0:
                         self.final_yields.append(total_yield)
-                        
+
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
                         self.final_t85.append(total_flux[1])
@@ -397,7 +397,7 @@ class Optimizer:
                                 physics_penalty = 0
                                 if creat_yield==-1:
                                     unused_penalty = max_thresh*unused_monomer
-                                    cost = -abs_yield + physics_penalty #+ unused_penalty
+                                    cost = -(total_yield/cur_time) + physics_penalty #+ unused_penalty
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
