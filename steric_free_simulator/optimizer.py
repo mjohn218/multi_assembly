@@ -112,7 +112,7 @@ class Optimizer:
         self.dt = None
         self.final_solns = []
         self.final_yields = []
-        self.abs_yield= []
+        self.curr_time= []
         self.final_t50 = []
         self.final_t85 = []
         self.final_t95 = []
@@ -377,7 +377,7 @@ class Optimizer:
                         self.final_t99.append(total_flux[3])
                         if self.rn.boolCreation_rxn:
                             self.final_unused_mon.append(unused_monomer)
-                            self.abs_yield.append(abs_yield)
+                            self.curr_time.append(cur_time)
 
                     if self.rn.assoc_is_param:
                         if self.rn.coupling:
