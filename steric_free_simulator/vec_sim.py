@@ -83,6 +83,10 @@ class VecSim:
         cutoff = 10000000
         mod_flag = True
         n_steps=0
+
+        values = psutil.virtual_memory()
+        print("Start of simulation: memory Used: ",values.percent)
+
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
 
@@ -346,6 +350,7 @@ class VecSim:
                     print("Next time larger than simulation runtime. Ending simulation.")
                     values = psutil.virtual_memory()
                     print("Memory Used: ",values.percent)
+                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
 
                     if self.rn.boolCreation_rxn:
                         print("MASS Conservation: ")
@@ -431,7 +436,7 @@ class VecSim:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
-
+            print(all_amounts)
             total_complete = self.rn.copies_vec[yield_species]/np.min(all_amounts)
             unused_monomer = (np.min(all_amounts) - self.rn.copies_vec[yield_species])/np.min(all_amounts)
         else:
