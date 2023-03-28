@@ -89,7 +89,7 @@ class ReactionNetwork:
         self.creation_species = []
         self.creation_nodes = []
         self.creation_rxn_data ={}
-        self.titration_end_time=-1
+        self.titration_end_conc=-1
         self.default_k_creation = 1e-1
         self.boolDestruction_rxn = False
         self.destruction_species = []
@@ -180,7 +180,7 @@ class ReactionNetwork:
             self.homo_rates=items[1]
         elif items[0]=='titration_time_int':
             print("Setting Totration ENd Point")
-            self.titration_end_time=items[1]
+            self.titration_end_conc=items[1]
         return items
 
     def parse_species(self, line, params):

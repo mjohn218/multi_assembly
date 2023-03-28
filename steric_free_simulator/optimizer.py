@@ -254,10 +254,16 @@ class Optimizer:
                 #Change the runtime so that the simulation is stopped after a certain number of molecules have been dumped.
                 final_conc = 100
                 #Get current rates of dumping
-                min_rate = torch.min(self.rn.get_params()[0])
-                titration_end = final_conc/min_rate
-                self.rn.titration_end_time=titration_end
-                new_runtime=titration_end+1
+                # min_rate = torch.min(self.rn.get_params()[0])
+                rates = np.array(self.rn.get_params())
+                titration_end = final_conc/rates
+
+                titration_time_map ={v['uid'] : final_conc/v['k_on'] for v in self.rn.creation_rxn_data.values()}
+                for r in range(len(rates)):
+                    titration_time_map[self.rn.optim_rates[r]]  = titration_end[r]
+                self.rn.titration_end_time=titration_time_map
+                # print("Titration Map : ",self.rn.titration_end_time)
+                new_runtime=np.max(list(titration_time_map.values()))+1
                 print("New Runtime: ",new_runtime)
                 sim = self.sim_class(self.rn,
                                      new_runtime,

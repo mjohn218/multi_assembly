@@ -65,8 +65,10 @@ class VecSim:
         self.rate_step_array = []
         self.mod_start=-1
         self.cur_time=0
-        self.titration_end_time=self.rn.titration_end_time
+        self.titration_end_conc=self.rn.titration_end_conc
+        self.tit_stop_count=0
         self.titrationBool=False
+
 
         if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
@@ -103,8 +105,9 @@ class VecSim:
         t50=-1
         t99=-1
         if self.rn.boolCreation_rxn:
+
             creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
-            if self.titration_end_time!=-1:
+            if self.titration_end_conc!=-1:
                 self.titrationBool=True
             else:
                 self.titrationBool=False
@@ -150,17 +153,21 @@ class VecSim:
 
         while cur_time < self.runtime:
             conc_counter=1
-
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
             # print("Prod Conc: ",l_conc_prod_vec)
             if self.rn.boolCreation_rxn:
+
                 array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
                 activator_arr = torch.ones((array_dim),requires_grad=True).double()
                 for node,values in self.rn.creation_rxn_data.items():
                     # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
-                    activator_arr[values['uid']] = self.activate_titration()
+
+                    end_time = self.rn.titration_time_map[values['uid']]
+                    # if n_steps==1:
+                    #     print("End TIME: ",end_time)
+                    activator_arr[values['uid']] = self.activate_titration(values['uid'])
                 l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
             else:
                 l_rxn_rates = l_conc_prod_vec + l_k
@@ -352,10 +359,10 @@ class VecSim:
                     print("Memory Used: ",values.percent)
                     print("RAM Usage (GB): ",values.used/(1024*1024*1024))
 
-                    if self.rn.boolCreation_rxn:
-                        print("MASS Conservation: ")
-                        print("A added: ",creation_amount[0])
-                        print("Total amount of A in system: ",self.rn.copies_vec[0]+self.rn.copies_vec[3]+self.rn.copies_vec[4]+self.rn.copies_vec[-1])
+                    # if self.rn.boolCreation_rxn:
+                    #     print("MASS Conservation: ")
+                        # print("Molecules added: ",creation_amount[0],creation_amount[1],creation_amount[2])
+                    #     print("Total amount of A in system: ",self.rn.copies_vec[0]+self.rn.copies_vec[3]+self.rn.copies_vec[4]+self.rn.copies_vec[-1])
 
                 # for obs in self.rn.observables.keys():
                 #     try:
@@ -534,13 +541,18 @@ class VecSim:
         return(total_coeff/len(rid[0]))
         # return(total_lag/len(rid[0]))
 
-    def activate_titration(self):
+    def activate_titration(self,rid=0):
         k_new=1e-6
         el = torch.nn.ELU(k_new)
-        if self.titrationBool and (self.titration_end_time < self.cur_time.item()):
+        end_time = self.rn.titration_end_time[rid]
+        if self.titrationBool and (end_time < self.cur_time.item()):
             print("Ending Titration!")
+            # print("Titration Map : ",self.rn.titration_end_time)
+            # self.tit_stop_count+=1
+            # print("Stop COunt= ",self.tit_stop_count)
             self.titrationBool=False
-        delta_t = Tensor([self.titration_end_time]) - self.cur_time
+        delta_t = Tensor([end_time]) - self.cur_time
+        # print("Delta t : ",delta_t)
         # return((1/delta_t)*(F.relu(delta_t)))
         # if not self.titrationBool:
         #     print("New rate: ",(1/delta_t)*(el(delta_t)))

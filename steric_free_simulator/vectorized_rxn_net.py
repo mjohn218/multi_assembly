@@ -44,7 +44,9 @@ class VectorizedRxnNet:
         self.boolCreation_rxn = rn.boolCreation_rxn
         self.creation_nodes = rn.creation_nodes
         self.creation_rxn_data = rn.creation_rxn_data
-        self.titration_end_time=rn.titration_end_time
+        self.titration_end_conc=rn.titration_end_conc
+        if self.boolCreation_rxn and self.titration_end_conc != -1:
+            self.titration_time_map={v['uid'] : self.titration_end_conc/v['k_on'] for v in self.creation_rxn_data.values()}
 
         #Variables for Destruction order reactions
         self.boolDestruction_rxn = rn.boolDestruction_rxn
