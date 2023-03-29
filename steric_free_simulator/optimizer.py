@@ -407,7 +407,7 @@ class Optimizer:
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
-                                    cost =  (creat_yield-total_yield) - total_yield/cur_time  + physics_penalty
+                                    cost =  (creat_yield-total_yield)   + physics_penalty #- total_yield/cur_time
                                     cost.backward(retain_graph=True)
                                     print("Grad: ",end="")
                                     for r in range(len(self.rn.params_kon)):
