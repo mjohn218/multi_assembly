@@ -179,7 +179,7 @@ class ReactionNetwork:
         elif items[0]== 'homo_rates':
             self.homo_rates=items[1]
         elif items[0]=='titration_time_int':
-            print("Setting Totration ENd Point")
+            print("Setting Titration End Point")
             self.titration_end_conc=items[1]
         return items
 

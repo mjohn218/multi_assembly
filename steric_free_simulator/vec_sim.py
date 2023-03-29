@@ -544,7 +544,7 @@ class VecSim:
     def activate_titration(self,rid=0):
         k_new=1e-6
         el = torch.nn.ELU(k_new)
-        end_time = self.rn.titration_end_time[rid]
+        end_time = self.rn.titration_time_map[rid]
         if self.titrationBool and (end_time < self.cur_time.item()):
             print("Ending Titration!")
             # print("Titration Map : ",self.rn.titration_end_time)

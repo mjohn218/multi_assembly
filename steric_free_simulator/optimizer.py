@@ -261,7 +261,7 @@ class Optimizer:
                 titration_time_map ={v['uid'] : final_conc/v['k_on'] for v in self.rn.creation_rxn_data.values()}
                 for r in range(len(rates)):
                     titration_time_map[self.rn.optim_rates[r]]  = titration_end[r]
-                self.rn.titration_end_time=titration_time_map
+                self.rn.titration_time_map=titration_time_map
                 # print("Titration Map : ",self.rn.titration_end_time)
                 new_runtime=np.max(list(titration_time_map.values()))+1
                 print("New Runtime: ",new_runtime)
@@ -407,7 +407,7 @@ class Optimizer:
                                     cost.backward(retain_graph=True)
                                     print("Unused Penalty: ",unused_penalty)
                                 else:
-                                    cost = (creat_yield - total_yield) + physics_penalty
+                                    cost =  (creat_yield-total_yield) - total_yield/cur_time  + physics_penalty
                                     cost.backward(retain_graph=True)
                                     print("Grad: ",end="")
                                     for r in range(len(self.rn.params_kon)):
