@@ -263,7 +263,7 @@ class Optimizer:
                     titration_time_map[self.rn.optim_rates[r]]  = titration_end[r]
                 self.rn.titration_time_map=titration_time_map
                 # print("Titration Map : ",self.rn.titration_end_time)
-                new_runtime=np.max(list(titration_time_map.values()))+1
+                new_runtime=np.max(list(titration_time_map.values()))+self.sim_runtime
                 print("New Runtime: ",new_runtime)
                 sim = self.sim_class(self.rn,
                                      new_runtime,
