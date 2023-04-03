@@ -403,9 +403,12 @@ class Optimizer:
                                 physics_penalty = 0
                                 if creat_yield==-1:
                                     unused_penalty = max_thresh*unused_monomer
-                                    cost = -(total_yield/cur_time) + physics_penalty #+ unused_penalty
+                                    cost = total_yield -(total_yield/cur_time) + physics_penalty #+ unused_penalty
                                     cost.backward(retain_graph=True)
-                                    print("Unused Penalty: ",unused_penalty)
+                                    print("Grad: ",end="")
+                                    for r in range(len(self.rn.params_kon)):
+                                        print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                    print("")
                                 else:
                                     cost =  (creat_yield-total_yield)   + physics_penalty #- total_yield/cur_time
                                     cost.backward(retain_graph=True)
