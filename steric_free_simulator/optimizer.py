@@ -303,8 +303,11 @@ class Optimizer:
 
 
 
-            if optim =='yield':
-                print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+            if optim =='yield' or optim=='time':
+                if optim=='yield':
+                    print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+                elif optim=='time':
+                    print('yield on sim iteration ' + str(i) + ' was ' + str(total_yield.item() * 100)[:4] + '%' + '\tTime : ',str(cur_time))
                 # print(self.rn.copies_vec)
                 # preform gradient step
                 if i != self.optim_iterations - 1:
@@ -389,7 +392,7 @@ class Optimizer:
                         if self.rn.coupling:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                            physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
+                            physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
                             cost = -total_yield + physics_penalty
                             cost.backward()
                         elif self.rn.partial_opt:
@@ -401,21 +404,30 @@ class Optimizer:
                                 # curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 # physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
                                 physics_penalty = 0
-                                if creat_yield==-1:
-                                    unused_penalty = max_thresh*unused_monomer
-                                    cost = -total_yield -(total_yield/cur_time) + physics_penalty #+ unused_penalty
+                                if optim=='yield':
+                                    if creat_yield==-1:
+                                        unused_penalty = max_thresh*unused_monomer
+                                        cost = -total_yield -(total_yield/cur_time) + physics_penalty #+ unused_penalty
+                                        cost.backward(retain_graph=True)
+                                        print("Grad: ",end="")
+                                        for r in range(len(self.rn.params_kon)):
+                                            print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                        print("")
+                                    else:
+                                        cost =  (creat_yield-total_yield)   + physics_penalty #- total_yield/cur_time
+                                        cost.backward(retain_graph=True)
+                                        print("Grad: ",end="")
+                                        for r in range(len(self.rn.params_kon)):
+                                            print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
+                                        print("")
+                                elif optim=='time':
+                                    cost = cur_time
                                     cost.backward(retain_graph=True)
                                     print("Grad: ",end="")
                                     for r in range(len(self.rn.params_kon)):
                                         print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
                                     print("")
-                                else:
-                                    cost =  (creat_yield-total_yield)   + physics_penalty #- total_yield/cur_time
-                                    cost.backward(retain_graph=True)
-                                    print("Grad: ",end="")
-                                    for r in range(len(self.rn.params_kon)):
-                                        print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
-                                    print("")
+
                             else:
                                 unused_penalty=0
                                 k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))

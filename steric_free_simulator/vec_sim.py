@@ -88,6 +88,8 @@ class VecSim:
 
         values = psutil.virtual_memory()
         print("Start of simulation: memory Used: ",values.percent)
+        if optim=='time':
+            print("Time based Optimization")
 
         # update observables
         max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers].clone()).to(self.dev)
@@ -109,6 +111,7 @@ class VecSim:
             creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
             if self.titration_end_conc!=-1:
                 self.titrationBool=True
+                max_poss_yield = self.titration_end_conc
             else:
                 self.titrationBool=False
 
@@ -336,7 +339,13 @@ class VecSim:
             # print("Full step: ",step)
             if cur_time + step*conc_scale > self.runtime:
                 # print("Current time: ",cur_time)
-
+                if optim=='time':
+                    # print("Exceeding time",t95_flag)
+                    if t95_flag:
+                        #Yield has not yeached 95%
+                        print("Yield has not reached 95 %. Increasing simulation time")
+                        self.runtime=(cur_time + step*conc_scale)*2
+                        continue
                 if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                     t50=cur_time
                     t50_flag=False
@@ -349,7 +358,7 @@ class VecSim:
                 if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99 and t99_flag:
                     t99=cur_time
                     t99_flag=False
-                print("Next time: ",cur_time + step)
+                print("Next time: ",cur_time + step*conc_scale)
                 # print("Curr_time:",cur_time)
                 if verbose:
                     print("Final Conc Scale: ",conc_scale)
@@ -392,6 +401,7 @@ class VecSim:
                 t85=cur_time
                 t85_flag=False
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.95 and t95_flag:
+                # print("95% yield reached: ",self.rn.copies_vec[yield_species]/max_poss_yield)
                 t95=cur_time
                 t95_flag=False
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99 and t99_flag:
@@ -470,7 +480,10 @@ class VecSim:
         else:
             # return (final_yield.to(self.dev),self.net_flux[list(self.net_flux.keys())[-1]].to(self.dev))
             if self.rn.boolCreation_rxn:
-                return(final_yield.to(self.dev),cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
+                if optim=='yield':
+                    return(final_yield.to(self.dev),cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
+                elif optim=='time':
+                    return(final_yield.to(self.dev),t95,unused_monomer.to(self.dev),(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
