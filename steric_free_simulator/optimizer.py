@@ -426,7 +426,7 @@ class Optimizer:
                                         for r in range(len(self.rn.params_kon)):
                                             var_tensor[r] = self.rn.params_kon[r]
 
-                                        var_penalty = 10*F.relu(-1 * (torch.var(var_tensor) - 10))
+                                        var_penalty = 10*F.relu(-1 * (torch.var(var_tensor)/torch.mean(var_tensor) - 10))
                                         print("Var: ",torch.var(var_tensor),"Penalty: ",var_penalty)
                                         cost =  -total_yield +var_penalty + physics_penalty #- total_yield/cur_time
                                         cost.backward(retain_graph=True)
