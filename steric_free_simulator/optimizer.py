@@ -78,6 +78,7 @@ class Optimizer:
                             learn_rate = random.uniform(learning_rate,1e-1)
                         else:
                             learn_rate = learning_rate[i]
+                            print("LR: ",learn_rate )
                         param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learn_rate})
                         self.lr_group.append(learn_rate)
                     self.optimizer = torch.optim.RMSprop(param_list)
