@@ -17,7 +17,7 @@ class Optimizer:
     def __init__(self, reaction_network,
                  sim_runtime: float,
                  optim_iterations: int,
-                 learning_rate: float,
+                 learning_rate,
                  device='cpu',method='Adam',lr_change_step=None,gamma=None,mom=0,random_lr=False):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
