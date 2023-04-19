@@ -77,7 +77,7 @@ class Optimizer:
                         if random_lr:
                             learn_rate = random.uniform(learning_rate,1e-1)
                         else:
-                            learn_rate = learning_rate
+                            learn_rate = learning_rate[i]
                         param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learn_rate})
                         self.lr_group.append(learn_rate)
                     self.optimizer = torch.optim.RMSprop(param_list)
@@ -413,14 +413,21 @@ class Optimizer:
                                 if optim=='yield':
                                     if creat_yield==-1:
                                         unused_penalty = max_thresh*unused_monomer
-                                        cost = -total_yield -(total_yield/cur_time) + physics_penalty #+ unused_penalty
+                                        # cost = -total_yield -(total_yield/cur_time) + physics_penalty #+ unused_penalty
+                                        cost = -100*total_yield/cur_time + physics_penalty
                                         cost.backward(retain_graph=True)
                                         print("Grad: ",end="")
                                         for r in range(len(self.rn.params_kon)):
                                             print(self.rn.params_kon[r],"-",self.rn.params_kon[r].grad,end=" ")
                                         print("")
                                     else:
-                                        cost =  (creat_yield-total_yield)   + physics_penalty #- total_yield/cur_time
+                                        var_tensor = torch.zeros((len(self.rn.params_kon)))
+                                        for r in range(len(self.rn.params_kon)):
+                                            var_tensor[r] = self.rn.params_kon[r]
+
+                                        var_penalty = 10*F.relu(-1 * (torch.var(var_tensor) - 10))
+                                        print("Var: ",torch.var(var_tensor),"Penalty: ",var_penalty)
+                                        cost =  -total_yield +var_penalty + physics_penalty #- total_yield/cur_time
                                         cost.backward(retain_graph=True)
                                         print("Grad: ",end="")
                                         for r in range(len(self.rn.params_kon)):
