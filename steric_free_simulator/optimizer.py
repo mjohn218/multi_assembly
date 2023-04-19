@@ -100,7 +100,7 @@ class Optimizer:
                             learn_rate = random.uniform(learning_rate,learning_rate*10)
                         else:
                             learn_rate = learning_rate[i]
-                        params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
+                        params_list.append({'params':param_itr[i], 'lr':learn_rate})
                         self.lr_group.append(learn_rate)
                     self.optimizer = torch.optim.RMSprop(params_list,momentum=mom)
                 else:
