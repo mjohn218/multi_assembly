@@ -172,6 +172,8 @@ class VecSim:
                     #     print("End TIME: ",end_time)
                     activator_arr[values['uid']] = self.activate_titration(values['uid'])
                 l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+                if !self.titrationBool:
+                    conc_scale = 1
             else:
                 l_rxn_rates = l_conc_prod_vec + l_k
             # print("Rates: ",l_rxn_rates)
@@ -564,6 +566,7 @@ class VecSim:
             # self.tit_stop_count+=1
             # print("Stop COunt= ",self.tit_stop_count)
             self.titrationBool=False
+
         delta_t = Tensor([end_time]) - self.cur_time
         # print("Delta t : ",delta_t)
         # return((1/delta_t)*(F.relu(delta_t)))
