@@ -174,6 +174,7 @@ class VecSim:
                 l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
                 if not self.titrationBool and change_cscale_tit:
                     conc_scale = 1
+                    change_cscale_tit=False
             else:
                 l_rxn_rates = l_conc_prod_vec + l_k
             # print("Rates: ",l_rxn_rates)
