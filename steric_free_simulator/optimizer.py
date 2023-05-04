@@ -87,7 +87,10 @@ class Optimizer:
             elif self.rn.chap_is_param:
                 param_list = []
                 for i in range(len(param_itr)):
-                    param_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learning_rate})
+                    lr_val = torch.mean(param_itr[i]).item()*learning_rate
+                    if lr_val>=1:
+                        lr_val = 1
+                    param_list.append({'params':param_itr[i], 'lr':lr_val})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
                 if self.rn.partial_opt:
@@ -409,7 +412,7 @@ class Optimizer:
                                 #     local_kon[r]=self.rn.params_kon[r]
                                 # k = torch.exp(self.rn.compute_log_constants(local_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                                 # curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                                # physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
+                                physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
                                 physics_penalty = 0
                                 if optim=='yield':
                                     if creat_yield==-1:

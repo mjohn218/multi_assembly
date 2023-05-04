@@ -119,6 +119,7 @@ class VecSim:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
             for species,uids in self.rn.chap_uid_map.items():
                 mask[species]=False
+            print("Mask: ",mask)
             max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
 
         if self.rn.coupling:
@@ -190,6 +191,7 @@ class VecSim:
 
 
 
+
             #Calculate rxn_flux
             if self.calc_flux:
                 rxn_flux = self.rn.get_reaction_flux()
@@ -229,9 +231,9 @@ class VecSim:
                     # print("New Delta Copies: ",delta_copies)
                 elif mod_bool:
                     # print("Previous rate step : ",rate_step,torch.sum(rate_step))
-                    # print("Old copies : ",self.rn.copies_vec + delta_copies)
+                    # print("Old copies : ",self.rn.copies_vec)
                     # print("Old delta copies: ",delta_copies)
-
+                    # print("Changing conc. scale")
                     temp_copies = self.rn.copies_vec + delta_copies
                     mask_neg = temp_copies<0
                     # max_delta = torch.max(delta_copies[mask_neg])
@@ -308,6 +310,16 @@ class VecSim:
             # print("Sum of steps: ", torch.sum(rate_step))
             # print("Matrix: ",self.rn.M)
             # print("delta_copies: ", delta_copies)
+            # print("A delta: ",torch.mul(self.rn.M[0,:],rate_step)*conc_scale)
+            # print("AB delta: ",torch.mul(self.rn.M[4,:],rate_step)*conc_scale)
+            # print("ABT delta: ",torch.mul(self.rn.M[8,:],rate_step)*conc_scale)
+            # print("ABC delta: ",torch.mul(self.rn.M[7,:],rate_step)*conc_scale)
+
+            # print("Delta Conservation: ",delta_copies[0]+delta_copies[4]+delta_copies[5]+delta_copies[7]+delta_copies[8])
+            # print("Mass Conservation A: ",self.rn.copies_vec[0]+self.rn.copies_vec[4]+self.rn.copies_vec[5]+self.rn.copies_vec[7]+self.rn.copies_vec[8])
+            # print("Mass Conservation B: ",self.rn.copies_vec[1]+self.rn.copies_vec[4]+self.rn.copies_vec[6]+self.rn.copies_vec[7]+self.rn.copies_vec[8])
+            # print("Mass Conservation C: ",self.rn.copies_vec[2]+self.rn.copies_vec[6]+self.rn.copies_vec[5]+self.rn.copies_vec[7])
+            # print("Mass Conservation T: ",self.rn.copies_vec[3]+self.rn.copies_vec[8])
             # print("SUM: ",torch.sum(delta_copies))
             #
             # print("Current time: ",cur_time)
@@ -364,6 +376,7 @@ class VecSim:
                 print("Next time: ",cur_time + step*conc_scale)
                 # print("Curr_time:",cur_time)
                 if verbose:
+                    # print("Mass Conservation T: ",self.rn.copies_vec[4]+self.rn.copies_vec[16])
                     print("Final Conc Scale: ",conc_scale)
                     print("Number of steps: ", n_steps)
                     print("Next time larger than simulation runtime. Ending simulation.")
@@ -454,6 +467,7 @@ class VecSim:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
+            print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
             print(all_amounts)

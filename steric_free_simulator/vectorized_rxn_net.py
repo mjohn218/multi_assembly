@@ -502,11 +502,11 @@ class VectorizedRxnNet:
         # generate the reverse map explicitly
         # M[0,11]=0
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
-
+        print("Before: ",M)
         if self.chaperone:
             for uid,chap in self.chap_uid_map.items():
                 # M[chap,uid] = 0
-                M[:,uid+rn._rxn_count] = 0
+                M[:,-1] = 0
 
         #To adjust for creation reactions. No reversible destruction
         if self.boolCreation_rxn or self.boolDestruction_rxn:
