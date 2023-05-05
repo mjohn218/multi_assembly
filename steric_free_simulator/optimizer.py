@@ -413,7 +413,6 @@ class Optimizer:
                                 k = torch.exp(self.rn.compute_log_constants(local_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
-                                physics_penalty = 0
                                 if optim=='yield':
                                     if creat_yield==-1:
                                         unused_penalty = max_thresh*unused_monomer
