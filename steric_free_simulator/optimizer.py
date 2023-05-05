@@ -407,11 +407,11 @@ class Optimizer:
                             cost.backward()
                         elif self.rn.partial_opt:
                             if self.rn.boolCreation_rxn:
-                                # local_kon = torch.zeros([len(self.rn.params_kon)], requires_grad=True).double()
-                                # for r in range(len(local_kon)):
-                                #     local_kon[r]=self.rn.params_kon[r]
-                                # k = torch.exp(self.rn.compute_log_constants(local_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
-                                # curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                                local_kon = torch.zeros([len(self.rn.params_kon)], requires_grad=True).double()
+                                for r in range(len(local_kon)):
+                                    local_kon[r]=self.rn.params_kon[r]
+                                k = torch.exp(self.rn.compute_log_constants(local_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
+                                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                                 physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) # stops zeroing or negating params
                                 physics_penalty = 0
                                 if optim=='yield':
