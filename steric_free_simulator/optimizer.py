@@ -488,7 +488,7 @@ class Optimizer:
                         k = self.rn.chap_params[1].clone().detach()
                         physics_penalty = torch.sum(1 * F.relu(-1 * (c-1e-4))).to(self.dev) + torch.sum(1 * F.relu(-1 * (k - self.lr))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
                         print("Penalty: ",physics_penalty)
-                        cost = -total_yield #+ physics_penalty
+                        cost = -total_yield + physics_penalty
                         cost.backward(retain_graph=True)
                     elif self.rn.dissoc_is_param:
                         if self.rn.partial_opt:
