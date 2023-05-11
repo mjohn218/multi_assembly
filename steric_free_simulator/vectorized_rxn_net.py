@@ -290,7 +290,7 @@ class VectorizedRxnNet:
             self.chap_params = []
             self.initial_params = []
 
-            init_copies = torch.zeros((len(rn.chap_uid_map.values())),requires_grad=True).double()
+            init_copies = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()
             rates = torch.zeros((2*len(rn.chap_uid_map.keys())),requires_grad=True).double()
             c_indx = 0
             r_indx=0
@@ -307,13 +307,21 @@ class VectorizedRxnNet:
 
                     r_indx+=1
 
-            init_copies = nn.Parameter(init_copies,requires_grad=True)
-            rates = nn.Parameter(rates, requires_grad=True)
-            self.chap_params.append(Tensor(init_copies))
-            self.chap_params.append(Tensor(rates))
+            # init_copies = nn.Parameter(init_copies,requires_grad=True)
+            # rates = nn.Parameter(rates, requires_grad=True)
+            print("Initial Copies: ",init_copies)
+            print("Initial Rates: ",rates)
+            for i in range(len(init_copies)):
+                self.chap_params.append(nn.Parameter(init_copies[i],requires_grad=True))
+                self.initial_params.append(init_copies[i].clone().detach())
+            for i in range(len(rates)):
+                self.chap_params.append(nn.Parameter(rates[i],requires_grad=True))
+                self.initial_params.append(rates[i].clone().detach())
+            # self.chap_params.append(Tensor(init_copies))
+            # self.chap_params.append(Tensor(rates))
 
-            self.initial_params.append(init_copies.clone().detach())
-            self.initial_params.append(rates.clone().detach())
+            # self.initial_params.append(init_copies.clone().detach())
+            # self.initial_params.append(rates.clone().detach())
         self.observables = rn.observables
         self.flux_vs_time = rn.flux_vs_time
         self.is_energy_set = rn.is_energy_set
@@ -330,7 +338,8 @@ class VectorizedRxnNet:
         if self.chap_is_param:
             # self.copies_vec[3] = self.chap_params[0].clone()
             for ind,sp in self.paramid_copy_map.items():
-                self.copies_vec[sp] = self.chap_params[0][ind].clone()
+                # self.copies_vec[sp] = self.chap_params[0][ind].clone()    #This is when we store copy params and rate params as a list in chap_params
+                self.copies_vec[sp] = self.chap_params[ind].clone()    #Changed so that each rate is a param and all are indivudal elements in chap_params.
         # print("Initial copies: ", self.initial_copies.clone())
         if reset_params:
             if self.coupling:
@@ -540,8 +549,10 @@ class VectorizedRxnNet:
         elif self.chap_is_param:
 
             # print(self.chap_params)
-            for i in range(len(self.chap_params[1])):
-                kon[self.paramid_uid_map[i]]= self.chap_params[1][i]
+            n_copy_params = len(self.paramid_copy_map.keys())
+            n_rxn_params = len(self.paramid_uid_map.keys())
+            for i in range(n_rxn_params):
+                kon[self.paramid_uid_map[i]]= self.chap_params[i+n_copy_params]
             l_kon = torch.log(kon)  # umol-1 s-1
 
             l_koff = (dGrxn * scalar_modifier) + l_kon + torch.log(self._C0)

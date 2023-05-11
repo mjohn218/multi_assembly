@@ -88,8 +88,8 @@ class Optimizer:
                 param_list = []
                 for i in range(len(param_itr)):
                     lr_val = torch.mean(param_itr[i]).item()*learning_rate
-                    if lr_val>=1:
-                        lr_val = 1
+                    if lr_val>=torch.min(param_itr[i]).item()*0.1:
+                        lr_val = torch.min(param_itr[i]).item()*0.01
                     param_list.append({'params':param_itr[i], 'lr':lr_val})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
