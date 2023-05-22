@@ -49,6 +49,14 @@ class Optimizer:
                     params_list.append({'params':param_itr[i], 'lr':torch.mean(param_itr[i]).item()*learn_rate})
                     self.lr_group.append(learn_rate)
                 self.optimizer = torch.optim.Adam(params_list)
+            elif self.rn.chap_is_param:
+                param_list = []
+                for i in range(len(param_itr)):
+                    lr_val = torch.mean(param_itr[i]).item()*learning_rate[i]
+                    if lr_val>=torch.min(param_itr[i]).item()*0.1:
+                        lr_val = torch.min(param_itr[i]).item()*0.1
+                    param_list.append({'params':param_itr[i], 'lr':lr_val})
+                self.optimizer = torch.optim.Adam(param_list)
             else:
                 self.optimizer = torch.optim.Adam(param_itr, learning_rate)
         elif method =='RMSprop':
@@ -87,13 +95,13 @@ class Optimizer:
             elif self.rn.chap_is_param:
                 param_list = []
                 for i in range(len(param_itr)):
-                    lr_val = torch.mean(param_itr[i]).item()*learning_rate
+                    lr_val = torch.mean(param_itr[i]).item()*learning_rate[i]
                     if lr_val>=torch.min(param_itr[i]).item()*0.1:
-                        lr_val = torch.min(param_itr[i]).item()*0.01
+                        lr_val = torch.min(param_itr[i]).item()*0.1
                     param_list.append({'params':param_itr[i], 'lr':lr_val})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
-                if self.rn.partial_opt:
+                if self.rn.partial_opt and not self.rn.coupling:
                     params_list=[]
                     self.lr_group=[]
                     print("Params: ",param_itr)
@@ -290,6 +298,8 @@ class Optimizer:
             if self.rn.boolCreation_rxn:
 
                 total_yield,cur_time,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
+            elif self.rn.chaperone:
+                total_yield,dimer_yield,chap_sp_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             else:
                 total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             #print("Type/class of yield: ", type(total_yield))
@@ -404,7 +414,7 @@ class Optimizer:
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                             physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
                             cost = -total_yield + physics_penalty
-                            cost.backward()
+                            cost.backward(retain_graph=True)   #retain_graph = True only required for partial_opt + coupled model
                         elif self.rn.partial_opt:
                             if self.rn.boolCreation_rxn:
                                 local_kon = torch.zeros([len(self.rn.params_kon)], requires_grad=True).double()
@@ -484,12 +494,25 @@ class Optimizer:
                         cost = -total_yield + physics_penalty
                         cost.backward()
                     elif self.rn.chap_is_param:
-                        c = self.rn.chap_params[0].clone().detach()
-                        k = self.rn.chap_params[1].clone().detach()
-                        physics_penalty = torch.sum(1 * F.relu(-1 * (c-1e-4))).to(self.dev) + torch.sum(1 * F.relu(-1 * (k - self.lr))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
-                        print("Penalty: ",physics_penalty)
-                        cost = -total_yield + physics_penalty
+                        n_copy_params = len(self.rn.paramid_copy_map.keys())
+                        n_rxn_params = len(self.rn.paramid_uid_map.keys())
+
+                        pen_copies = torch.zeros((n_copy_params),requires_grad=True).double()
+                        pen_rates = torch.zeros((n_rxn_params),requires_grad=True).double()
+                        for r in range(n_copy_params):
+                            pen_copies[r] = self.rn.chap_params[r].clone()
+                        for r in range(n_rxn_params):
+                            pen_rates[r]= self.rn.chap_params[r+n_copy_params]
+                        # c = self.rn.chap_params[0].clone().detach()
+                        # k = self.rn.chap_params[1].clone().detach()
+                        physics_penalty = torch.sum(max_thresh * F.relu(-10 * (pen_copies-1))).to(self.dev) + torch.sum(max_thresh * F.relu(-1 * (pen_rates - 1e-2))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
+                        print("Penalty: ",physics_penalty, "Dimer yield: ",dimer_yield,"ABT yield: ",chap_sp_yield)
+
+                        cost = -total_yield + physics_penalty + 1*dimer_yield + 0.1*chap_sp_yield
                         cost.backward(retain_graph=True)
+                        for i in range(len(self.rn.chap_params)):
+                            print("Grad: ",self.rn.chap_params[i].grad,end="")
+                        print("")
                     elif self.rn.dissoc_is_param:
                         if self.rn.partial_opt:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,scalar_modifier=1.))

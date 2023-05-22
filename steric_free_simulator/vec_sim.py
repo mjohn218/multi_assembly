@@ -119,23 +119,42 @@ class VecSim:
             mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
             for species,uids in self.rn.chap_uid_map.items():
                 mask[species]=False
-            print("Mask: ",mask)
             max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
 
         if self.rn.coupling:
             #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
             # print("Coupling")
-            for i in range(len(self.rn.kon)):
-                # print(i)
-                if i in self.rn.rx_cid.keys():
-                    #new_kon[i] = 1.0
-                    # self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
-                    self.coupled_kon[i] = max(self.rn.params_kon[self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
-                    # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
-                else:
-                    # self.coupled_kon[i] = self.rn.kon[i]
-                    self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
-            l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+            if self.rn.partial_opt:
+                for i in range(len(self.rn.kon)):
+                    if i in self.rn.rx_cid.keys():
+                        all_rates=[]
+                        for rate in self.rn.rx_cid[i]:
+                            if rate in self.rn.optim_rates:
+                                all_rates.append(self.rn.params_kon[self.rn.coup_map[rate]])
+                            else:
+                                all_rates.append(self.rn.kon[rate])
+                        self.coupled_kon[i] = max(all_rates)
+                    else:
+                        if i in self.rn.optim_rates:
+                            self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
+                        else:
+                            self.coupled_kon[i] = self.rn.kon[i]
+                l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+
+
+            else:
+                for i in range(len(self.rn.kon)):
+                    # print(i)
+                    if i in self.rn.rx_cid.keys():
+                        #new_kon[i] = 1.0
+                        # self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
+                        self.coupled_kon[i] = max(self.rn.params_kon[self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
+                        # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
+                    else:
+                        # self.coupled_kon[i] = self.rn.kon[i]
+                        self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
+                l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+
         elif self.rn.homo_rates:
             counter=0
             for k,rids in self.rn.rxn_class.items():
@@ -467,6 +486,8 @@ class VecSim:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
+            dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+            chap_species = self.rn.copies_vec[-1]
             print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
@@ -501,6 +522,8 @@ class VecSim:
                     return(final_yield.to(self.dev),cur_time,unused_monomer.to(self.dev),(t50,t85,t95,t99))
                 elif optim=='time':
                     return(final_yield.to(self.dev),t95,unused_monomer.to(self.dev),(t50,t85,t95,t99))
+            elif self.rn.chaperone:
+                return(final_yield.to(self.dev),dimer_yield,chap_species,(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
@@ -519,9 +542,9 @@ class VecSim:
                     else:
                         clr=random.choice(colors_list)
                     if not ax:
-                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=8.0)
+                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=25.0)
                     else:
-                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=8.0)
+                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=25.0)
                 counter+=1
         else:
             for key in self.flux_vs_time.keys():
