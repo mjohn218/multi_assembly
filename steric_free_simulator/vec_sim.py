@@ -132,7 +132,10 @@ class VecSim:
                             if rate in self.rn.optim_rates:
                                 all_rates.append(self.rn.params_kon[self.rn.coup_map[rate]])
                             else:
-                                all_rates.append(self.rn.kon[rate])
+                                if self.rn.slow_rates is not None and rate in self.rn.slow_rates:
+                                    all_rates.append(torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio)
+                                else:
+                                    all_rates.append(self.rn.kon[rate])
                         self.coupled_kon[i] = max(all_rates)
                     else:
                         if i in self.rn.optim_rates:
@@ -140,7 +143,8 @@ class VecSim:
                         else:
                             if self.rn.slow_rates is not None and i in self.rn.slow_rates:       #Can be replaced later so that the RN figures out by iteself which are fast  interfaces and which are slow.
                                 self.coupled_kon[i] = torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio
-                            self.coupled_kon[i] = self.rn.kon[i]
+                            else:
+                                self.coupled_kon[i] = self.rn.kon[i]
                 l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
 
