@@ -139,7 +139,7 @@ class VecSim:
                             self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
                         else:
                             if self.rn.slow_rates is not None and i in self.rn.slow_rates:       #Can be replaced later so that the RN figures out by iteself which are fast  interfaces and which are slow.
-                                self.coupled_kon[i] = torch.mean(self.rn.kon[self.optim_rates])/self.rn.slow_ratio
+                                self.coupled_kon[i] = torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio
                             self.coupled_kon[i] = self.rn.kon[i]
                 l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
