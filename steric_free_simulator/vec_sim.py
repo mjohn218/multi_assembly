@@ -145,6 +145,7 @@ class VecSim:
                                 self.coupled_kon[i] = torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio
                             else:
                                 self.coupled_kon[i] = self.rn.kon[i]
+                print("SLow rates: ",self.coupled_kon[self.rn.slow_rates])
                 l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
 
