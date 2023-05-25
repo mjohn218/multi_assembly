@@ -133,7 +133,7 @@ class VecSim:
                                 all_rates.append(self.rn.params_kon[self.rn.coup_map[rate]])
                             else:
                                 if self.rn.slow_rates is not None and rate in self.rn.slow_rates:
-                                    all_rates.append(torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio)
+                                    all_rates.append(torch.mean(self.rn.params_kon)/self.rn.slow_ratio)
                                 else:
                                     all_rates.append(self.rn.kon[rate])
                         self.coupled_kon[i] = max(all_rates)
@@ -142,8 +142,8 @@ class VecSim:
                             self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
                         else:
                             if (self.rn.slow_rates is not None) and (i in self.rn.slow_rates):
-                                print("Enter:")       #Can be replaced later so that the RN figures out by iteself which are fast  interfaces and which are slow.
-                                self.coupled_kon[i] = torch.mean(self.rn.kon[self.rn.optim_rates])/self.rn.slow_ratio
+                                # print("Enter:")       #Can be replaced later so that the RN figures out by iteself which are fast  interfaces and which are slow.
+                                self.coupled_kon[i] = torch.mean(self.rn.params_kon)/self.rn.slow_ratio
                             else:
                                 self.coupled_kon[i] = self.rn.kon[i]
                 print("SLow rates: ",self.coupled_kon[self.rn.slow_rates])
