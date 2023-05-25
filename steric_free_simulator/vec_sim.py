@@ -527,7 +527,7 @@ class VecSim:
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
-    def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None):
+    def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None,lw=1.0):
         t = np.array(self.steps)
         colors_list = list(mcolors.CSS4_COLORS.keys())
         random.seed(a=seed)
@@ -542,9 +542,9 @@ class VecSim:
                     else:
                         clr=random.choice(colors_list)
                     if not ax:
-                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=25.0)
+                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
                     else:
-                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=25.0)
+                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
                 counter+=1
         else:
             for key in self.flux_vs_time.keys():
