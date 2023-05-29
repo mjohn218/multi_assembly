@@ -494,8 +494,12 @@ class VecSim:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
-            dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
-            chap_species = self.rn.copies_vec[-1]
+            # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+            dimer_yield = self.rn.copies_vec[self.rn.optimize_species['substrate']]/max_poss_yield
+            chap_species = self.rn.copies_vec[self.rn.optimize_species['enz-subs']]/max_poss_yield
+
+            # dimer_yield = np.max(self.rn.observables[self.rn.optimize_species['substrate']][1])/max_poss_yield
+            # chap_species = np.max(self.rn.observables[self.rn.optimize_species['enz-subs']][1])/max_poss_yield
             # chap_species = np.max(self.rn.observables[6][1])
             print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:

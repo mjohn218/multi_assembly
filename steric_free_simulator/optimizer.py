@@ -54,7 +54,7 @@ class Optimizer:
                 for i in range(len(param_itr)):
                     lr_val = torch.mean(param_itr[i]).item()*learning_rate[i]
                     if lr_val>=torch.min(param_itr[i]).item()*0.1:
-                        lr_val = torch.min(param_itr[i]).item()*0.1
+                        lr_val = torch.min(param_itr[i]).item()*1
                     param_list.append({'params':param_itr[i], 'lr':lr_val})
                 self.optimizer = torch.optim.Adam(param_list)
             else:
@@ -94,12 +94,14 @@ class Optimizer:
                     # self.optimizer = torch.optim.RMSprop(param_itr,torch.mean(param_itr[0]).item()*learning_rate)
             elif self.rn.chap_is_param:
                 param_list = []
+                # param_list2 = []
+
                 for i in range(len(param_itr)):
                     lr_val = torch.mean(param_itr[i]).item()*learning_rate[i]
                     if lr_val>=torch.min(param_itr[i]).item()*0.1:
-                        lr_val = torch.min(param_itr[i]).item()*0.1
+                        lr_val = torch.min(param_itr[i]).item()*1
                     param_list.append({'params':param_itr[i], 'lr':lr_val})
-                self.optimizer = torch.optim.RMSprop(param_list)
+                self.optimizer = torch.optim.RMSprop(param_list,momentum=mom)
             else:
                 if self.rn.partial_opt and not self.rn.coupling:
                     params_list=[]
@@ -397,7 +399,7 @@ class Optimizer:
                     print('current params: ' + str(new_params))
                     #Store yield and params data
                     if total_yield-max_yield > 0:
-                        self.final_yields.append(total_yield)
+                        self.final_yields.append([total_yield,dimer_yield,chap_sp_yield])
 
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
@@ -508,7 +510,8 @@ class Optimizer:
                         physics_penalty = torch.sum(max_thresh * F.relu(-10 * (pen_copies-1))).to(self.dev) + torch.sum(max_thresh * F.relu(-1 * (pen_rates - 1e-2))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
                         print("Penalty: ",physics_penalty, "Dimer yield: ",dimer_yield,"ABT yield: ",chap_sp_yield)
 
-                        cost = -total_yield + physics_penalty + 1*dimer_yield + 0.1*chap_sp_yield
+                        # cost = -total_yield + physics_penalty + 1*dimer_yield + 1*chap_sp_yield
+                        cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
                         cost.backward(retain_graph=True)
                         for i in range(len(self.rn.chap_params)):
                             print("Grad: ",self.rn.chap_params[i].grad,end="")

@@ -176,6 +176,7 @@ class ReactionNetwork:
             self.chaperone_rxns = []
             self.chap_uid_map = {}
             self.chap_int_spec_map = {}
+            self.optimize_species={}
         elif items[0]== 'homo_rates':
             self.homo_rates=items[1]
         elif items[0]=='titration_time_int':
@@ -916,8 +917,13 @@ class ReactionNetwork:
                     chap_species = n
                     r = self.chap_int_spec_map[sp_label]
 
+                if (n in reactant) and len(sp_label)>1:
+                    self.optimize_species['substrate'] = n
+
+            
             print("Products:",products)
             print("Reactants: ",r)
+            self.optimize_species['enz-subs'] = r
 
             for p in products:
                 self.network.add_edge(r, p,

@@ -56,6 +56,7 @@ class VectorizedRxnNet:
         self.chaperone = rn.chaperone
         if self.chaperone:
             self.chap_uid_map = rn.chap_uid_map
+            self.optimize_species=rn.optimize_species
 
         self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
         self.rxn_coupling = coupling
