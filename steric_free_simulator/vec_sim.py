@@ -496,6 +496,7 @@ class VecSim:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
             dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
             chap_species = self.rn.copies_vec[-1]
+            # chap_species = np.max(self.rn.observables[6][1])
             print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
