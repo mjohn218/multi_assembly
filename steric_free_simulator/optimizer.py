@@ -138,6 +138,9 @@ class Optimizer:
         self.final_t95 = []
         self.final_t99 = []
         self.final_unused_mon = []
+        self.dimer_max=[]
+        self.chap_max=[]
+        self.endtimes=[]
         if lr_change_step is not None:
             if gamma == None:
                 gamma = 0.5
@@ -257,7 +260,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,change_runtime=False,yield_species=-1,creat_yield=-1,varBool=True):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,change_runtime=False,yield_species=-1,creat_yield=-1,varBool=True,chap_mode=1):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -301,7 +304,7 @@ class Optimizer:
 
                 total_yield,cur_time,unused_monomer,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose)
             elif self.rn.chaperone:
-                total_yield,dimer_yield,chap_sp_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
+                total_yield,dimer_yield,chap_sp_yield,dimer_max,chap_max,endtime,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             else:
                 total_yield,total_flux = sim.simulate(optim,node_str,corr_rxns=corr_rxns,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
             #print("Type/class of yield: ", type(total_yield))
@@ -399,7 +402,14 @@ class Optimizer:
                     print('current params: ' + str(new_params))
                     #Store yield and params data
                     if total_yield-max_yield > 0:
-                        self.final_yields.append([total_yield,dimer_yield,chap_sp_yield])
+                        if self.rn.chap_is_param:
+                            self.final_yields.append([total_yield,dimer_yield,chap_sp_yield])
+                            self.dimer_max.append(dimer_max)
+                            self.chap_max.append(chap_max)
+                            self.endtimes.append(endtime)
+                        else:
+                            self.final_yields.append(total_yield)
+
 
                         self.final_solns.append(new_params)
                         self.final_t50.append(total_flux[0])
@@ -511,7 +521,11 @@ class Optimizer:
                         print("Penalty: ",physics_penalty, "Dimer yield: ",dimer_yield,"ABT yield: ",chap_sp_yield)
 
                         # cost = -total_yield + physics_penalty + 1*dimer_yield + 1*chap_sp_yield
-                        cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
+                        # cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
+                        if chap_mode == 1:
+                            cost = -total_yield-dimer_yield
+                        elif chap_mode ==2:
+                            cost = chap_sp_yield+dimer_yield
                         cost.backward(retain_graph=True)
                         for i in range(len(self.rn.chap_params)):
                             print("Grad: ",self.rn.chap_params[i].grad,end="")

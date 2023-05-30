@@ -343,7 +343,10 @@ class VecSim:
             # print("ABC delta: ",torch.mul(self.rn.M[7,:],rate_step)*conc_scale)
 
             # print("Delta Conservation: ",delta_copies[0]+delta_copies[4]+delta_copies[5]+delta_copies[7]+delta_copies[8])
-            # print("Mass Conservation A: ",self.rn.copies_vec[0]+self.rn.copies_vec[4]+self.rn.copies_vec[5]+self.rn.copies_vec[7]+self.rn.copies_vec[8])
+            # mass_cons = self.rn.copies_vec[0]+self.rn.copies_vec[4]+self.rn.copies_vec[5]+self.rn.copies_vec[7]+self.rn.copies_vec[8]
+            # print("Mass Conservation A: ",mass_cons)
+            # if mass_cons > 100.01:
+            #     break
             # print("Mass Conservation B: ",self.rn.copies_vec[1]+self.rn.copies_vec[4]+self.rn.copies_vec[6]+self.rn.copies_vec[7]+self.rn.copies_vec[8])
             # print("Mass Conservation C: ",self.rn.copies_vec[2]+self.rn.copies_vec[6]+self.rn.copies_vec[5]+self.rn.copies_vec[7])
             # print("Mass Conservation T: ",self.rn.copies_vec[3]+self.rn.copies_vec[8])
@@ -498,8 +501,12 @@ class VecSim:
             dimer_yield = self.rn.copies_vec[self.rn.optimize_species['substrate']]/max_poss_yield
             chap_species = self.rn.copies_vec[self.rn.optimize_species['enz-subs']]/max_poss_yield
 
-            # dimer_yield = np.max(self.rn.observables[self.rn.optimize_species['substrate']][1])/max_poss_yield
-            # chap_species = np.max(self.rn.observables[self.rn.optimize_species['enz-subs']][1])/max_poss_yield
+            dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate']][1])
+            chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs']][1])
+
+            dimer_max_yield = self.rn.observables[self.rn.optimize_species['substrate']][1][dim_indx]/max_poss_yield
+            # print("Time of max DImer yield: ",self.steps[dim_indx])
+            chap_max_yield = self.rn.observables[self.rn.optimize_species['enz-subs']][1][chap_indx]/max_poss_yield
             # chap_species = np.max(self.rn.observables[6][1])
             print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:
@@ -536,7 +543,7 @@ class VecSim:
                 elif optim=='time':
                     return(final_yield.to(self.dev),t95,unused_monomer.to(self.dev),(t50,t85,t95,t99))
             elif self.rn.chaperone:
-                return(final_yield.to(self.dev),dimer_yield,chap_species,(t50,t85,t95,t99))
+                return(final_yield.to(self.dev),dimer_yield,chap_species,dimer_max_yield,chap_max_yield,self.steps[-1],(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
