@@ -526,6 +526,8 @@ class Optimizer:
                             cost = -total_yield-dimer_yield
                         elif chap_mode ==2:
                             cost = chap_sp_yield+dimer_yield
+                        elif chap_mode==3:
+                            cost = -total_yield
                         cost.backward(retain_graph=True)
                         for i in range(len(self.rn.chap_params)):
                             print("Grad: ",self.rn.chap_params[i].grad,end="")
