@@ -260,7 +260,7 @@ class Optimizer:
         plt.title = 'Yield at each iteration'
         plt.show()
 
-    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,change_runtime=False,yield_species=-1,creat_yield=-1,varBool=True,chap_mode=1):
+    def optimize(self,optim='yield',node_str=None,max_yield=0.5,corr_rxns=[[1],[5]],max_thresh=10,lowvar=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,change_runtime=False,yield_species=-1,creat_yield=-1,varBool=True,chap_mode=1,change_lr_yield=0.98,var_thresh=10):
         print("Reaction Parameters before optimization: ")
         print(self.rn.get_params())
 
@@ -452,7 +452,7 @@ class Optimizer:
                                             for r in range(len(self.rn.params_kon)):
                                                 var_tensor[r] = self.rn.params_kon[r]
 
-                                            var_penalty = 10*F.relu(-1 * (torch.var(var_tensor)/torch.mean(var_tensor) - 10))
+                                            var_penalty = F.relu(-1 * (torch.var(var_tensor)/torch.mean(var_tensor) - var_thresh/len(self.rn.params_kon)))    #var_thresh is how much should the minimum variance be
                                             print("Var: ",torch.var(var_tensor),"Penalty: ",var_penalty)
                                         cost =  -total_yield +var_penalty + physics_penalty #- total_yield/cur_time
                                         cost.backward(retain_graph=True)
@@ -564,7 +564,7 @@ class Optimizer:
 
 
                     # self.scheduler.step(metric)
-                    if (self.lr_change_step is not None) and (total_yield>=0.97):
+                    if (self.lr_change_step is not None) and (total_yield>=change_lr_yield):
                         change_lr = True
                         print("Curr learning rate : ")
                         for param_groups in self.optimizer.param_groups:
