@@ -785,10 +785,13 @@ class ReactionNetwork:
                         connected_item = item.copy()
                         new_bonds.append(poss_edge)
 
-                        sp_len = [len(e) for e in poss_edge]
-                        print(sp_len)
-                        connected_item.add_edge(poss_edge[sp_len.index(1)][0],poss_edge[sp_len.index(1)])
-                        self.chap_int_spec_map[poss_edge[sp_len.index(1)]] =  self._node_count
+                        sp_len = [len(e) for e in poss_edge]     #Here poss_edge has two elements. One is the chaperone (len ==1) and one is the intermediate (len>1)
+                        connected_item.add_edge(poss_edge[sp_len.index(1)][0],poss_edge[sp_len.index(1)])     #Connecting internal T-T edge. Need to check this. Does not affect any opt since the edges in the network are added properly.
+
+                        if poss_edge[sp_len.index(1)] is not in self.chap_int_spec_map:
+                            self.chap_int_spec_map[poss_edge[sp_len.index(1)]] =  [self._node_count]
+                        else:
+                            self.chap_int_spec_map[poss_edge[sp_len.index(1)]].append(self._node_count)
 
                         add_to_graph=True
 
@@ -906,8 +909,9 @@ class ReactionNetwork:
         print("Resolving Chaperone Rxns::")
         print(self.chaperone_rxns)
         for chap in self.chaperone_rxns:
-            reactant = chap[0]
+            reactant = chap[0]    #Which nodes are reacting. e.g. AB + X
             products=[]
+            enz_sub_complx = "".join(chap[1])   #Name of enzymen subtrate complex = ABX
             chap_species = -1
             for n in self.network.nodes():
                 sp_label = gtostr(self.network.nodes[n]['struct'])
@@ -915,15 +919,18 @@ class ReactionNetwork:
                     products.append(n)
                 if (n in reactant) and (sp_label in list(self.chap_int_spec_map.keys())):
                     chap_species = n
-                    r = self.chap_int_spec_map[sp_label]
+                    for int_species in self.chap_int_spec_map:
+                        if gtostr(self.network.nodes[int_species]['struct']) == enz_sub_complx:
+                            r=int_species
 
                 if (n in reactant) and len(sp_label)>1:
-                    self.optimize_species['substrate'] = n
+                    self.optimize_species['substrate'].append(n)
 
-            
+
+
             print("Products:",products)
             print("Reactants: ",r)
-            self.optimize_species['enz-subs'] = r
+            self.optimize_species['enz-subs'].append(r)
 
             for p in products:
                 self.network.add_edge(r, p,
