@@ -518,7 +518,7 @@ class Optimizer:
                         # c = self.rn.chap_params[0].clone().detach()
                         # k = self.rn.chap_params[1].clone().detach()
                         physics_penalty = torch.sum(max_thresh * F.relu(-10 * (pen_copies-1))).to(self.dev) + torch.sum(max_thresh * F.relu(-1 * (pen_rates - 1e-2))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
-                        print("Penalty: ",physics_penalty, "Dimer yield: ",dimer_yield,"ABT yield: ",chap_sp_yield)
+                        print("Penalty: ",physics_penalty, "Dimer yield: ",torch.sum(dimer_yield).item(),"ABT yield: ",torch.sum(chap_sp_yield).item())
 
                         # cost = -total_yield + physics_penalty + 1*dimer_yield + 1*chap_sp_yield
                         # cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
