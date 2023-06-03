@@ -318,7 +318,7 @@ class VectorizedRxnNet:
                 init_copies[c_indx]= self.initial_copies[species]
                 self.paramid_copy_map[c_indx]=species
                 c_indx+=1
-                for id in uids:
+                for id in sorted(uids):
                     rates[r_indx] = self.kon[id]
                     self.paramid_uid_map[r_indx]=id
 
