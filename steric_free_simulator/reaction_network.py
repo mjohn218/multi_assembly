@@ -176,7 +176,7 @@ class ReactionNetwork:
             self.chaperone_rxns = []
             self.chap_uid_map = {}
             self.chap_int_spec_map = {}
-            self.optimize_species={}
+            self.optimize_species={'substrate':[]'enz-subs':[]}
         elif items[0]== 'homo_rates':
             self.homo_rates=items[1]
         elif items[0]=='titration_time_int':
