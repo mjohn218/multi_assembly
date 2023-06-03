@@ -788,7 +788,7 @@ class ReactionNetwork:
                         sp_len = [len(e) for e in poss_edge]     #Here poss_edge has two elements. One is the chaperone (len ==1) and one is the intermediate (len>1)
                         connected_item.add_edge(poss_edge[sp_len.index(1)][0],poss_edge[sp_len.index(1)])     #Connecting internal T-T edge. Need to check this. Does not affect any opt since the edges in the network are added properly.
 
-                        if poss_edge[sp_len.index(1)] is not in self.chap_int_spec_map:
+                        if poss_edge[sp_len.index(1)] not in self.chap_int_spec_map:
                             self.chap_int_spec_map[poss_edge[sp_len.index(1)]] =  [self._node_count]
                         else:
                             self.chap_int_spec_map[poss_edge[sp_len.index(1)]].append(self._node_count)
