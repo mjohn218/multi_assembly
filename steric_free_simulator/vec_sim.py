@@ -504,8 +504,8 @@ class VecSim:
             dimer_yield_sum=0
             chap_species_sum = 0
 
-            # dimer_max_yields_arr= []
-            # chap_max_yields_arr = []
+            dimer_max_yields_arr= []
+            chap_max_yields_arr = []
             for s_iter in range(len(self.rn.optimize_species['substrate'])):
                 dimer_yield_sum+= self.rn.copies_vec[self.rn.optimize_species['substrate'][s_iter]]/max_poss_yield
                 dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1])
