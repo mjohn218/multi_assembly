@@ -518,14 +518,14 @@ class Optimizer:
                         # c = self.rn.chap_params[0].clone().detach()
                         # k = self.rn.chap_params[1].clone().detach()
                         physics_penalty = torch.sum(max_thresh * F.relu(-10 * (pen_copies-1))).to(self.dev) + torch.sum(max_thresh * F.relu(-1 * (pen_rates - 1e-2))).to(self.dev) #+ torch.sum(00 * F.relu(c-1e2)).to(self.dev)
-                        print("Penalty: ",physics_penalty, "Dimer yield: ",torch.sum(dimer_yield).item(),"ABT yield: ",torch.sum(chap_sp_yield).item())
+                        print("Penalty: ",physics_penalty, "Dimer yield: ",dimer_yield,"ABT yield: ",chap_sp_yield)
 
                         # cost = -total_yield + physics_penalty + 1*dimer_yield + 1*chap_sp_yield
                         # cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
                         if chap_mode == 1:
-                            cost = -total_yield-torch.sum(dimer_yield)
+                            cost = -total_yield-dimer_yield
                         elif chap_mode ==2:
-                            cost = torch.sum(chap_sp_yield)+torch.sum(dimer_yield)
+                            cost = chap_sp_yield+dimer_yield
                         elif chap_mode==3:
                             cost = -total_yield
                         cost.backward(retain_graph=True)
