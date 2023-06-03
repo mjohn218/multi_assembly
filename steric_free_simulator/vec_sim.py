@@ -498,16 +498,33 @@ class VecSim:
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[-2]/max_poss_yield
             # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
-            dimer_yield = self.rn.copies_vec[self.rn.optimize_species['substrate']]/max_poss_yield
-            chap_species = self.rn.copies_vec[self.rn.optimize_species['enz-subs']]/max_poss_yield
+            dimer_yields_arr = torch.zeros([len(self.rn.optimize_species['substrate'])],requires_grad=True)
+            chap_species_arr = torch.zeros([len(self.rn.optimize_species['enz-subs'])],requires_grad=True)
 
-            dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate']][1])
-            chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs']][1])
+            dimer_max_yields_arr= []
+            chap_max_yields_arr = []
+            for s_iter in range(len(self.rn.optimize_species['substrate'])):
+                dimer_yields_arr[s_iter] = self.rn.copies_vec[self.rn.optimize_species['substrate'][s_iter]]/max_poss_yield
+                dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1])
+                dimer_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1][dim_indx]/max_poss_yield)
 
-            dimer_max_yield = self.rn.observables[self.rn.optimize_species['substrate']][1][dim_indx]/max_poss_yield
-            # print("Time of max DImer yield: ",self.steps[dim_indx])
-            chap_max_yield = self.rn.observables[self.rn.optimize_species['enz-subs']][1][chap_indx]/max_poss_yield
-            # chap_species = np.max(self.rn.observables[6][1])
+            for s_iter in range(len(self.rn.optimize_species['enz-subs'])):
+                chap_species_arr[s_iter] = self.rn.copies_vec[self.rn.optimize_species['enz-subs'][s_iter]]/max_poss_yield
+                chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1])
+                chap_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1][chap_indx]/max_poss_yield)
+
+
+            #Old code when there was only one chap reaction
+            # dimer_yield = self.rn.copies_vec[self.rn.optimize_species['substrate']]/max_poss_yield
+            # chap_species = self.rn.copies_vec[self.rn.optimize_species['enz-subs']]/max_poss_yield
+            #
+            # dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate']][1])
+            # chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs']][1])
+            #
+            # dimer_max_yield = self.rn.observables[self.rn.optimize_species['substrate']][1][dim_indx]/max_poss_yield
+            # # print("Time of max DImer yield: ",self.steps[dim_indx])
+            # chap_max_yield = self.rn.observables[self.rn.optimize_species['enz-subs']][1][chap_indx]/max_poss_yield
+
             print("Max Possible Yield: ",max_poss_yield)
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
@@ -543,7 +560,7 @@ class VecSim:
                 elif optim=='time':
                     return(final_yield.to(self.dev),t95,unused_monomer.to(self.dev),(t50,t85,t95,t99))
             elif self.rn.chaperone:
-                return(final_yield.to(self.dev),dimer_yield,chap_species,dimer_max_yield,chap_max_yield,self.steps[-1],(t50,t85,t95,t99))
+                return(final_yield.to(self.dev),dimer_yields_arr,chap_species_arr,dimer_max_yields_arr,chap_max_yields_arr,self.steps[-1],(t50,t85,t95,t99))
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 

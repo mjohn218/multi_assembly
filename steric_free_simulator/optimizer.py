@@ -523,9 +523,9 @@ class Optimizer:
                         # cost = -total_yield + physics_penalty + 1*dimer_yield + 1*chap_sp_yield
                         # cost = 1*chap_sp_yield #-total_yield #+1*dimer_yield
                         if chap_mode == 1:
-                            cost = -total_yield-dimer_yield
+                            cost = -total_yield-torch.sum(dimer_yield)
                         elif chap_mode ==2:
-                            cost = chap_sp_yield+dimer_yield
+                            cost = torch.sum(chap_sp_yield)+torch.sum(dimer_yield)
                         elif chap_mode==3:
                             cost = -total_yield
                         cost.backward(retain_graph=True)

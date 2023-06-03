@@ -307,8 +307,8 @@ class VectorizedRxnNet:
             self.chap_params = []
             self.initial_params = []
 
-            init_copies = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()
-            rates = torch.zeros((2*len(rn.chap_uid_map.keys())),requires_grad=True).double()
+            init_copies = torch.zeros((len(rn.chap_uid_map.keys())),requires_grad=True).double()   #No. of species
+            rates = torch.zeros((2*len(rn.chaperone_rxns)),requires_grad=True).double()    #chaperone_rxns is a list of tuples, where each tuple hold info about one chap rxn. And for one chap rxn there are two rates to optimize.
             c_indx = 0
             r_indx=0
             self.paramid_uid_map = {}
@@ -530,9 +530,11 @@ class VectorizedRxnNet:
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
         print("Before: ",M)
         if self.chaperone:
-            for uid,chap in self.chap_uid_map.items():
+            for chap,uids in self.chap_uid_map.items():
                 # M[chap,uid] = 0
-                M[:,-1] = 0
+                # M[:,-1] = 0
+                for id in uids:
+                    M[:,rn._rxn_count+id] = 0
 
         #To adjust for creation reactions. No reversible destruction
         if self.boolCreation_rxn or self.boolDestruction_rxn:
