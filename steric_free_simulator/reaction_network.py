@@ -944,7 +944,7 @@ class ReactionNetwork:
             if chap_species not in self.chap_uid_map:
                 self.chap_uid_map[chap_species] = [self._rxn_count]
             else:
-                self.chap_uid_map[chap_species].append([self._rxn_count])
+                self.chap_uid_map[chap_species].append(self._rxn_count)
             self._rxn_count+=1
 
             for edge in self.network.in_edges(r):
