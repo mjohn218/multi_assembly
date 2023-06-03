@@ -919,7 +919,7 @@ class ReactionNetwork:
                     products.append(n)
                 if (n in reactant) and (sp_label in list(self.chap_int_spec_map.keys())):
                     chap_species = n
-                    for int_species in self.chap_int_spec_map:
+                    for int_species in self.chap_int_spec_map[sp_label]:
                         if gtostr(self.network.nodes[int_species]['struct']) == enz_sub_complx:
                             r=int_species
 
