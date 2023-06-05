@@ -443,7 +443,9 @@ class VecSim:
             n_steps+=1
 
             #Only for testing puprose in CHaperone
-            nn.Module.zero_grad()
+            for c in range(len(self.rn.chap_params)):
+                self.rn.chap_params[c].zero_grad()
+            # nn.Module.zero_grad()
             obj_yield = self.rn.copies_vec[yield_species]/max_poss_yield
             self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params))
 
