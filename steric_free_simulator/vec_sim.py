@@ -529,6 +529,7 @@ class VecSim:
             # chap_max_yield = self.rn.observables[self.rn.optimize_species['enz-subs']][1][chap_indx]/max_poss_yield
 
             print("Max Possible Yield: ",max_poss_yield)
+            print("Gradient: ",torch.autograd.grad(total_complete,self.rn.chap_params))
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
             print(all_amounts)
