@@ -68,6 +68,7 @@ class VecSim:
         self.titration_end_conc=self.rn.titration_end_conc
         self.tit_stop_count=0
         self.titrationBool=False
+        self.gradients =[]
 
 
         if self.rn.rxn_coupling or self.rn.coupling:
@@ -439,6 +440,9 @@ class VecSim:
             cur_time = cur_time + step*conc_scale
             self.cur_time = cur_time
             n_steps+=1
+
+            #Only for testing puprose in CHaperone
+            self.gradients.append(torch.autograd.grad(total_complete,self.rn.chap_params))
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
