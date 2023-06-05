@@ -5,8 +5,8 @@ begin model
 
 begin parameters
     default_assoc   1.
-    rxn_coupling True
     monomer_add_only -1
+    chaperone True
 end parameters
 
 begin species
@@ -15,6 +15,7 @@ begin species
     R(a,b) 100.0 umol
     S(a,b) 100.0 umol
     T(a,b) 100.0 umol
+    X(a,b) 300
 end species
 
 begin observables
@@ -36,5 +37,13 @@ begin rules
     R(c)+S(b)<->R(c!1).S(b!1)  G=-20
     R(c)+T(b)<->R(c!1).T(b!1)  G=-20
     S(c)+T(b)<->S(c!1).T(b!1)  G=-20
+    
+    #Chaperone rxns
+    #Tetramer interface - 1 rxns
+#    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
+
+    #Trimer interface - 2 rxns
+    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
+    P(a!1).Q(a!1).R(a!1)+X(a)<->P(a)+Q(a)+R(a)+X(a) G=-20
     
 end rules

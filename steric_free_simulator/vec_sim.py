@@ -496,7 +496,7 @@ class VecSim:
                 if verbose:
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
-            total_complete = self.rn.copies_vec[-2]/max_poss_yield
+            total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
             # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
             # dimer_yields_arr = torch.zeros([len(self.rn.optimize_species['substrate'])],requires_grad=True)
             # chap_species_arr = torch.zeros([len(self.rn.optimize_species['enz-subs'])],requires_grad=True)

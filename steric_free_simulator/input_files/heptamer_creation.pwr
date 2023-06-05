@@ -5,16 +5,18 @@ begin model
 
 begin parameters
     default_assoc   1.
-    rxn_coupling True
     monomer_add_only -1
+    titration_time_int 100
 end parameters
 
 begin species
-    P(a,b,c) 100.0 umol
-    Q(a,b,c) 100.0 umol
-    R(a,b) 100.0 umol
-    S(a,b) 100.0 umol
-    T(a,b) 100.0 umol
+    P(a,b,c) 0.0 umol
+    Q(a,b,c) 0.0 umol
+    R(a,b) 0.0 umol
+    S(a,b) 0.0 umol
+    T(a,b) 0.0 umol
+    U(a,b) 100.0 umol
+    V(a,b) 100.0 umol
 end species
 
 begin observables
@@ -26,15 +28,33 @@ begin observables
 end observables
 
 begin rules
+    null<->P(a) G=0
+    null<->Q(a) G=0
+    null<->R(a) G=0
+    null<->S(a) G=0
+    null<->T(a) G=0
+#    null<->U(a) G=0
+#    null<->V(a) G=0
     P(a)+Q(b)<->P(a!1).Q(a!1)  G=-20	
     P(b)+R(a)<->P(b!1).R(a!1)  G=-20
     P(c)+S(a)<->P(c!1).S(a!1)  G=-20
     P(b)+T(b)<->P(b!1).T(b!1)  G=-20
+    P(b)+U(b)<->P(b!1).U(b!1)  G=-20
+    P(b)+V(b)<->P(b!1).V(b!1)  G=-20
     Q(c)+R(b)<->Q(c!1).R(b!1)  G=-20
     Q(c)+S(b)<->Q(c!1).S(b!1)  G=-20
     Q(c)+T(b)<->Q(c!1).T(b!1)  G=-20
+    Q(c)+U(b)<->Q(c!1).U(b!1)  G=-20
+    Q(c)+V(b)<->Q(c!1).V(b!1)  G=-20
     R(c)+S(b)<->R(c!1).S(b!1)  G=-20
     R(c)+T(b)<->R(c!1).T(b!1)  G=-20
+    R(c)+U(b)<->R(c!1).U(b!1)  G=-20
+    R(c)+V(b)<->R(c!1).V(b!1)  G=-20
     S(c)+T(b)<->S(c!1).T(b!1)  G=-20
+    S(c)+U(b)<->S(c!1).U(b!1)  G=-20
+    S(c)+V(b)<->S(c!1).V(b!1)  G=-20
+    U(c)+T(b)<->U(c!1).T(b!1)  G=-20
+    U(c)+V(b)<->U(c!1).V(b!1)  G=-20
+    T(c)+V(b)<->T(c!1).V(b!1)  G=-20
     
 end rules

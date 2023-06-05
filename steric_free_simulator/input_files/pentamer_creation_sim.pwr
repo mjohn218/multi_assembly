@@ -1,0 +1,45 @@
+begin model
+
+## Reserved Parameters::
+#   loop_coop: a list of loop cooperativity factors, one for each rule.
+
+begin parameters
+    default_assoc   1.
+    monomer_add_only -1
+    titration_time_int 10000
+end parameters
+
+begin species
+    P(a,b,c) 0 umol
+    Q(a,b,c) 0 umol
+    R(a,b) 0 umol
+    S(a,b) 0 umol
+    T(a,b) 0 umol
+end species
+
+begin observables
+    full_complex    A(a!1,b!1,c!).B(a!1,b!1).M(a!1,b!1).S(a!1)
+    momomer_A   A(a,b,c)
+    monomer_B   B(a,b)
+    monomer_M   M(a,b)
+    monomer_D   S(a)
+end observables
+
+begin rules
+    null<->P(a) G=0
+    null<->Q(a) G=0
+    null<->R(a) G=0
+    null<->S(a) G=0
+    null<->T(a) G=0
+    P(a)+Q(b)<->P(a!1).Q(a!1)  G=-8.0	
+    P(b)+R(a)<->P(b!1).R(a!1)  G=-8.0
+    P(c)+S(a)<->P(c!1).S(a!1)  G=-8.0
+    P(b)+T(b)<->P(b!1).T(b!1)  G=-8.0
+    Q(c)+R(b)<->Q(c!1).R(b!1)  G=-8.0
+    Q(c)+S(b)<->Q(c!1).S(b!1)  G=-8.0
+    Q(c)+T(b)<->Q(c!1).T(b!1)  G=-8.0
+    R(c)+S(b)<->R(c!1).S(b!1)  G=-8.0
+    R(c)+T(b)<->R(c!1).T(b!1)  G=-8.0
+    S(c)+T(b)<->S(c!1).T(b!1)  G=-8.0
+    
+end rules
