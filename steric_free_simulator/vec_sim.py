@@ -447,7 +447,7 @@ class VecSim:
                 self.rn.chap_params[c].grad = None
             # nn.Module.zero_grad()
             obj_yield = self.rn.copies_vec[yield_species]/max_poss_yield
-            self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params))
+            self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params,retain_graph=True))
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
