@@ -442,7 +442,8 @@ class VecSim:
             n_steps+=1
 
             #Only for testing puprose in CHaperone
-            self.gradients.append(torch.autograd.grad(total_complete,self.rn.chap_params))
+            obj_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+            self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params))
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
