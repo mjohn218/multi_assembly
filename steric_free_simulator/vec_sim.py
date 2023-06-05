@@ -443,11 +443,11 @@ class VecSim:
             n_steps+=1
 
             #Only for testing puprose in CHaperone
-            for c in range(len(self.rn.chap_params)):
-                self.rn.chap_params[c].grad = None
-            # nn.Module.zero_grad()
-            obj_yield = self.rn.copies_vec[yield_species]/max_poss_yield
-            self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params,retain_graph=True))
+            # for c in range(len(self.rn.chap_params)):
+            #     self.rn.chap_params[c].grad = None
+            # # nn.Module.zero_grad()
+            # obj_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+            # self.gradients.append(torch.autograd.grad(obj_yield,self.rn.chap_params,retain_graph=True))
 
             if self.rn.copies_vec[yield_species]/max_poss_yield > 0.5 and t50_flag:
                 t50=cur_time
@@ -538,7 +538,8 @@ class VecSim:
             # chap_max_yield = self.rn.observables[self.rn.optimize_species['enz-subs']][1][chap_indx]/max_poss_yield
 
             print("Max Possible Yield: ",max_poss_yield)
-            print("Gradient: ",torch.autograd.grad(total_complete,self.rn.chap_params))
+            # for n in self.rn.network.nodes():
+            # print("Gradient: ",torch.autograd.grad(total_complete,self.rn.chap_params))
         elif self.rn.boolCreation_rxn:
             all_amounts = np.array(list(creation_amount.values()))
             print(all_amounts)
