@@ -242,49 +242,49 @@ class VecKinSim:
         return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
 
-def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None,lw=1.0):
-    t = np.array(self.steps)
-    colors_list = list(mcolors.CSS4_COLORS.keys())
-    random.seed(a=seed)
-    if not flux:
-        counter=0
-        for key in self.observables.keys():
+    def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None,lw=1.0):
+        t = np.array(self.steps)
+        colors_list = list(mcolors.CSS4_COLORS.keys())
+        random.seed(a=seed)
+        if not flux:
+            counter=0
+            for key in self.observables.keys():
 
-            if self.observables[key][0] in nodes_list:
-                data = np.array(self.observables[key][1])
-                if color_input is not None:
-                    clr=color_input[counter]
-                else:
-                    clr=random.choice(colors_list)
-                if not ax:
-                    plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
-                else:
-                    ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
-            counter+=1
-    else:
-        for key in self.flux_vs_time.keys():
-            if self.flux_vs_time[key][0] in nodes_list:
-                data2 = np.array(self.flux_vs_time[key][1])
-                #print(data2)
-                if not ax:
-                    plt.plot(t, data2, label=self.flux_vs_time[key][0],color=random.choice(colors_list))
-                else:
-                    ax.plot(t, data2, label=self.flux_vs_time[key][0],color=random.choice(colors_list))
-    if legend:
-        lgnd = plt.legend(loc='best')
-        for i in range(len(lgnd.legendHandles)):
-            lgnd.legendHandles[i]._sizes = [30]
+                if self.observables[key][0] in nodes_list:
+                    data = np.array(self.observables[key][1])
+                    if color_input is not None:
+                        clr=color_input[counter]
+                    else:
+                        clr=random.choice(colors_list)
+                    if not ax:
+                        plt.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
+                    else:
+                        ax.plot(t, data, label=self.observables[key][0],color=clr,linewidth=lw)
+                counter+=1
+        else:
+            for key in self.flux_vs_time.keys():
+                if self.flux_vs_time[key][0] in nodes_list:
+                    data2 = np.array(self.flux_vs_time[key][1])
+                    #print(data2)
+                    if not ax:
+                        plt.plot(t, data2, label=self.flux_vs_time[key][0],color=random.choice(colors_list))
+                    else:
+                        ax.plot(t, data2, label=self.flux_vs_time[key][0],color=random.choice(colors_list))
+        if legend:
+            lgnd = plt.legend(loc='best')
+            for i in range(len(lgnd.legendHandles)):
+                lgnd.legendHandles[i]._sizes = [30]
 
-    plt.ticklabel_format(style='sci',scilimits=(-3,3))
-    plt.tick_params(axis='both',labelsize=14.0)
-    f_dict = {'fontsize':14}
-    plt.ylabel(r'Conc in $\mu M$',fontdict=f_dict)
-    plt.xlabel('Time (s)',fontdict=f_dict)
+        plt.ticklabel_format(style='sci',scilimits=(-3,3))
+        plt.tick_params(axis='both',labelsize=14.0)
+        f_dict = {'fontsize':14}
+        plt.ylabel(r'Conc in $\mu M$',fontdict=f_dict)
+        plt.xlabel('Time (s)',fontdict=f_dict)
 
-def observables_to_csv(self, out_path):
-    data = {}
-    for key in self.rn.observables:
-        entry = self.rn.observables[key]
-        data[entry[0]] = entry[1]
-    df = pd.DataFrame(data)
-    df.to_csv(out_path)
+    def observables_to_csv(self, out_path):
+        data = {}
+        for key in self.rn.observables:
+            entry = self.rn.observables[key]
+            data[entry[0]] = entry[1]
+        df = pd.DataFrame(data)
+        df.to_csv(out_path)
