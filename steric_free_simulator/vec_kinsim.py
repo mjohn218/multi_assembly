@@ -21,7 +21,7 @@ def _make_finite(t):
     temp[t == np.inf] = 2. ** 32.
     return temp
 
-class VecSim:
+class VecKinSim:
     """
     Run a vectorized deterministic simulation. All data and parameters are represented as
     Torch Tensors, allowing for gradients to be tracked. This simulator was designed to
