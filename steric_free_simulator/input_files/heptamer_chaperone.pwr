@@ -51,5 +51,16 @@ begin rules
     U(c)+V(b)<->U(c!1).V(b!1)  G=-20
     T(c)+V(b)<->T(c!1).V(b!1)  G=-20
     
-    P(a!1).Q(a!1).R(a!1).S(a!1).T(a!1).U(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+T(a)+U(a)+X(a) G=-20
+    #Hexamer Interface
+    #P(a!1).Q(a!1).R(a!1).S(a!1).T(a!1).U(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+T(a)+U(a)+X(a) G=-20
+    #Pentamer Interface
+    P(a!1).Q(a!1).R(a!1).S(a!1).T(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+T(a)+X(a) G=-20
+    #Tetramer Interface
+    #P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
+    #Trimer Interface
+    #P(a!1).Q(a!1).R(a!1)+X(a)<->P(a)+Q(a)+R(a)+X(a) G=-20
+    #Dimer Interface
+    #P(a!1).Q(a!1)+X(a)<->P(a)+Q(a)+X(a) G=-20
+
+
 end rules
