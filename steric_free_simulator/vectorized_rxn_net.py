@@ -345,6 +345,8 @@ class VectorizedRxnNet:
         self.num_monomers = rn.num_monomers
         self.reaction_ids = []
         self.reaction_network = rn
+
+        print("Shifting to device: ", dev)
         self.to(dev)
 
     def reset(self, reset_params=False):
