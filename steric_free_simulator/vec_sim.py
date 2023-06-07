@@ -503,6 +503,9 @@ class VecSim:
                 break
             if n_steps%10000==0:
                 if verbose:
+                    values = psutil.virtual_memory()
+                    print("Memory Used: ",values.percent)
+                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
                     print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
