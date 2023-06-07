@@ -6,19 +6,21 @@ except (ModuleNotFoundError, NameError):
 from .reaction_network import ReactionNetwork
 from .vectorized_rxn_net import VectorizedRxnNet
 from .vec_sim import VecSim
+from .vec_kinsim import VecKinSim
 from .optimizer import Optimizer
 from .EqSolver import EquilibriumSolver
 from .reaction_network import gtostr
 from .trap_metric import TrapMetric
-from .vec_kinsim import VecKinSim
+
 
 __all__ = [
     "EnergyExplorer",
     "ReactionNetworka",
     "VecSim",
+    "VecKinSim",
     "Optimizer",
     "VectorizedRxnNet",
     "EquilibriumSolver",
-    "TrapMetric",
-    "VecKinSim"
+    "TrapMetric"
+
 ]
