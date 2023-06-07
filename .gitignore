@@ -23,6 +23,8 @@ Thumbs.db
 #IGNORE JUPYTER CHECKPOINTS#
 *.ipynb_checkpoints
 *\#*
+*.pwr
+
 
 #locally stored objects
 steric_free_simulator/local_saves

@@ -40,10 +40,12 @@ begin rules
     
     #Chaperone rxns
     #Tetramer interface - 1 rxns
-#    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
+    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
 
     #Trimer interface - 2 rxns
-    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
+#    P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
     P(a!1).Q(a!1).R(a!1)+X(a)<->P(a)+Q(a)+R(a)+X(a) G=-20
     
+    #Dimer interface - 3 rxns
+#    P(a!1).Q(a!1)+X(a)<->P(a)+Q(a)+X(a) G=-20
 end rules

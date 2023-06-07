@@ -45,7 +45,7 @@ begin rules
     U(c)+T(b)<->U(c!1).T(b!1)  G=-20
     
     #Pentamer INterface
-#    P(a!1).Q(a!1).R(a!1).S(a!1).T(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+T(a)+X(a) G=-20
+    P(a!1).Q(a!1).R(a!1).S(a!1).T(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+T(a)+X(a) G=-20
     #Tetramer Interface
     P(a!1).Q(a!1).R(a!1).S(a!1)+X(a)<->P(a)+Q(a)+R(a)+S(a)+X(a) G=-20
 end rules
