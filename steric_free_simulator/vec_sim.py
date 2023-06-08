@@ -301,7 +301,7 @@ class VecSim:
                     #
                     # print("New Conc scale = ",conc_scale)
                     # print("Copies : ",self.rn.copies_vec)
-                    print("Current time: ",cur_time)
+                    # print("Current time: ",cur_time)
                     if mod_flag:
                         self.mod_start=cur_time
                         mod_flag=False
@@ -502,12 +502,12 @@ class VecSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-            if n_steps%1000==0:
+            if n_steps%10000==0:
                 if verbose:
                     values = psutil.virtual_memory()
-                    # print("Memory Used: ",values.percent)
-                    # print("RAM Usage (GB): ",values.used/(1024*1024*1024))
-                    # print("Current Time: ",cur_time)
+                    print("Memory Used: ",values.percent)
+                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
+                    print("Current Time: ",cur_time)
         if self.rn.chaperone:
             total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
             # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
