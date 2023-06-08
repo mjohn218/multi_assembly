@@ -299,7 +299,7 @@ class VecSim:
                     # conc_scale = min_val/mod_factor
                     # delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     #
-                    print("New Conc scale = ",conc_scale)
+                    # print("New Conc scale = ",conc_scale)
                     # print("Copies : ",self.rn.copies_vec)
                     if mod_flag:
                         self.mod_start=cur_time
@@ -501,7 +501,7 @@ class VecSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-            if n_steps%10000==0:
+            if n_steps%1000==0:
                 if verbose:
                     values = psutil.virtual_memory()
                     # print("Memory Used: ",values.percent)
