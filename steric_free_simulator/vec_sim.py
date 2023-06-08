@@ -301,6 +301,7 @@ class VecSim:
                     #
                     # print("New Conc scale = ",conc_scale)
                     # print("Copies : ",self.rn.copies_vec)
+                    print("Current time: ",cur_time)
                     if mod_flag:
                         self.mod_start=cur_time
                         mod_flag=False
@@ -354,7 +355,7 @@ class VecSim:
             # print("Mass Conservation T: ",self.rn.copies_vec[3]+self.rn.copies_vec[8])
             # print("SUM: ",torch.sum(delta_copies))
             #
-            print("Current time: ",cur_time)
+            # print("Current time: ",cur_time)
             # Prevent negative copy cumbers explicitly (possible due to local linear approximation)
             initial_monomers = self.rn.initial_copies
             min_copies = torch.ones(self.rn.copies_vec.shape, device=self.dev) * np.inf
