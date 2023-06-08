@@ -267,7 +267,7 @@ class VecSim:
                     mask_neg = temp_copies<0
                     # max_delta = torch.max(delta_copies[mask_neg])
 
-                    zeros = torch.zeros([len(delta_copies)]).double().to(self.dev)
+                    zeros = torch.zeros([len(delta_copies)],dtype=torch.double,device=self.dev)
                     neg_species = torch.where(mask_neg,delta_copies,zeros)   #Get delta copies of all species that have neg copies
                     # print("Neg species: ",neg_species)
 
@@ -299,7 +299,7 @@ class VecSim:
                     # conc_scale = min_val/mod_factor
                     # delta_copies = torch.matmul(self.rn.M, rate_step)*conc_scale
                     #
-                    # print("New Conc scale = ",conc_scale)
+                    print("New Conc scale = ",conc_scale)
                     # print("Copies : ",self.rn.copies_vec)
                     if mod_flag:
                         self.mod_start=cur_time
