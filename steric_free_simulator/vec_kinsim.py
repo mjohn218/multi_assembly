@@ -76,6 +76,8 @@ class VecKinSim:
         n_steps=0
 
         values = psutil.virtual_memory()
+        print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
+        print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
         print("Start of simulation: memory Used: ",values.percent)
         if optim=='time':
             print("Time based Optimization")
@@ -232,6 +234,8 @@ class VecKinSim:
             if n_steps%10000==0:
                 if verbose:
                     print("Current Time: ",cur_time)
+                    print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
+                    print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
 
         total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
         final_yield = total_complete
