@@ -29,7 +29,7 @@ class VecKinSim:
         - The simulation must be fully differentiable.
     """
 
-    def __init__(self, net: VectorizedRxnNet,
+    def __init__(self, net: VectorizedRxnNet_KinSim,
                  runtime: float,
                  device='cuda:0'):
         """
@@ -47,7 +47,7 @@ class VecKinSim:
             print("Using CPU")
 
         if type(net) is ReactionNetwork:
-            self.rn = VectorizedRxnNet(net, dev=self.dev)
+            self.rn = VectorizedRxnNet_KinSim(net, dev=self.dev)
         else:
             self.rn = net
         self.use_energies = self.rn.is_energy_set
