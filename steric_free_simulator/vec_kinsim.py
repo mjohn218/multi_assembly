@@ -232,11 +232,12 @@ class VecKinSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-            if n_steps%10000==0:
+            if n_steps%1000==0:
                 if verbose:
                     print("Current Time: ",cur_time)
-                    print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
-                    print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
+                    if torch.cuda.is_available() and "cpu" not in device:
+                        print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
+                        print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
 
         total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
         final_yield = total_complete
