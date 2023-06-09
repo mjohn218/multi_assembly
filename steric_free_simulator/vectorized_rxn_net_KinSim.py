@@ -251,21 +251,21 @@ class VectorizedRxnNet_KinSim:
         # r_filter[6,3]=1
         # print(r_filter)
         #Old code
-        c_temp_mat = torch.mul(r_filter, self.copies_vec)
-        l_c_temp_mat = torch.log(c_temp_mat)
-        l_c_temp_mat[c_temp_mat < 0] = 0      #Make zero for non-reactants with non-zero copy number -> Flag 1
-        c_mask = r_filter + self.copies_vec
-        l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)  #Make zero for non-reactants with zero copy number -> Flag 2
-        l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)  # compute log products
+        # c_temp_mat = torch.mul(r_filter, self.copies_vec)
+        # l_c_temp_mat = torch.log(c_temp_mat)
+        # l_c_temp_mat[c_temp_mat < 0] = 0      #Make zero for non-reactants with non-zero copy number -> Flag 1
+        # c_mask = r_filter + self.copies_vec
+        # l_c_temp_mat[c_mask == -1] = 0  # 0 = log(1)  #Make zero for non-reactants with zero copy number -> Flag 2
+        # l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)  # compute log products
 
         #New code
         #Use a non_reactant mask
-        # nonreactant_mask = r_filter<0       #Combines condition of Flag1 and Flag2. Basically just selecting all non_reactants w.r.t to each reaction
-        # c_temp_mat = torch.pow(self.copies_vec,r_filter)        #Different from previous where torch.mul was used. The previous only works for stoich=1, since X^1=X*1. But in mass action kinetics, conc. is raised to the power
-        # l_c_temp_mat = torch.log(c_temp_mat)                #Same as above
-        # l_c_temp_mat[nonreactant_mask]=0
-        # # print(l_c_temp_mat)                    #Setting all conc. values of non-reactants to zero before taking the sum. Matrix dim - No. of rxn x No. of species
-        # l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)       #Summing for each row to get prod of conc. of reactants for each reaction
+        nonreactant_mask = r_filter<0       #Combines condition of Flag1 and Flag2. Basically just selecting all non_reactants w.r.t to each reaction
+        c_temp_mat = torch.pow(self.copies_vec,r_filter)        #Different from previous where torch.mul was used. The previous only works for stoich=1, since X^1=X*1. But in mass action kinetics, conc. is raised to the power
+        l_c_temp_mat = torch.log(c_temp_mat)                #Same as above
+        l_c_temp_mat[nonreactant_mask]=0
+        # print(l_c_temp_mat)                    #Setting all conc. values of non-reactants to zero before taking the sum. Matrix dim - No. of rxn x No. of species
+        l_c_prod_vec = torch.sum(l_c_temp_mat, dim=1)       #Summing for each row to get prod of conc. of reactants for each reaction
         # print("Actual Prod: ",torch.exp(l_c_prod_vec))
         return l_c_prod_vec
 
