@@ -71,7 +71,7 @@ class VecKinSim:
         cur_time = 0
         prev_time=0
         self.cur_time=Tensor([0.])
-        cutoff = 10000000
+        cutoff = 100000000
         mod_flag = True
         n_steps=0
 
