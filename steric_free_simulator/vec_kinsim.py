@@ -234,6 +234,9 @@ class VecKinSim:
                 break
             if n_steps%1000==0:
                 if verbose:
+                    values = psutil.virtual_memory()
+                    print("Memory Used: ",values.percent)
+                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
                     print("Current Time: ",cur_time)
                     if torch.cuda.is_available() and "cpu" not in device:
                         print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))

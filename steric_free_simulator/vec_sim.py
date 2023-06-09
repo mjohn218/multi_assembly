@@ -502,7 +502,7 @@ class VecSim:
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
-            if n_steps%10000==0:
+            if n_steps%1000==0:
                 if verbose:
                     values = psutil.virtual_memory()
                     print("Memory Used: ",values.percent)
