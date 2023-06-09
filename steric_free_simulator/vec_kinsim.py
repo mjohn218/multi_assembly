@@ -242,11 +242,21 @@ class VecKinSim:
                     #     print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
                     #     print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
 
+            values = psutil.virtual_memory()
+            mem = values.available / (1024.0 ** 3)
+            if mem < .5:
+                # kill program if it uses to much ram
+                print("Killing Simulation because too much RAM being used.")
+                print(values.available,mem)
+                return(final_yield.to(self.dev),(t50,t85,t95,t99))
+
         total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
         final_yield = total_complete
 
         if verbose:
             print("Final Yield: ", final_yield)
+
+
 
         return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
