@@ -81,7 +81,7 @@ class VectorizedRxnNet_KinSim:
         self.coup_map = {}
         self.rxn_class = rn.rxn_class
         self.dG_map = rn.dG_map
-        self.initial_params = Tensor(self.kon).clone().detach()
+        # self.initial_params = Tensor(self.kon).clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
         self.assoc_is_param = assoc_is_param
         self.copies_is_param = copies_is_param
@@ -128,7 +128,7 @@ class VectorizedRxnNet_KinSim:
         self._R = self._R.to(dev)
         self._T = self._T.to(dev)
         self._C0 = self._C0.to(dev)
-        self.kon = nn.Parameter(self.kon.data.clone().detach().to(dev), requires_grad=True)
+        self.kon = self.kon.data.clone().detach().to(dev)
         self.copies_vec = self.copies_vec.to(dev)
         self.initial_copies = self.initial_copies.to(dev)
         self.rxn_score_vec = self.rxn_score_vec.to(dev)
