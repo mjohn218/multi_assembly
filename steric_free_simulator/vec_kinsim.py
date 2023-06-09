@@ -76,7 +76,7 @@ class VecKinSim:
         n_steps=0
 
         values = psutil.virtual_memory()
-        if torch.cuda.is_available() and "cpu" not in device:
+        if torch.cuda.is_available() and "cpu" not in self.device:
             print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
             print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
         print("Start of simulation: memory Used: ",values.percent)
