@@ -5,6 +5,7 @@ except (ModuleNotFoundError, NameError):
     print('EnergyExplorer Module is not available. Check Rosetta installation.', sys.stderr)
 from .reaction_network import ReactionNetwork
 from .vectorized_rxn_net import VectorizedRxnNet
+from .vectorized_rxn_net import VectorizedRxnNet_KinSim
 from .vec_sim import VecSim
 from .vec_kinsim import VecKinSim
 from .optimizer import Optimizer
@@ -15,11 +16,12 @@ from .trap_metric import TrapMetric
 
 __all__ = [
     "EnergyExplorer",
-    "ReactionNetworka",
+    "ReactionNetwork",
     "VecSim",
     "VecKinSim",
     "Optimizer",
     "VectorizedRxnNet",
+    "VectorizedRxnNet_KinSim",
     "EquilibriumSolver",
     "TrapMetric"
 
