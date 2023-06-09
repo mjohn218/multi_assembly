@@ -234,13 +234,13 @@ class VecKinSim:
                 break
             if n_steps%1000==0:
                 if verbose:
-                    values = psutil.virtual_memory()
-                    print("Memory Used: ",values.percent)
-                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
+                    # values = psutil.virtual_memory()
+                    # print("Memory Used: ",values.percent)
+                    # print("RAM Usage (GB): ",values.used/(1024*1024*1024))
                     print("Current Time: ",cur_time)
-                    if torch.cuda.is_available() and "cpu" not in device:
-                        print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
-                        print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
+                    # if torch.cuda.is_available() and "cpu" not in device:
+                    #     print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
+                    #     print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
 
         total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
         final_yield = total_complete
