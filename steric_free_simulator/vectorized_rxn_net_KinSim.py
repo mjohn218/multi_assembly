@@ -109,7 +109,7 @@ class VectorizedRxnNet_KinSim:
             self.copies_vec[:self.num_monomers] = self.c_params.clone()
 
         if reset_params:
-            self.kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+            self.kon = self.initial_params.clone().detach()
         for key in self.observables:
             self.observables[key] = (self.observables[key][0], [])
 
