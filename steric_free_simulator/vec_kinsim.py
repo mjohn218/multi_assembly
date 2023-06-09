@@ -1,4 +1,4 @@
-from steric_free_simulator.vectorized_rxn_net import VectorizedRxnNet_KinSim
+from steric_free_simulator.vectorized_rxn_net_KinSim import VectorizedRxnNet_KinSim
 from steric_free_simulator import ReactionNetwork
 import numpy as np
 
