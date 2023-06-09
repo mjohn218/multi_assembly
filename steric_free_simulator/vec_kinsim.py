@@ -246,6 +246,8 @@ class VecKinSim:
             mem = values.available / (1024.0 ** 3)
             if mem < .5:
                 # kill program if it uses to much ram
+                total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
+                final_yield = total_complete
                 print("Killing Simulation because too much RAM being used.")
                 print(values.available,mem)
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))

@@ -223,7 +223,7 @@ class VectorizedRxnNet_KinSim:
 
         # print(copies_vec)
 
-        return M, kon, rxn_score_vec, copies_vec
+        return M.detach(), kon.detach(), rxn_score_vec.detach(), copies_vec.detach()
 
     def compute_log_constants(self, kon: Tensor, dGrxn: Tensor, scalar_modifier) -> Tensor:
         """
@@ -237,7 +237,7 @@ class VectorizedRxnNet_KinSim:
         # print(torch.exp(l_kon))
         # print(torch.exp(l_koff))       #Units of dG in J/mol
         l_k = torch.cat([l_kon, l_koff], dim=0)
-        return l_k.clone()
+        return l_k
 
     def get_log_copy_prod_vector(self):
         """
