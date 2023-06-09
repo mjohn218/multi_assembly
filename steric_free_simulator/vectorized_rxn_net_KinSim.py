@@ -88,11 +88,11 @@ class VectorizedRxnNet_KinSim:
         self.dissoc_is_param = dissoc_is_param
         self.dG_is_param = dG_is_param
         self.chap_is_param=chap_is_param
-        if assoc_is_param:
-            self.kon = nn.Parameter(self.kon, requires_grad=True)
-        if copies_is_param:
-            print("COPIES ARE PARAMS:::")
-            self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
+        # if assoc_is_param:
+        #     self.kon = nn.Parameter(self.kon, requires_grad=True)
+        # if copies_is_param:
+        #     print("COPIES ARE PARAMS:::")
+        #     self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
         self.observables = rn.observables
         self.flux_vs_time = rn.flux_vs_time
         self.is_energy_set = rn.is_energy_set
