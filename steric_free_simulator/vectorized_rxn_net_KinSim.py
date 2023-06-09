@@ -35,10 +35,10 @@ class VectorizedRxnNet_KinSim:
         """
         #rn.reset()
         self.dev = torch.device(dev)
-        self._avo = Tensor([6.02214e23],device=self.dev)  # copies / mol
-        self._R = Tensor([8.314],device=self.dev)  # J / mol * K
-        self._T = Tensor([273.15],device=self.dev)  # K
-        self._C0 = Tensor([std_c],device=self.dev)    #Std. Conc in uM
+        self._avo = Tensor([6.02214e23])  # copies / mol
+        self._R = Tensor([8.314])  # J / mol * K
+        self._T = Tensor([273.15])  # K
+        self._C0 = Tensor([std_c])    #Std. Conc in uM
         # self.dev=dev
 
         #Variables for zeroth order reactions
