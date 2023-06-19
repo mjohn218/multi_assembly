@@ -34,3 +34,6 @@ steric_free_simulator/results
 
 #Inout files
 steric_free_simulator/input_files
+
+#Cache files
+steric_free_simulator/__pycache__
