@@ -25,15 +25,15 @@ begin observables
 end observables
 
 begin rules
-    P(a)+Q(b)<->P(a!1).Q(a!1)  G=-12	
-    P(b)+R(a)<->P(b!1).R(a!1)  G=-12
-    P(c)+S(a)<->P(c!1).S(a!1)  G=-12
-    P(b)+T(b)<->P(b!1).T(b!1)  G=-12
-    Q(c)+R(b)<->Q(c!1).R(b!1)  G=-12
-    Q(c)+S(b)<->Q(c!1).S(b!1)  G=-12
-    Q(c)+T(b)<->Q(c!1).T(b!1)  G=-12
-    R(c)+S(b)<->R(c!1).S(b!1)  G=-12
-    R(c)+T(b)<->R(c!1).T(b!1)  G=-12
-    S(c)+T(b)<->S(c!1).T(b!1)  G=-12
+    P(a)+Q(b)<->P(a!1).Q(a!1)  G=-15	
+    P(b)+R(a)<->P(b!1).R(a!1)  G=-15
+    P(c)+S(a)<->P(c!1).S(a!1)  G=-15
+    P(b)+T(b)<->P(b!1).T(b!1)  G=-15
+    Q(c)+R(b)<->Q(c!1).R(b!1)  G=-15
+    Q(c)+S(b)<->Q(c!1).S(b!1)  G=-15
+    Q(c)+T(b)<->Q(c!1).T(b!1)  G=-15
+    R(c)+S(b)<->R(c!1).S(b!1)  G=-15
+    R(c)+T(b)<->R(c!1).T(b!1)  G=-15
+    S(c)+T(b)<->S(c!1).T(b!1)  G=-15
     
 end rules

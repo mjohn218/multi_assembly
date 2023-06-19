@@ -35,10 +35,10 @@ class VectorizedRxnNet:
         """
         #rn.reset()
         self.dev = torch.device(dev)
-        self._avo = Tensor([6.02214e23],device=dev)  # copies / mol
-        self._R = Tensor([8.314],device=dev)  # J / mol * K
-        self._T = Tensor([273.15],device=dev)  # K
-        self._C0 = Tensor([std_c],device=dev)    #Std. Conc in uM
+        self._avo = Tensor([6.02214e23])  # copies / mol
+        self._R = Tensor([8.314])  # J / mol * K
+        self._T = Tensor([273.15])  # K
+        self._C0 = Tensor([std_c])    #Std. Conc in uM
         self.dev=dev
 
         #Variables for zeroth order reactions
@@ -426,10 +426,10 @@ class VectorizedRxnNet:
 
     def to(self, dev):
         self.M = self.M.to(dev)
-        self._avo = self._avo.to(dev)
-        self._R = self._R.to(dev)
-        self._T = self._T.to(dev)
-        self._C0 = self._C0.to(dev)
+#        self._avo = self._avo.to(dev)
+#        self._R = self._R.to(dev)
+#        self._T = self._T.to(dev)
+#        self._C0 = self._C0.to(dev)
         if self.coupling:
             self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
         elif self.partial_opt and self.assoc_is_param:
@@ -483,10 +483,10 @@ class VectorizedRxnNet:
         """
         num_states = len(rn.network.nodes)
         # initialize tensor representation dimensions
-        M = torch.zeros((num_states, rn._rxn_count * 2),dtype=torch.double,device=self.dev)
-        kon = torch.zeros([rn._rxn_count], requires_grad=True,dtype=torch.double,device=self.dev)
-        rxn_score_vec = torch.zeros([rn._rxn_count],dtype=torch.double,device=self.dev)
-        copies_vec = torch.zeros([num_states],dtype=torch.double,device=self.dev)
+        M = torch.zeros((num_states, rn._rxn_count * 2)).double()
+        kon = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        rxn_score_vec = torch.zeros([rn._rxn_count]).double()
+        copies_vec = torch.zeros([num_states]).double()
 
         for n in rn.network.nodes():
             print(RN.gtostr(rn.network.nodes[n]['struct']))
@@ -810,8 +810,8 @@ class VectorizedRxnNet:
 
             return l_final_k.clone().to(self.dev)
         else:
-            # return l_k.clone().to(self.dev)
-            return l_k.clone()
+            return l_k.clone().to(self.dev)
+            #return l_k.clone()
 
     def get_log_copy_prod_vector(self):
         """
