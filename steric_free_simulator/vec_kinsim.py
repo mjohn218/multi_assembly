@@ -155,7 +155,7 @@ class VecKinSim:
 
                     zeros = torch.zeros([len(delta_copies)],device=self.dev).double()
                     neg_species = torch.where(mask_neg,delta_copies,zeros)   #Get delta copies of all species that have neg copies
-                    print(neg_species)
+                    # print(neg_species)
 
                     min_value = self.rn.copies_vec
 
@@ -355,7 +355,8 @@ class VecKinSim:
 
     def activate_titration(self,rid=0):
         k_new=1e-6
-        el = torch.nn.ELU(k_new)
+        # el = torch.nn.functional.ELU(k_new)
+        # print(el)
         end_time = self.rn.titration_time_map[rid]
         if self.titrationBool and (end_time < self.cur_time.item()):
             print("Ending Titration!")
@@ -369,4 +370,6 @@ class VecKinSim:
         # return((1/delta_t)*(F.relu(delta_t)))
         # if not self.titrationBool:
         #     print("New rate: ",(1/delta_t)*(el(delta_t)))
-        return((1/delta_t)*(el(delta_t)))
+        titration_mod = (1/delta_t)*(torch.nn.functional.ELU(delta_t,alpha=k_new))
+        print(titration_mod)
+        return(titration_mod)
