@@ -123,7 +123,7 @@ class VecKinSim:
             if self.rn.boolCreation_rxn:
 
                 array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
-                activator_arr = torch.ones((array_dim),requires_grad=True).double()
+                activator_arr = torch.ones((array_dim)).double()
                 for node,values in self.rn.creation_rxn_data.items():
                     # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
 
