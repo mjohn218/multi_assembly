@@ -62,6 +62,11 @@ class VecKinSim:
         self.uid_flux = torch.zeros(1,2*self.rn.reaction_network._rxn_count)
         self.mod_start=-1
         self.cur_time=0
+        self.titration_end_conc=self.rn.titration_end_conc
+        self.tit_stop_count=0
+        self.titrationBool=False
+
+
 
     def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,store_interval=-1,change_cscale_tit=False):
         """
@@ -99,6 +104,14 @@ class VecKinSim:
         t50=-1
         t99=-1
 
+        if self.rn.boolCreation_rxn:
+
+            creation_amount={node:0 for node in self.rn.creation_rxn_data.keys()}
+            if self.titration_end_conc!=-1:
+                self.titrationBool=True
+                max_poss_yield = self.titration_end_conc
+            else:
+                self.titrationBool=False
 
         l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:
@@ -107,7 +120,24 @@ class VecKinSim:
         while cur_time < self.runtime:
             conc_counter=1
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
-            l_rxn_rates = l_conc_prod_vec + l_k
+            if self.rn.boolCreation_rxn:
+
+                array_dim = 2*len(self.rn.kon)-len(self.rn.creation_rxn_data)-len(self.rn.destruction_rxn_data)
+                activator_arr = torch.ones((array_dim),requires_grad=True).double()
+                for node,values in self.rn.creation_rxn_data.items():
+                    # self.rn.kon[self.rn.optim_rates[r]] = self.activate_titration(self.rn.params_kon[r])
+
+                    end_time = self.rn.titration_time_map[values['uid']]
+                    # if n_steps==1:
+                    #     print("End TIME: ",end_time)
+                    activator_arr[values['uid']] = self.activate_titration(values['uid'])
+                l_rxn_rates = l_conc_prod_vec + l_k + torch.log(activator_arr)
+                if not self.titrationBool and change_cscale_tit:
+                    conc_scale = 1
+                    change_cscale_tit=False
+            else:
+                l_rxn_rates = l_conc_prod_vec + l_k
+            # l_rxn_rates = l_conc_prod_vec + l_k
 
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
 
@@ -125,6 +155,7 @@ class VecKinSim:
 
                     zeros = torch.zeros([len(delta_copies)],device=self.dev).double()
                     neg_species = torch.where(mask_neg,delta_copies,zeros)   #Get delta copies of all species that have neg copies
+                    print(neg_species)
 
                     min_value = self.rn.copies_vec
 
@@ -155,6 +186,12 @@ class VecKinSim:
 
 
             step = torch.exp(l_step)
+
+            if self.rn.boolCreation_rxn:
+                for node,data in self.rn.creation_rxn_data.items():
+                    cr_rid = data['uid']
+                    curr_path_contri = rate_step[cr_rid].detach().numpy()
+                    creation_amount[node]+=  np.sum(curr_path_contri)*conc_scale
 
 
 
@@ -252,7 +289,13 @@ class VecKinSim:
                 print(values.available,mem)
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
-        total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
+        if self.rn.boolCreation_rxn:
+            all_amounts = np.array(list(creation_amount.values()))
+            print(all_amounts)
+            total_complete = self.rn.copies_vec[yield_species]/np.min(all_amounts)
+            unused_monomer = (np.min(all_amounts) - self.rn.copies_vec[yield_species])/np.min(all_amounts)
+        else:
+            total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
         final_yield = total_complete
 
         if verbose:
@@ -309,3 +352,21 @@ class VecKinSim:
             data[entry[0]] = entry[1]
         df = pd.DataFrame(data)
         df.to_csv(out_path)
+
+    def activate_titration(self,rid=0):
+        k_new=1e-6
+        el = torch.nn.ELU(k_new)
+        end_time = self.rn.titration_time_map[rid]
+        if self.titrationBool and (end_time < self.cur_time.item()):
+            print("Ending Titration!")
+            # print("Titration Map : ",self.rn.titration_end_time)
+            # self.tit_stop_count+=1
+            # print("Stop COunt= ",self.tit_stop_count)
+            self.titrationBool=False
+
+        delta_t = Tensor([end_time]) - self.cur_time
+        # print("Delta t : ",delta_t)
+        # return((1/delta_t)*(F.relu(delta_t)))
+        # if not self.titrationBool:
+        #     print("New rate: ",(1/delta_t)*(el(delta_t)))
+        return((1/delta_t)*(el(delta_t)))
