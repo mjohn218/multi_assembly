@@ -237,7 +237,13 @@ class VectorizedRxnNet_KinSim:
         # print(torch.exp(l_kon))
         # print(torch.exp(l_koff))       #Units of dG in J/mol
         l_k = torch.cat([l_kon, l_koff], dim=0)
-        return l_k
+
+        if self.boolCreation_rxn or self.boolDestruction_rxn:
+            num_creat_dest_rxn = len(self.creation_rxn_data) + len(self.destruction_rxn_data)
+            new_l_k = l_k[:-num_creat_dest_rxn]
+            return new_l_k.clone().to(self.dev)
+        else:
+            return l_k
 
     def get_log_copy_prod_vector(self):
         """
