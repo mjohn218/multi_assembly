@@ -370,6 +370,6 @@ class VecKinSim:
         # return((1/delta_t)*(F.relu(delta_t)))
         # if not self.titrationBool:
         #     print("New rate: ",(1/delta_t)*(el(delta_t)))
-        titration_mod = (1/delta_t)*(torch.nn.functional.ELU(delta_t,alpha=k_new))
+        titration_mod = (1/delta_t)*(torch.nn.functional.elu(delta_t,alpha=k_new))
         print(titration_mod)
         return(titration_mod)
