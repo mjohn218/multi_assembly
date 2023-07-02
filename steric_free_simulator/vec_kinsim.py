@@ -266,6 +266,19 @@ class VecKinSim:
             if n_steps==1:
                 prev_time = cur_time
 
+            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99:
+                print("Reached max yield possible")
+                if verbose:
+                    # print("Mass Conservation T: ",self.rn.copies_vec[4]+self.rn.copies_vec[16])
+                    print("Final Conc Scale: ",conc_scale)
+                    print("Number of steps: ", n_steps)
+                    print("Next time larger than simulation runtime. Ending simulation.")
+                    values = psutil.virtual_memory()
+                    print("Memory Used: ",values.percent)
+                    print("RAM Usage (GB): ",values.used/(1024*1024*1024))
+                break
+
+
             if len(self.steps) > cutoff:
                 print("WARNING: sim was stopped early due to exceeding set max steps", sys.stderr)
                 break
