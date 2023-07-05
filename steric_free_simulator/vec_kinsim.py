@@ -112,6 +112,11 @@ class VecKinSim:
                 max_poss_yield = self.titration_end_conc
             else:
                 self.titrationBool=False
+        if self.rn.chap_is_param:
+            mask = torch.ones([len(self.rn.copies_vec[:self.rn.num_monomers])],dtype=bool)
+            for species,uids in self.rn.chap_uid_map.items():
+                mask[species]=False
+            max_poss_yield = torch.min(self.rn.copies_vec[:self.rn.num_monomers][mask].clone()).to(self.dev)
 
         l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:
@@ -220,6 +225,29 @@ class VecKinSim:
                     values = psutil.virtual_memory()
                     print("Memory Used: ",values.percent)
                     print("RAM Usage (GB): ",values.used/(1024*1024*1024))
+
+            if self.rn.chaperone:
+                total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
+                # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+                # dimer_yields_arr = torch.zeros([len(self.rn.optimize_species['substrate'])],requires_grad=True)
+                # chap_species_arr = torch.zeros([len(self.rn.optimize_species['enz-subs'])],requires_grad=True)
+
+                dimer_yield_sum=0
+                chap_species_sum = 0
+
+                dimer_max_yields_arr= []
+                chap_max_yields_arr = []
+                for s_iter in range(len(self.rn.optimize_species['substrate'])):
+                    dimer_yield_sum+= self.rn.copies_vec[self.rn.optimize_species['substrate'][s_iter]]/max_poss_yield
+                    dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1])
+                    dimer_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1][dim_indx]/max_poss_yield)
+
+                for s_iter in range(len(self.rn.optimize_species['enz-subs'])):
+                    chap_species_sum+= self.rn.copies_vec[self.rn.optimize_species['enz-subs'][s_iter]]/max_poss_yield
+                    chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1])
+                    chap_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1][chap_indx]/max_poss_yield)
+
+                print("Max Possible Yield: ",max_poss_yield)
 
 
             cur_time = cur_time + step*conc_scale
