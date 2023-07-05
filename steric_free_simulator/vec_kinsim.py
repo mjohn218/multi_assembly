@@ -226,26 +226,7 @@ class VecKinSim:
                     print("Memory Used: ",values.percent)
                     print("RAM Usage (GB): ",values.used/(1024*1024*1024))
 
-            if self.rn.chaperone:
-                total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
-                # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
-                # dimer_yields_arr = torch.zeros([len(self.rn.optimize_species['substrate'])],requires_grad=True)
-                # chap_species_arr = torch.zeros([len(self.rn.optimize_species['enz-subs'])],requires_grad=True)
 
-                dimer_yield_sum=0
-                chap_species_sum = 0
-
-                dimer_max_yields_arr= []
-                chap_max_yields_arr = []
-                for s_iter in range(len(self.rn.optimize_species['substrate'])):
-                    dimer_yield_sum+= self.rn.copies_vec[self.rn.optimize_species['substrate'][s_iter]]/max_poss_yield
-                    dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1])
-                    dimer_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1][dim_indx]/max_poss_yield)
-
-                for s_iter in range(len(self.rn.optimize_species['enz-subs'])):
-                    chap_species_sum+= self.rn.copies_vec[self.rn.optimize_species['enz-subs'][s_iter]]/max_poss_yield
-                    chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1])
-                    chap_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1][chap_indx]/max_poss_yield)
 
                 print("Max Possible Yield: ",max_poss_yield)
 
@@ -319,6 +300,26 @@ class VecKinSim:
                     # if torch.cuda.is_available() and "cpu" not in device:
                     #     print("Free: ",torch.cuda.mem_get_info()[0]/(1024*1024*1024))
                     #     print("Used: ",torch.cuda.mem_get_info()[1]/(1024*1024*1024))
+            if self.rn.chaperone:
+                total_complete = self.rn.copies_vec[yield_species]/max_poss_yield
+                # dimer_yield = self.rn.copies_vec[yield_species]/max_poss_yield
+                # dimer_yields_arr = torch.zeros([len(self.rn.optimize_species['substrate'])],requires_grad=True)
+                # chap_species_arr = torch.zeros([len(self.rn.optimize_species['enz-subs'])],requires_grad=True)
+
+                dimer_yield_sum=0
+                chap_species_sum = 0
+
+                dimer_max_yields_arr= []
+                chap_max_yields_arr = []
+                for s_iter in range(len(self.rn.optimize_species['substrate'])):
+                    dimer_yield_sum+= self.rn.copies_vec[self.rn.optimize_species['substrate'][s_iter]]/max_poss_yield
+                    dim_indx = np.argmax(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1])
+                    dimer_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['substrate'][s_iter]][1][dim_indx]/max_poss_yield)
+
+                for s_iter in range(len(self.rn.optimize_species['enz-subs'])):
+                    chap_species_sum+= self.rn.copies_vec[self.rn.optimize_species['enz-subs'][s_iter]]/max_poss_yield
+                    chap_indx = np.argmax(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1])
+                    chap_max_yields_arr.append(self.rn.observables[self.rn.optimize_species['enz-subs'][s_iter]][1][chap_indx]/max_poss_yield)
 
             values = psutil.virtual_memory()
             mem = values.available / (1024.0 ** 3)
