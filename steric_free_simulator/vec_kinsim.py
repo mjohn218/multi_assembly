@@ -68,7 +68,7 @@ class VecKinSim:
 
 
 
-    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,store_interval=-1,change_cscale_tit=False):
+    def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,store_interval=-1,change_cscale_tit=False,max_thresh):
         """
         modifies reaction network
         :return:
@@ -275,7 +275,7 @@ class VecKinSim:
             if n_steps==1:
                 prev_time = cur_time
 
-            if self.rn.copies_vec[yield_species]/max_poss_yield > 0.99:
+            if self.rn.copies_vec[yield_species]/max_poss_yield > max_thresh:
                 print("Reached max yield possible")
                 if verbose:
                     # print("Mass Conservation T: ",self.rn.copies_vec[4]+self.rn.copies_vec[16])
