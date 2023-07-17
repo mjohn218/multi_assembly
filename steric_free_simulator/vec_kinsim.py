@@ -31,7 +31,7 @@ class VecKinSim:
 
     def __init__(self, net: VectorizedRxnNet_KinSim,
                  runtime: float,
-                 device='cuda:0'):
+                 device='cuda:0',rate_step=False):
         """
 
         Args:
@@ -65,6 +65,8 @@ class VecKinSim:
         self.titration_end_conc=self.rn.titration_end_conc
         self.tit_stop_count=0
         self.titrationBool=False
+        self.rate_step=rate_step
+        self.rate_step_array = []
 
 
 
@@ -191,6 +193,8 @@ class VecKinSim:
 
 
             step = torch.exp(l_step)
+            if self.rate_step:
+                self.rate_step_array.append(rate_step)
 
             if self.rn.boolCreation_rxn:
                 for node,data in self.rn.creation_rxn_data.items():
