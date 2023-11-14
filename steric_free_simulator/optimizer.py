@@ -372,6 +372,8 @@ class Optimizer:
                             # self.rn.kon[self.rn.optim_rates[r]] = self.rn.params_kon[r]
                     elif self.rn.homo_rates and self.rn.assoc_is_param:
                         new_params = self.rn.params_kon.clone().detach()
+                    elif self.rn.bool_rpb and self.rn.assoc_is_param:
+                        new_params = self.rn.params_kon.clone().detach()
                     elif self.rn.copies_is_param:
                         new_params = self.rn.c_params.clone().detach()
                     elif self.rn.chap_is_param:
@@ -479,6 +481,12 @@ class Optimizer:
                             k = torch.exp(self.rn.compute_log_constants(self.rn.params_kon, self.rn.params_rxn_score_vec,scalar_modifier=1.))
                             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                             physics_penalty = torch.sum(10 * F.relu(-1 * (k - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev) # stops zeroing or negating params
+                            cost = -total_yield + physics_penalty
+                            cost.backward(retain_graph=True)
+                        elif self.rn.bool_rpb:
+
+                            curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                            physics_penalty = torch.sum(10 * F.relu(-1 * (self.rn.params_kon - curr_lr * 10))).to(self.dev) + torch.sum(10 * F.relu(1 * (self.rn.params_kon - max_thresh))).to(self.dev) # stops zeroing or negating params
                             cost = -total_yield + physics_penalty
                             cost.backward(retain_graph=True)
                         else:

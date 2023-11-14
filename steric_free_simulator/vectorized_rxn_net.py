@@ -59,12 +59,17 @@ class VectorizedRxnNet:
             self.chap_uid_map = rn.chap_uid_map
             self.optimize_species=rn.optimize_species
 
+
+
         self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
         self.rxn_coupling = coupling
         self.coupling = rn.rxn_coupling
         self.num_monomers = rn.num_monomers
         self.max_subunits = rn.max_subunits
         self.homo_rates = rn.homo_rates
+        self.bool_rpb=rn.bool_rpb
+
+        self.uid_newbonds_map=rn.uid_newbonds_map
 
 
 
@@ -152,6 +157,18 @@ class VectorizedRxnNet:
                 counter+=1
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
+
+
+        elif self.bool_rpb:
+            self.params_kon = torch.zeros([2],requires_grad=True).double()
+
+            #Setting dimerization rate to the user input set from rn.kon
+            self.params_kon[0] = self.kon.clone().detach()[0]
+            #Setting rate_per_bindsite, which is the second parameter to the user input
+            self.params_kon[1] = rn.rate_per_bindsite
+            self.params_kon.requires_grad_(True)
+            self.initial_params = Tensor(self.params_kon).clone().detach()
+
         elif dissoc_is_param:
             if self.partial_opt == False:
                 # self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()             #kon from input; koff evaluated here
@@ -370,6 +387,8 @@ class VectorizedRxnNet:
                     self.params_kon[i] = nn.Parameter(self.initial_params[i].clone(),requires_grad=True)
             elif self.homo_rates:
                 self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+            elif self.bool_rpb:  #If model is rate per binding site
+                self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
             elif self.dissoc_is_param:
                 # self.params_koff = nn.Parameter(self.initial_params.clone(), requires_grad=True)
                 # self.params_koff_01 = nn.Parameter(self.initial_params[0].clone(),requires_grad=True)
@@ -410,6 +429,8 @@ class VectorizedRxnNet:
                 return self.params_kon
             elif self.homo_rates:
                 return [self.params_kon]
+            elif self.bool_rpb:
+                return [self.params_kon]
             else:
                 return [self.kon]
         elif self.dissoc_is_param:
@@ -437,6 +458,8 @@ class VectorizedRxnNet:
             for i in range(len(self.params_kon)):
                 self.params_kon[i]=nn.Parameter(self.params_kon[i].data.clone().detach().to(dev),requires_grad=True)
         elif self.homo_rates and self.assoc_is_param:
+            self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
+        elif self.bool_rpb and self.assoc_is_param:
             self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
         elif self.dissoc_is_param:
             # self.params_koff = nn.Parameter(self.params_koff.data.clone().detach().to(dev), requires_grad=True)

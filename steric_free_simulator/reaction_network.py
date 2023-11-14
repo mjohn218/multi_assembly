@@ -101,6 +101,8 @@ class ReactionNetwork:
         self.monomer_add_only = True
         self.chaperone=False
         self.homo_rates=False
+        self.bool_rpb=False
+        self.uid_newbonds_map = dict()
         # default observables are monomers and final complex
         self.observables = dict()
         self.flux_vs_time = dict()
@@ -182,6 +184,10 @@ class ReactionNetwork:
         elif items[0]=='titration_time_int':
             print("Setting Titration End Point")
             self.titration_end_conc=items[1]
+        elif items[0]=='set_rpb':
+            self.bool_rpb = items[1]
+        elif items[0]=='rate_per_bindsite' and self.bool_rpb:
+            self.rate_per_bindsite=items[1]
         return items
 
     def parse_species(self, line, params):
@@ -456,6 +462,7 @@ class ReactionNetwork:
                 #Appending to uid map. This dictiobary maps each unique reaction id to it's reactants
                 #{key - > rxn_count ; value - > (node1,node2)}
                 self.uid_map[self._rxn_count] = tuple(sorted((source_1,source_2)))
+                self.uid_newbonds_map[self._rxn_count] = len(template)
 
             #Code for repeat units
             if len(template) > new_edges_added:

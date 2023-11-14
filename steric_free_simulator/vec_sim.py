@@ -75,6 +75,9 @@ class VecSim:
         if self.rn.rxn_coupling or self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
+        if self.rn.bool_rpb:
+            self.rpb_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
+
 
     def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,store_interval=-1,change_cscale_tit=False):
         """
@@ -160,6 +163,7 @@ class VecSim:
                         # self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
                         self.coupled_kon[i] = max(self.rn.params_kon[self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
                         # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
+                        # self.coupled_kon[i].requires_grad = False
                     else:
                         # self.coupled_kon[i] = self.rn.kon[i]
                         self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
@@ -172,6 +176,14 @@ class VecSim:
                     self.rn.kon[r] = self.rn.params_kon[counter]
                 counter+=1
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+        elif self.rn.bool_rpb:
+            counter=0
+            for rid in range(len(self.rpb_kon)):
+                if self.rn.uid_newbonds_map[rid]==1:
+                    self.rpb_kon[rid]=self.rn.params_kon[0]
+                else:
+                    self.rpb_kon[rid]=self.rn.params_kon[1]*self.rn.uid_newbonds_map[rid]
+            l_k = self.rn.compute_log_constants(self.rpb_kon, self.rn.rxn_score_vec, self._constant)
         elif self.rn.partial_opt:
             # local_kon = torch.zeros(len(self.kon),requires_grad=True).double()
             for r in range(len(self.rn.params_kon)):
@@ -186,7 +198,11 @@ class VecSim:
 
         while cur_time < self.runtime:
             conc_counter=1
-            l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
+            if n_steps > 100:
+                with torch.no_grad():
+                    l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
+            else:
+                l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
             # if self.rn.boolCreation_rxn:
                 # l_conc_prod_vec[-1]=torch.log(torch.pow(Tensor([0]),Tensor([1])))
             # print("Prod Conc: ",l_conc_prod_vec)
