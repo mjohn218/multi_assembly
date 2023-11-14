@@ -24,6 +24,7 @@ Thumbs.db
 *.ipynb_checkpoints
 *\#*
 *.pwr
+*.pyc
 
 
 #locally stored objects
