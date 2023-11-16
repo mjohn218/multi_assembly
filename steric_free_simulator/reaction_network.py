@@ -94,7 +94,7 @@ class ReactionNetwork:
 
     def get_params(self):
         """
-        returns an iterator over optimization parameters
+        returns a generator over optimization parameters
         :return:
         """
         for key in self.parameters:
