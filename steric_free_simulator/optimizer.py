@@ -652,6 +652,8 @@ class Optimizer:
 
         rate_data = pd.read_csv(trueval,delimiter='\t',comment='#',names=['Timestep','Conc'])
 
+        self.mse_error = []
+
 
 
         print("Optimizer State:",self.optimizer.state_dict)
@@ -721,7 +723,7 @@ class Optimizer:
                         #Experimental data
                         mask1 = (rate_data['Timestep']>=time_thresh) & (rate_data['Timestep']<time_threshmax)
                         exp_time = np.array(rate_data['Timestep'][mask1])
-                        
+
                         exp_conc = np.array(rate_data['Conc'][mask1])
 
                         # mse_tensor = torch.zeros(len(exp_time))
@@ -741,6 +743,7 @@ class Optimizer:
                         # print(type(mse_tensor))
                         # mse = mse/len(exp_time)
                         mse_mean = torch.mean(mse)
+                        self.mse_error.append(mse_mean)
                         print("Total time diff: ",total_time_diff)
                         # print(mse)
                         cost = mse_mean + physics_penalty
