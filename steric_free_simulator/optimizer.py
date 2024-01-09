@@ -231,7 +231,7 @@ class Optimizer:
 
 
 
-    def plot_observable(self, iteration, nodes_list,ax=None):
+    def plot_observable(self, iteration, nodes_list, ax=None):
         t = self.sim_observables[iteration]['steps']
 
         for key in self.sim_observables[iteration].keys():
