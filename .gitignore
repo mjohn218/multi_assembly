@@ -34,12 +34,11 @@ Thumbs.db
 steric_free_simulator/local_saves
 
 #Results section
-steric_free_simulator/results
+steric_free_simulator/results/
 
 #Inout files
-steric_free_simulator/input_files
+steric_free_simulator/input_files/
 
 #Cache files
-steric_free_simulator/__pycache__
-
-
+steric_free_simulator/__pycache__/
+*/__pycache__/*
