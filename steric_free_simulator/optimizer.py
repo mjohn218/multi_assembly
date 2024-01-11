@@ -661,7 +661,7 @@ class Optimizer:
             init_conc = float(conc_files_range[b])
             print("----------------- Starting new batch of optimization ------------------------------")
             print("------------------ Conentration : %f " %(init_conc))
-            new_file = conc_files_pref+str(init_conc)
+            new_file = conc_files_pref+str(init_conc)+"uM"
             rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc'])
 
             self.batch_mse_error = []
