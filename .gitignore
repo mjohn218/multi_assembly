@@ -25,6 +25,9 @@ Thumbs.db
 *\#*
 *.pwr
 *.pyc
+*.log
+*.pbs
+
 
 
 #locally stored objects
@@ -38,3 +41,5 @@ steric_free_simulator/input_files
 
 #Cache files
 steric_free_simulator/__pycache__
+
+
