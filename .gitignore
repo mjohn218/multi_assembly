@@ -31,7 +31,7 @@ Thumbs.db
 steric_free_simulator/local_saves
 
 #Results section
-steric_free_simulator/results
+steric_free_simulator/results/
 
 #Inout files
 steric_free_simulator/input_files/
