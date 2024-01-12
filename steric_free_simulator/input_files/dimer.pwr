@@ -1,0 +1,21 @@
+# bngl needs to specify only basic dimerization rules, rates, initial values.
+# steric free simulator will build full reaction network and generate allowed rules
+
+begin parameters
+    default_assoc   1.
+end parameters
+
+begin species
+    A(a) 10
+    B(a) 5
+end species
+
+
+begin observables
+    momomer_A   A(a)
+    monomer_B   B(a)
+end observables
+
+begin rules
+    A(a)+B(a)<->A(a!1).B(a!1) G=100
+end rules

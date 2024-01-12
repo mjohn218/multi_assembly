@@ -1,0 +1,47 @@
+# bngl needs to specify only basic dimerization rules, rates, initial values.
+
+begin model
+
+## Reserved Parameters::
+# - ARC2: A
+# - ARC3: B
+# - ARC15: C
+# - ARC18: D
+# - ARC19: E
+# - ARC35: F
+# - ARC40: G
+
+begin parameters
+    init_pop    100
+    default_assoc   1.
+end parameters
+
+begin species
+    E(a,b,c,d,e) init_pop
+    B(a,b,c,d) init_pop
+    A(a,b,c) init_pop
+    C(a,b,c) init_pop
+    G(a,b) init_pop
+    F(a,b) init_pop
+    D(a) init_pop
+end species
+
+begin observables
+    full_complex    E(a!1,b!1,c!1,d!1,e!1)
+end observables
+
+begin rules
+    E(a)+B(a)<->E(a!1).B(a!1)  G=-400
+    E(b)+A(a)<->E(b!1).A(a!1)  G=-8000
+    E(c)+C(a)<->E(c!1).C(a!1)  G=-5600
+    E(d)+G(a)<->E(d!1).G(a!1)  G=-9800
+    E(e)+F(a)<->E(e!1).F(a!1)  G=-25800
+
+    B(b)+A(b)<->B(b!1).A(b!1)  G=-2600
+    B(c)+F(b)<->B(c!1).F(b!1)  G=-14200
+    B(d)+D(a)<->B(d!1).D(a!1)  G=-7600
+
+    A(c)+C(b)<->A(c!1).C(b!1)  G=0
+
+    C(c)+G(b)<->C(c!1).G(b!1)  G=-4000
+end rules

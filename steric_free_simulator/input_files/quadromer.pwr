@@ -1,0 +1,32 @@
+begin model
+
+## Reserved Parameters::
+#   loop_coop: a list of loop cooperativity factors, one for each rule.
+
+begin parameters
+    init_pop    10000
+
+end parameters
+
+begin species
+    A(a,b,c) init_pop
+    B(a,b,c) init_pop
+    C(a,b,c) init_pop
+    D(a,b,c) init_pop
+end species
+
+begin observables
+
+end observables
+
+begin rules
+    A(a)+B(a)<->A(a!1).B(a!1)  G=-100
+    A(b)+C(a)<->A(b!1).C(a!1)  G=-10
+    A(c)+D(a)<->A(c!1).D(a!1)  G=-1
+
+    B(b)+C(b)<->B(b!1).C(b!1)  G=10
+    B(c)+D(b)<->B(c!1).C(b!1)  G=10
+
+    C(c)+D(c)<->C(c!1)+D(c!1) G=1
+
+end rules
