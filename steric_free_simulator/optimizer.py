@@ -966,6 +966,105 @@ class Optimizer:
             #
             #     return self.rn
 
+        elif batch_mode=='conc_sim':
+            n_batches = len(conc_files_range)
+            print("Total number of batches: ",n_batches)
+            print("Optimizer State:",self.optimizer.state_dict)
+            self.mse_error = []
+
+            for i in range(self.optim_iterations):
+                # reset for new simulator
+                self.rn.reset()
+                sim = self.sim_class(self.rn,
+                                         self.sim_runtime,
+                                         device=self._dev_name)
+
+
+
+                mse=torch.Tensor([0.])
+                mse.requires_grad=True
+
+                for b in range(n_batches):
+                    init_conc = float(conc_files_range[b])
+                    print("----------------- Starting new batch of Simulation ------------------------------")
+                    print("------------------ Concentration : %f -------------------------------" %(init_conc))
+                    new_file = conc_files_pref+str(init_conc)+"uM"
+                    rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc'])
+
+                    update_copies_vec = self.rn.initial_copies
+                    update_copies_vec[0:self.rn.num_monomers] = Tensor([init_conc])
+
+                    self.rn.initial_copies = update_copies_vec
+                    self.rn.reset()
+                    sim.reset()
+
+                    # preform simulation
+                    self.optimizer.zero_grad()
+                    total_yield,conc_tensor,total_flux = sim.simulate_wrt_expdata(optim,node_str,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
+                    print('yield for simulation with  ' + str(init_conc)+"uM" + ' was ' + str(total_yield.item() * 100)[:4] + '%')
+
+
+
+                    sel_parm_indx = []
+
+                    time_array = np.array(sim.steps)
+                    conc_array = conc_tensor
+
+                    #Experimental data
+                    mask1 = (rate_data['Timestep']>=time_threshmin) & (rate_data['Timestep']<time_threshmax)
+                    exp_time = np.array(rate_data['Timestep'][mask1])
+                    exp_conc = np.array(rate_data['Conc'][mask1])
+                    total_time_diff = 0
+                    for e_indx in range(len(exp_time)):
+                        curr_time = exp_time[e_indx]
+                        time_diff = (np.abs(time_array-curr_time))
+                        get_indx = time_diff.argmin()
+                        total_time_diff+=time_diff[get_indx]
+                        mse = mse+ ((exp_conc[e_indx] - conc_array[get_indx])/init_conc)**2
+
+                    print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc)
+                #End of running all batches of simulations
+                #Calculate the avg of mse over all conc ranges
+                mse_mean = mse/n_batches
+
+                k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
+                                                    scalar_modifier=1.))
+                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                physics_penalty = torch.sum(100 * F.relu(-1 * (k - curr_lr * 1000))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                cost = mse_mean + physics_penalty
+                cost.backward()
+                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                print("Grad: ",self.rn.kon.grad)
+
+
+
+
+                self.yield_per_iter.append(total_yield.item())
+                self.sim_observables.append(self.rn.observables.copy())
+                self.sim_observables[-1]['steps'] = np.array(sim.steps)
+                self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
+
+                self.optimizer.step()
+
+
+                values = psutil.virtual_memory()
+                mem = values.available / (1024.0 ** 3)
+                if mem < .5:
+                    # kill program if it uses to much ram
+                    print("Killing optimization because too much RAM being used.")
+                    print(values.available,mem)
+                    return self.rn
+                if i == self.optim_iterations - 1:
+                    print("Batch optimization complete")
+                    print("Updated params: " + str(new_params))
+
+
+                del sim
+
+
+
+
 
 
 if __name__ == '__main__':

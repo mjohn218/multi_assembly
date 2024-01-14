@@ -784,6 +784,13 @@ class VecSim:
         return(final_yield.to(self.dev),conc_tensor,(t50,t85,t95,t99))
 
 
+    def reset(self):
+        self.steps=[]
+        self.observables=self.rn.observables
+        self.rate_step_array=[]
+        self.cur_time=0
+        self.gradients =[]
+
     def plot_observable(self,nodes_list, ax=None,flux=False,legend=True,seed=None,color_input=None,lw=1.0):
         t = np.array(self.steps)
         colors_list = list(mcolors.CSS4_COLORS.keys())
