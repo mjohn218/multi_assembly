@@ -383,7 +383,7 @@ class OptimizerExp:
                     curr_time = exp_time[-1]
                     time_diff = torch.abs(time_array-curr_time)
                     time_indx = time_diff.argmin()
-                    yield_error = ((exp_conc[-1]-conc_array[time_indx])*100/init_conc)**2
+                    yield_error = ((exp_conc[-1]-conc_array[time_indx])/init_conc)**2
 
                     print("Exp Yield: ",exp_conc[-1]/init_conc,"Sim Yield: ",conc_array[time_indx]/init_conc)
                     # print(type(mse_tensor))
