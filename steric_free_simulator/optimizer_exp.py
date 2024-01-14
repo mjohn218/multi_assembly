@@ -193,7 +193,7 @@ class OptimizerExp:
                     k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                         scalar_modifier=1.))
                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 100))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                     #Extracting simulation data
                     sel_parm_indx = []
@@ -361,7 +361,7 @@ class OptimizerExp:
                     k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
                                                         scalar_modifier=1.))
                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 100))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
 
                     time_array = Tensor(np.array(sim.steps))
