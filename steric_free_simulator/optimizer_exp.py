@@ -358,8 +358,7 @@ class OptimizerExp:
                         self.final_t95.append(total_flux[2])
                         self.final_t99.append(total_flux[3])
 
-                    k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
-                                                        scalar_modifier=1.))
+                    k = self.rn.kon
                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                     physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
