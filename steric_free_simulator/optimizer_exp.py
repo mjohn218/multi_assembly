@@ -516,7 +516,7 @@ class OptimizerExp:
 
 
 
-            k = self.rn.kon.clone().detach()
+            k = self.rn.kon
             curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
             physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
