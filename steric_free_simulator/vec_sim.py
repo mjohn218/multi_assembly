@@ -634,7 +634,58 @@ class VecSim:
         t50=-1
         t99=-1
 
-        l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+
+        if self.rn.coupling:
+            #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
+            # print("Coupling")
+            if self.rn.partial_opt:
+                for i in range(len(self.rn.kon)):
+                    if i in self.rn.rx_cid.keys():
+                        all_rates=[]
+                        for rate in self.rn.rx_cid[i]:
+                            if rate in self.rn.optim_rates:
+                                all_rates.append(self.rn.params_kon[self.rn.coup_map[rate]])
+                            else:
+                                if self.rn.slow_rates is not None and rate in self.rn.slow_rates:
+                                    all_rates.append(torch.mean(self.rn.params_kon)/self.rn.slow_ratio)
+                                else:
+                                    all_rates.append(self.rn.kon[rate])
+                        self.coupled_kon[i] = max(all_rates)
+                    else:
+                        if i in self.rn.optim_rates:
+                            self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
+                        else:
+                            if (self.rn.slow_rates is not None) and (i in self.rn.slow_rates):
+                                # print("Enter:")       #Can be replaced later so that the RN figures out by iteself which are fast  interfaces and which are slow.
+                                self.coupled_kon[i] = torch.mean(self.rn.params_kon)/self.rn.slow_ratio
+                            else:
+                                self.coupled_kon[i] = self.rn.kon[i]
+                print("SLow rates: ",self.coupled_kon[self.rn.slow_rates])
+                l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+
+
+            else:
+                for i in range(len(self.rn.kon)):
+                    # print(i)
+                    if i in self.rn.rx_cid.keys():
+                        #new_kon[i] = 1.0
+                        # self.coupled_kon[i] = max(self.rn.kon[rate] for rate in self.rn.rx_cid[i])
+                        self.coupled_kon[i] = max(self.rn.params_kon[self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
+                        # print("Max rate for reaction %s chosen as %.3f" %(i,self.coupled_kon[i]))
+                        # self.coupled_kon[i].requires_grad = False
+                    else:
+                        # self.coupled_kon[i] = self.rn.kon[i]
+                        self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
+                l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+
+        elif self.rn.homo_rates:
+            counter=0
+            for k,rids in self.rn.rxn_class.items():
+                for r in rids:
+                    self.rn.kon[r] = self.rn.params_kon[counter]
+                counter+=1
+            l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+        # l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:
             print("Simulation rates: ",torch.exp(l_k))
 

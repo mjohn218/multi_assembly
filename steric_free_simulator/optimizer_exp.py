@@ -176,24 +176,6 @@ class OptimizerExp:
 
                 if i != self.optim_iterations - 1:
 
-                    new_params = self.rn.kon.clone().detach()
-                    print('current params: ' + str(new_params))
-
-                    #Store yield and params data
-                    if total_yield-max_yield > 0:
-
-                        self.final_yields.append(total_yield)
-                        self.final_solns.append(new_params)
-                        self.final_t50.append(total_flux[0])
-                        self.final_t85.append(total_flux[1])
-                        self.final_t95.append(total_flux[2])
-                        self.final_t99.append(total_flux[3])
-
-                    #Calculate regularization term to penalize extreme rate values
-                    k = torch.exp(self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec,
-                                                        scalar_modifier=1.))
-                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                     #Extracting simulation data
                     sel_parm_indx = []
@@ -238,10 +220,41 @@ class OptimizerExp:
                     self.mse_error.append(mse.item())
                     print("Total time diff: ",total_time_diff)
                     # print(mse)
-                    cost = mse + physics_penalty
-                    cost.backward()
-                    print('MSE on sim iteration ' + str(i) + ' was ' + str(mse.item()))
-                    print("Grad: ",self.rn.kon.grad)
+                    if self.rn.coupling or self.rn.homo_rates:
+                        new_params = self.rn.params_kon.clone().detach()
+                        k = self.rn.params_kon
+                        print('current params: ' + str(new_params))
+                        #Calculate regularization term to penalize extreme rate values
+                        curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                        physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                        cost = mse + physics_penalty
+                        cost.backward(retain_graph=True)
+                        print('MSE on sim iteration ' + str(i) + ' was ' + str(mse.item()))
+                        print("Grad: ",self.rn.params_kon.grad)
+                    else:
+                        # new_params = self.rn.params_kon.clone().detach()
+                        new_params = self.rn.kon.clone().detach()
+                        k = self.rn.kon
+                        print('current params: ' + str(new_params))
+                        #Calculate regularization term to penalize extreme rate values
+                        curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                        physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                        cost = mse + physics_penalty
+                        cost.backward()
+                        print('MSE on sim iteration ' + str(i) + ' was ' + str(mse.item()))
+                        print("Grad: ",self.rn.kon.grad)
+
+                    #Store yield and params data
+                    if total_yield-max_yield > 0:
+
+                        self.final_yields.append(total_yield)
+                        self.final_solns.append(new_params)
+                        self.final_t50.append(total_flux[0])
+                        self.final_t85.append(total_flux[1])
+                        self.final_t95.append(total_flux[2])
+                        self.final_t99.append(total_flux[3])
 
                     if (self.lr_change_step is not None) and (total_yield>=change_lr_yield):
                         change_lr = True
@@ -345,24 +358,6 @@ class OptimizerExp:
 
                 if i != self.optim_iterations - 1:
 
-                    new_params = self.rn.kon.clone().detach()
-                    print('current params: ' + str(new_params))
-
-                    #Store yield and params data
-                    if total_yield-max_yield > 0:
-
-                        self.final_yields.append(total_yield)
-                        self.final_solns.append(new_params)
-                        self.final_t50.append(total_flux[0])
-                        self.final_t85.append(total_flux[1])
-                        self.final_t95.append(total_flux[2])
-                        self.final_t99.append(total_flux[3])
-
-                    k = self.rn.kon
-                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
-
-
                     time_array = Tensor(np.array(sim.steps))
                     conc_array = conc_tensor
 
@@ -390,10 +385,41 @@ class OptimizerExp:
                     self.mse_error.append(yield_error.item())
                     # print("Total time diff: ",time_diff)
 
-                    cost = yield_error + physics_penalty
-                    cost.backward()
-                    print('Yield error on sim iteration ' + str(i) + ' was ' + str(yield_error))
-                    print("Grad: ",self.rn.kon.grad)
+                    if self.rn.coupling or self.rn.homo_rates:
+                        new_params = self.rn.params_kon.clone().detach()
+                        k = self.rn.params_kon
+                        print('current params: ' + str(new_params))
+
+                        curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                        physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                        cost = yield_error + physics_penalty
+                        cost.backward(retain_graph=True)
+                        print('Yield error on sim iteration ' + str(i) + ' was ' + str(yield_error))
+                        print("Grad: ",self.rn.params_kon.grad)
+                    else:
+                        # new_params = self.rn.params_kon.clone().detach()
+                        new_params = self.rn.kon.clone().detach()
+                        k = self.rn.kon
+                        print('current params: ' + str(new_params))
+
+                        curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                        physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                        cost = yield_error + physics_penalty
+                        cost.backward()
+                        print('Yield error on sim iteration ' + str(i) + ' was ' + str(yield_error))
+                        print("Grad: ",self.rn.kon.grad)
+
+                    #Store yield and params data
+                    if total_yield-max_yield > 0:
+
+                        self.final_yields.append(total_yield)
+                        self.final_solns.append(new_params)
+                        self.final_t50.append(total_flux[0])
+                        self.final_t85.append(total_flux[1])
+                        self.final_t95.append(total_flux[2])
+                        self.final_t99.append(total_flux[3])
 
                     if (self.lr_change_step is not None) and (total_yield>=change_lr_yield):
                         change_lr = True
@@ -453,6 +479,7 @@ class OptimizerExp:
         print("Optimizer State:",self.optimizer.state_dict)
         self.mse_error = []
         time_threshmin=1e-4
+        torch.autograd.set_detect_anomaly(True)
 
         for i in range(self.optim_iterations):
             # reset for new simulator
@@ -465,9 +492,6 @@ class OptimizerExp:
 
             mse=torch.Tensor([0.])
             mse.requires_grad=True
-
-            new_params = self.rn.kon.clone().detach()
-            print('current params: ' + str(new_params))
 
             for b in range(n_batches):
                 init_conc = float(conc_files_range[b])
@@ -514,16 +538,33 @@ class OptimizerExp:
             mse_mean = mse/n_batches
 
 
+            if self.rn.coupling or self.rn.homo_rates:
+                new_params = self.rn.params_kon.clone().detach()
+                k = self.rn.params_kon
 
-            k = self.rn.kon
-            curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-            physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                print('current params: ' + str(new_params))
+                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
-            cost = mse_mean + physics_penalty
-            cost.backward()
-            print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
-            print("Reg Penalty: ",physics_penalty)
-            print("Grad: ",self.rn.kon.grad)
+                cost = mse_mean #+ physics_penalty
+                cost.backward(retain_graph=True)
+                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                print("Reg Penalty: ",physics_penalty)
+                print("Grad: ",self.rn.params_kon.grad)
+            else:
+                # new_params = self.rn.params_kon.clone().detach()
+                new_params = self.rn.kon.clone().detach()
+                k = self.rn.kon
+
+                print('current params: ' + str(new_params))
+                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                cost = mse_mean #+ physics_penalty
+                cost.backward()
+                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                print("Reg Penalty: ",physics_penalty)
+                print("Grad: ",self.rn.kon.grad)
 
             self.mse_error.append(mse_mean.item())
 
