@@ -685,6 +685,7 @@ class VecSim:
                     self.rn.kon[r] = self.rn.params_kon[counter]
                 counter+=1
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+            print("Simulation rates: ",torch.exp(l_k))
         # l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:
             print("Simulation rates: ",torch.exp(l_k))
