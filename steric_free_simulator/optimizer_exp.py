@@ -503,15 +503,20 @@ class OptimizerExp:
                 print("----------------- Starting new batch of Simulation ------------------------------")
                 print("------------------ Concentration : %f -------------------------------" %(init_conc))
                 new_file = conc_files_pref+str(init_conc)+"uM"
-                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale'])
+                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale','runtime'])
                 conc_scale = rate_date['c_scale'][0]
                 conc_thresh=conc_scale
+
+                time_mask = rate_data['Conc']/init_conc>0.95
+                time_indx = time_mask.loc[time_mask==True].index[0]
+                time_threshmax=rate_data['Timestep'][time_indx]
+
 
                 self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([init_conc])
 
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
-                sim.reset()    #Resets the variables of the sim class that are tracked during a simulation.
+                sim.reset(runtime=rate_data['runtime'][0])    #Resets the variables of the sim class that are tracked during a simulation.
                 # sim = self.sim_class(self.rn,
                                          # self.sim_runtime,
                                          # device=self._dev_name)
@@ -543,7 +548,7 @@ class OptimizerExp:
                     total_time_diff+=time_diff[get_indx]
                     mse = mse+ ((exp_conc[e_indx] - conc_array[get_indx])/init_conc)**2
 
-                print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc)
+                print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
             #End of running all batches of simulations
             #Calculate the avg of mse over all conc ranges
             mse_mean = mse/n_batches
