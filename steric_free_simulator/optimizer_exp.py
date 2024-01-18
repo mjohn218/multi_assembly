@@ -479,7 +479,7 @@ class OptimizerExp:
         print("Optimizer State:",self.optimizer.state_dict)
         self.mse_error = []
         time_threshmin=1e-4
-        torch.autograd.set_detect_anomaly(True)
+        # torch.autograd.set_detect_anomaly(True)
 
         for i in range(self.optim_iterations):
             # reset for new simulator
@@ -493,6 +493,11 @@ class OptimizerExp:
             mse=torch.Tensor([0.])
             mse.requires_grad=True
 
+            #This boolean is required for homo_rates and coupling protocol since in each call of simulate() method,
+            #the kon is updated from the corresponsing parameters. Now that works for optimization in other functions, but in this case
+            #since we run multiple simulations in 1 optim iteration, each simulation call will update the kon value. This leads to error since between
+            #each gradient update steps, the parameters cannot be changed. So this boolean ensures that the kon is updated from params_kon only for the 1st simulate call in each iteration.
+            update_kon_bool=True
             for b in range(n_batches):
                 init_conc = float(conc_files_range[b])
                 print("----------------- Starting new batch of Simulation ------------------------------")
@@ -505,10 +510,14 @@ class OptimizerExp:
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
                 sim.reset()    #Resets the variables of the sim class that are tracked during a simulation.
-
+                # sim = self.sim_class(self.rn,
+                                         # self.sim_runtime,
+                                         # device=self._dev_name)
                 # preform simulation
                 self.optimizer.zero_grad()
-                total_yield,conc_tensor,total_flux = sim.simulate_wrt_expdata(optim,node_str,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species)
+                total_yield,conc_tensor,total_flux = sim.simulate_wrt_expdata(optim,node_str,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species,update_kon_bool=update_kon_bool)
+                update_kon_bool=False
+
                 print('yield for simulation with  ' + str(init_conc)+"uM" + ' was ' + str(total_yield.item() * 100)[:4] + '%')
 
 
@@ -539,8 +548,10 @@ class OptimizerExp:
 
 
             if self.rn.coupling or self.rn.homo_rates:
+            # if False:
                 new_params = self.rn.params_kon.clone().detach()
-                k = self.rn.params_kon
+                # new_params=self.rn.kon
+                k = self.rn.kon
 
                 print('current params: ' + str(new_params))
                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
@@ -548,9 +559,10 @@ class OptimizerExp:
 
                 cost = mse_mean #+ physics_penalty
                 cost.backward(retain_graph=True)
-                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                # print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
                 print("Reg Penalty: ",physics_penalty)
                 print("Grad: ",self.rn.params_kon.grad)
+
             else:
                 # new_params = self.rn.params_kon.clone().detach()
                 new_params = self.rn.kon.clone().detach()
@@ -561,10 +573,12 @@ class OptimizerExp:
                 physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                 cost = mse_mean #+ physics_penalty
-                cost.backward()
+                cost.backward(retain_graph=True)
                 print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
                 print("Reg Penalty: ",physics_penalty)
                 print("Grad: ",self.rn.kon.grad)
+
+
 
             self.mse_error.append(mse_mean.item())
 
@@ -588,8 +602,10 @@ class OptimizerExp:
                 print("Batch optimization complete")
                 print("Updated params: " + str(new_params))
 
-
             del sim
+
+
+
 
 
 

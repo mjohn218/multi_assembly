@@ -601,7 +601,7 @@ class VecSim:
             else:
                 return(final_yield.to(self.dev),(t50,t85,t95,t99))
 
-    def simulate_wrt_expdata(self, optim='yield',node_str=None,verbose=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1):
+    def simulate_wrt_expdata(self, optim='yield',node_str=None,verbose=False,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,update_kon_bool=True):
         """
         modifies reaction network
         :return:
@@ -635,7 +635,7 @@ class VecSim:
         t99=-1
 
 
-        if self.rn.coupling:
+        if self.rn.coupling and update_kon_bool:
             #new_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
             # print("Coupling")
             if self.rn.partial_opt:
@@ -678,15 +678,16 @@ class VecSim:
                         self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
                 l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
-        elif self.rn.homo_rates:
+        elif self.rn.homo_rates and update_kon_bool:
             counter=0
             for k,rids in self.rn.rxn_class.items():
                 for r in rids:
-                    self.rn.kon[r] = self.rn.params_kon[counter]
+                    self.rn.kon[r] = self.rn.params_kon[counter].clone()
                 counter+=1
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
             print("Simulation rates: ",torch.exp(l_k))
-        # l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+        else:
+            l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:
             print("Simulation rates: ",torch.exp(l_k))
 
@@ -694,8 +695,8 @@ class VecSim:
             conc_counter=1
 
             l_conc_prod_vec = self.rn.get_log_copy_prod_vector()
-
             l_rxn_rates = l_conc_prod_vec + l_k
+
             l_total_rate = torch.logsumexp(l_rxn_rates, dim=0)
             l_step = 0 - l_total_rate
             rate_step = torch.exp(l_rxn_rates + l_step)

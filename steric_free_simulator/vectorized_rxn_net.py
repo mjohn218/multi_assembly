@@ -147,16 +147,26 @@ class VectorizedRxnNet:
                 print("is Leaf: ",self.params_kon[i].is_leaf)
 
         elif self.homo_rates == True:
-            self.params_kon = torch.zeros([len(self.rxn_class.keys())],requires_grad=True).double()
-            self.params_rxn_score_vec = torch.zeros([len(self.rxn_class.keys())]).double()
-            counter=0
-            for k,rid in self.rxn_class.items():
+            if self.partial_opt:
+                c_rxn_count=len(self.optim_rates)
+                self.params_kon = torch.zeros([c_rxn_count],requires_grad=True).double()
+                self.params_rxn_score_vec = torch.zeros([c_rxn_count]).double()
+                rid=0
+                for i in range(c_rxn_count):
+                    self.params_kon[rid] = self.kon.clone().detach()[self.optim_rates[i]]
+                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[self.optim_rates[i]]
+                    rid+=1
+            else:
+                self.params_kon = torch.zeros([len(self.rxn_class.keys())],requires_grad=True).double()
+                self.params_rxn_score_vec = torch.zeros([len(self.rxn_class.keys())]).double()
+                counter=0
+                for k,rid in self.rxn_class.items():
 
-                self.params_kon[counter] = self.kon.clone().detach()[rid[0]]  ##Get the first uid of each class.Set that as the param for that class of rxns
-                self.params_rxn_score_vec[counter] = self.rxn_score_vec[rid[0]]
-                counter+=1
-            self.params_kon.requires_grad_(True)
-            self.initial_params = Tensor(self.params_kon).clone().detach()
+                    self.params_kon[counter] = self.kon.clone().detach()[rid[0]]  ##Get the first uid of each class.Set that as the param for that class of rxns
+                    self.params_rxn_score_vec[counter] = self.rxn_score_vec[rid[0]]
+                    counter+=1
+                self.params_kon.requires_grad_(True)
+                self.initial_params = Tensor(self.params_kon).clone().detach()
 
 
         elif self.bool_rpb:
