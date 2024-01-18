@@ -503,7 +503,9 @@ class OptimizerExp:
                 print("----------------- Starting new batch of Simulation ------------------------------")
                 print("------------------ Concentration : %f -------------------------------" %(init_conc))
                 new_file = conc_files_pref+str(init_conc)+"uM"
-                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc'])
+                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale'])
+                conc_scale = rate_date['c_scale'][0]
+                conc_thresh=conc_scale
 
                 self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([init_conc])
 
@@ -559,7 +561,7 @@ class OptimizerExp:
 
                 cost = mse_mean #+ physics_penalty
                 cost.backward(retain_graph=True)
-                # print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
                 print("Reg Penalty: ",physics_penalty)
                 print("Grad: ",self.rn.params_kon.grad)
 
