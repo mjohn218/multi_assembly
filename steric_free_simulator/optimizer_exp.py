@@ -467,7 +467,7 @@ class OptimizerExp:
 
     def optimize_wrt_conc_beta(self,optim='yield',batch_mode="conc",node_str=None,max_yield=0.5,
     max_thresh=10,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,yield_species=-1,
-    conc_files_pref=None,conc_files_range=[],time_threshmax=1):
+    conc_files_pref=None,conc_files_range=[],yield_threshmax=1):
 
         """
         This optimization is based on using multiple concentration curves. However it is different from the previous conc based opt
@@ -504,10 +504,10 @@ class OptimizerExp:
                 print("------------------ Concentration : %f -------------------------------" %(init_conc))
                 new_file = conc_files_pref+str(init_conc)+"uM"
                 rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale','runtime'])
-                conc_scale = rate_date['c_scale'][0]
+                conc_scale = rate_data['c_scale'][0]
                 conc_thresh=conc_scale
 
-                time_mask = rate_data['Conc']/init_conc>0.95
+                time_mask = rate_data['Conc']/init_conc>yield_threshmax
                 time_indx = time_mask.loc[time_mask==True].index[0]
                 time_threshmax=rate_data['Timestep'][time_indx]
 
