@@ -565,7 +565,7 @@ class OptimizerExp:
                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
                 physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
-                cost = mse_mean #+ physics_penalty
+                cost = mse_mean + physics_penalty
                 cost.backward(retain_graph=True)
                 print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
                 print("Reg Penalty: ",physics_penalty)
