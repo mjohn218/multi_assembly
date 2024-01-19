@@ -571,6 +571,13 @@ class OptimizerExp:
                 print("Reg Penalty: ",physics_penalty)
                 print("Grad: ",self.rn.params_kon.grad)
 
+                self.mse_error.append(mse_mean.item())
+
+                self.yield_per_iter.append(total_yield.item())
+                self.sim_observables.append(self.rn.observables.copy())
+                self.sim_observables[-1]['steps'] = np.array(sim.steps)
+                self.parameter_history.append(self.rn.params_kon.clone().detach().to(torch.device('cpu')).numpy())
+
             else:
                 # new_params = self.rn.params_kon.clone().detach()
                 new_params = self.rn.kon.clone().detach()
@@ -588,14 +595,14 @@ class OptimizerExp:
 
 
 
-            self.mse_error.append(mse_mean.item())
+                self.mse_error.append(mse_mean.item())
 
 
 
-            self.yield_per_iter.append(total_yield.item())
-            self.sim_observables.append(self.rn.observables.copy())
-            self.sim_observables[-1]['steps'] = np.array(sim.steps)
-            self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
+                self.yield_per_iter.append(total_yield.item())
+                self.sim_observables.append(self.rn.observables.copy())
+                self.sim_observables[-1]['steps'] = np.array(sim.steps)
+                self.parameter_history.append(self.rn.kon.clone().detach().to(torch.device('cpu')).numpy())
 
             self.optimizer.step()
 
