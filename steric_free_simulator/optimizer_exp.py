@@ -551,7 +551,8 @@ class OptimizerExp:
                 print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
             #End of running all batches of simulations
             #Calculate the avg of mse over all conc ranges
-            mse_mean = mse/n_batches
+            # mse_mean = mse/n_batches
+            mse_mean = mse
 
 
             if self.rn.coupling or self.rn.homo_rates:
