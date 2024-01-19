@@ -277,7 +277,7 @@ class Optimizer:
 
             if self.rn.boolCreation_rxn and change_runtime:
                 #Change the runtime so that the simulation is stopped after a certain number of molecules have been dumped.
-                final_conc = 100
+                final_conc = self.rn.titration_end_conc
                 #Get current rates of dumping
                 # min_rate = torch.min(self.rn.get_params()[0])
                 rates = np.array(self.rn.get_params())

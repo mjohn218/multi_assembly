@@ -559,7 +559,7 @@ class OptimizerExp:
             # if False:
                 new_params = self.rn.params_kon.clone().detach()
                 # new_params=self.rn.kon
-                k = self.rn.kon
+                k = self.rn.params_kon
 
                 print('current params: ' + str(new_params))
                 curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
