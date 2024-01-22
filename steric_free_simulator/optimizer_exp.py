@@ -520,7 +520,7 @@ class OptimizerExp:
                                          # self.sim_runtime,
                                          # device=self._dev_name)
                 print("----------------- Starting new batch of Simulation ------------------------------")
-                print("------------------ Concentration : %f -------------------------------" %(self.rn.initial_copies[0:self.rn.num_monomers]))
+                print("------------------ Concentration : %f,%f,%f,%f -------------------------------" %(r for r in self.rn.initial_copies[0:self.rn.num_monomers]))
                 # preform simulation
                 self.optimizer.zero_grad()
                 total_yield,conc_tensor,total_flux = sim.simulate_wrt_expdata(optim,node_str,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species,update_kon_bool=update_kon_bool)
