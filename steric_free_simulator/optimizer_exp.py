@@ -506,12 +506,11 @@ class OptimizerExp:
                 conc_scale = rate_data['c_scale'][0]
                 conc_thresh=conc_scale
 
-                time_mask = rate_data['Conc']/init_conc>yield_threshmax
+                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data['A'][0],rate_data['B'][0],rate_data['M'][0],rate_data['S'][0]])
+
+                time_mask = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmax
                 time_indx = time_mask.loc[time_mask==True].index[0]
                 time_threshmax=rate_data['Timestep'][time_indx]
-
-
-                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data['A'][0],rate_data['B'][0],rate_data['M'][0],rate_data['S'][0]])
 
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
