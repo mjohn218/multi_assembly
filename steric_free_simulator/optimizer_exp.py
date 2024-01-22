@@ -500,10 +500,9 @@ class OptimizerExp:
             update_kon_bool=True
             for b in range(n_batches):
                 init_conc = float(conc_files_range[b])
-                print("----------------- Starting new batch of Simulation ------------------------------")
-                print("------------------ Concentration : %f -------------------------------" %(init_conc))
+
                 new_file = conc_files_pref+str(init_conc)+"uM"
-                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale','runtime'])
+                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale','runtime','A','B','M','S'])
                 conc_scale = rate_data['c_scale'][0]
                 conc_thresh=conc_scale
 
@@ -512,7 +511,7 @@ class OptimizerExp:
                 time_threshmax=rate_data['Timestep'][time_indx]
 
 
-                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([init_conc])
+                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data['A'][0],rate_data['B'][0],rate_data['M'][0],rate_data['S'][0]])
 
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
@@ -520,6 +519,8 @@ class OptimizerExp:
                 # sim = self.sim_class(self.rn,
                                          # self.sim_runtime,
                                          # device=self._dev_name)
+                print("----------------- Starting new batch of Simulation ------------------------------")
+                print("------------------ Concentration : %f -------------------------------" %(self.rn.initial_copies[0:self.rn.num_monomers]))
                 # preform simulation
                 self.optimizer.zero_grad()
                 total_yield,conc_tensor,total_flux = sim.simulate_wrt_expdata(optim,node_str,conc_scale=conc_scale,mod_factor=mod_factor,conc_thresh=conc_thresh,mod_bool=mod_bool,verbose=verbose,yield_species=yield_species,update_kon_bool=update_kon_bool)
