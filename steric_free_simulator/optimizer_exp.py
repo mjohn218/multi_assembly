@@ -538,7 +538,7 @@ class OptimizerExp:
                 exp_time = Tensor(np.array(rate_data['Timestep'][mask1]))
                 exp_conc = Tensor(np.array(rate_data['Conc'][mask1]))
                 total_time_diff = 0
-                init_conc = torch.min(self.rn.initial_copies[0:self.rn.num_monomers]
+                init_conc = torch.min(self.rn.initial_copies[0:self.rn.num_monomers])
 
                 for e_indx in range(len(exp_time)):
                     curr_time = exp_time[e_indx]
