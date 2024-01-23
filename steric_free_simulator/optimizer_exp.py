@@ -514,7 +514,7 @@ class OptimizerExp:
 
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
-                sim.reset(runtime=rate_data['runtime'][0])    #Resets the variables of the sim class that are tracked during a simulation.
+                sim.reset(runtime=time_threshmax)    #Resets the variables of the sim class that are tracked during a simulation.
                 # sim = self.sim_class(self.rn,
                                          # self.sim_runtime,
                                          # device=self._dev_name)
