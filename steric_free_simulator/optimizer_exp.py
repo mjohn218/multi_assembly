@@ -594,7 +594,7 @@ class OptimizerExp:
                     print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
                     print("Reg Penalty: ",physics_penalty)
                     print("dG_penalty: ",dG_penalty)
-                    # print("Grad: ",self.rn.params_kon.grad)
+                    print("Grad: ",self.rn.params_k[0].grad,self.rn.params_k[1].grad)
                     self.mse_error.append(mse_mean.item())
 
                     self.yield_per_iter.append(total_yield.item())

@@ -695,7 +695,7 @@ class VecSim:
                         print("Current dG: ",dG)
                     for r in rids:
                         self.rn.kon[r] = self.rn.params_k[0][counter].clone()
-                        # self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG
+                        self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG
                     counter+=1
                 l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
 
