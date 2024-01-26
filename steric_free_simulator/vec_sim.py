@@ -72,7 +72,7 @@ class VecSim:
         self.gradients =[]
 
 
-        if self.rn.rxn_coupling or self.rn.coupling:
+        if self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
         if self.rn.bool_rpb:
@@ -683,13 +683,31 @@ class VecSim:
 
 
         elif self.rn.homo_rates and update_kon_bool:
-            counter=0
-            for k,rids in self.rn.rxn_class.items():
-                for r in rids:
-                    self.rn.kon[r] = self.rn.params_kon[counter].clone()
-                counter+=1
-            l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-            # print("Simulation rates: ",torch.exp(l_k))
+            if self.rn.dG_is_param:
+
+                #Need to calculate the current dG from the new kon and koff. CUrrently this assumes we only have 1 variable off rate.
+                #Can be modifed if we have multiple off rates as parameters. Then need to cal dG for every rid
+                #Now only calc dG for a single rxn of class (1,1) mon+mon -> dim
+                counter=0
+                for k,rids in self.rn.rxn_class.items():
+                    if k==(1,1):
+                        dG = -1*torch.log(self.rn.params_k[0][counter]*self.rn._C0/self.rn.params_k[1][counter])
+                        print("Current dG: ",dG)
+                    for r in rids:
+                        self.rn.kon[r] = self.rn.params_k[0][counter].clone()
+                        # self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG
+                    counter+=1
+                l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+
+            else:
+
+                counter=0
+                for k,rids in self.rn.rxn_class.items():
+                    for r in rids:
+                        self.rn.kon[r] = self.rn.params_kon[counter].clone()
+                    counter+=1
+                l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+                # print("Simulation rates: ",torch.exp(l_k))
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:

@@ -23,7 +23,7 @@ class VectorizedRxnNet:
     units of reaction scores are treated as J * c / mol where c is a user defined scalar
     """
 
-    def __init__(self, rn: ReactionNetwork, assoc_is_param=True, copies_is_param=False, chap_is_param=False,dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},std_c=1e6,optim_rates=None,slow_rates=None,slow_ratio=1):
+    def __init__(self, rn: ReactionNetwork, initialize_params=True,assoc_is_param=True, copies_is_param=False, chap_is_param=False,dissoc_is_param=False, dG_is_param=False,cplx_dG=0,mode=None,type='a',dev='cpu',coupling=False,cid={-1:-1}, rxn_coupling=False, rx_cid={-1:-1},std_c=1e6,optim_rates=None,slow_rates=None,slow_ratio=1):
         """
 
         :param rn: The reaction network template
@@ -34,12 +34,15 @@ class VectorizedRxnNet:
         :param cid : Reaction ids in a dictionary format. {child_reaction:parent_reaction}. Set the rate of child_reaction to parent_reaction
         """
         #rn.reset()
+
+        """
+        Initializing standard constants
+        """
         self.dev = torch.device(dev)
         self._avo = Tensor([6.02214e23])  # copies / mol
         self._R = Tensor([8.314])  # J / mol * K
         self._T = Tensor([273.15])  # K
         self._C0 = Tensor([std_c])    #Std. Conc in uM
-        self.dev=dev
 
         #Variables for zeroth order reactions
         self.boolCreation_rxn = rn.boolCreation_rxn
@@ -62,7 +65,7 @@ class VectorizedRxnNet:
 
 
         self.M, self.kon, self.rxn_score_vec, self.copies_vec = self.generate_vectorized_representation(rn)
-        self.rxn_coupling = coupling
+
         self.coupling = rn.rxn_coupling
         self.num_monomers = rn.num_monomers
         self.max_subunits = rn.max_subunits
@@ -86,6 +89,28 @@ class VectorizedRxnNet:
         self.coup_map = {}
         self.rxn_class = rn.rxn_class
         self.dG_map = rn.dG_map
+
+        #Initialize parameters required for optimization based upon different protocols
+        self.initial_copies = self.copies_vec.clone().detach()
+        self.assoc_is_param = assoc_is_param
+        self.copies_is_param = copies_is_param
+        self.dissoc_is_param = dissoc_is_param
+        self.dG_is_param = dG_is_param
+        self.chap_is_param=chap_is_param
+        if initialize_params:
+            print("Initializing Parameters")
+            self.initialize_parameters()
+
+        self.observables = rn.observables
+        self.flux_vs_time = rn.flux_vs_time
+        self.is_energy_set = rn.is_energy_set
+        self.num_monomers = rn.num_monomers
+        self.reaction_ids = []
+        self.reaction_network = rn
+
+
+
+    def initialize_parameters(self):
 
         #Make new param Tensor (that will be optimized) if coupling is True
         if self.coupling == True:
@@ -145,8 +170,7 @@ class VectorizedRxnNet:
                 self.params_kon[i] = nn.Parameter(self.params_kon[i],requires_grad=True)
             for i in range(len(params_kon)):
                 print("is Leaf: ",self.params_kon[i].is_leaf)
-
-        elif self.homo_rates == True:
+        elif self.homo_rates == True and not rn.dG_is_param:
             if self.partial_opt:
                 c_rxn_count=len(self.optim_rates)
                 self.params_kon = torch.zeros([c_rxn_count],requires_grad=True).double()
@@ -167,8 +191,6 @@ class VectorizedRxnNet:
                     counter+=1
                 self.params_kon.requires_grad_(True)
                 self.initial_params = Tensor(self.params_kon).clone().detach()
-
-
         elif self.bool_rpb:
             self.params_kon = torch.zeros([2],requires_grad=True).double()
 
@@ -178,7 +200,6 @@ class VectorizedRxnNet:
             self.params_kon[1] = rn.rate_per_bindsite
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
-
         elif dissoc_is_param:
             if self.partial_opt == False:
                 # self.params_koff = torch.zeros([rn._rxn_count],requires_grad=True).double()             #kon from input; koff evaluated here
@@ -308,17 +329,11 @@ class VectorizedRxnNet:
                 # self.initial_params = Tensor(self.params_k).clone().detach()
 
                 self.fixed_koff = self.kon*self._C0*torch.exp(self.rxn_score_vec)
-
-
         else:
             self.initial_params = Tensor(self.kon).clone().detach()
-        self.initial_copies = self.copies_vec.clone().detach()
-        self.assoc_is_param = assoc_is_param
-        self.copies_is_param = copies_is_param
-        self.dissoc_is_param = dissoc_is_param
-        self.dG_is_param = dG_is_param
-        self.chap_is_param=chap_is_param
-        if assoc_is_param:
+
+
+        if self.assoc_is_param:
             if self.coupling:
                 self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)
             elif self.partial_opt:
@@ -328,10 +343,10 @@ class VectorizedRxnNet:
                 self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)
             else:
                 self.kon = nn.Parameter(self.kon, requires_grad=True)
-        if copies_is_param:
+        if self.copies_is_param:
             print("COPIES ARE PARAMS:::")
             self.c_params = nn.Parameter(self.initial_copies[:rn.num_monomers], requires_grad=True)
-        if chap_is_param:
+        if self.chap_is_param:
             self.chap_params = []
             self.initial_params = []
 
@@ -367,15 +382,11 @@ class VectorizedRxnNet:
 
             # self.initial_params.append(init_copies.clone().detach())
             # self.initial_params.append(rates.clone().detach())
-        self.observables = rn.observables
-        self.flux_vs_time = rn.flux_vs_time
-        self.is_energy_set = rn.is_energy_set
-        self.num_monomers = rn.num_monomers
-        self.reaction_ids = []
-        self.reaction_network = rn
 
-        print("Shifting to device: ", dev)
-        self.to(dev)
+        print("Shifting to device: ", self.dev)
+        self.to(self.dev)
+
+
 
     def reset(self, reset_params=False):
         self.copies_vec = self.initial_copies.clone()
@@ -517,7 +528,8 @@ class VectorizedRxnNet:
         num_states = len(rn.network.nodes)
         # initialize tensor representation dimensions
         M = torch.zeros((num_states, rn._rxn_count * 2)).double()
-        kon = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        # kon = torch.zeros([rn._rxn_count], requires_grad=True).double()
+        kon = torch.zeros([rn._rxn_count]).double()
         rxn_score_vec = torch.zeros([rn._rxn_count]).double()
         copies_vec = torch.zeros([num_states]).double()
 
@@ -601,6 +613,7 @@ class VectorizedRxnNet:
         # print(torch.exp(l_kon))
         # print(torch.exp(l_koff))       #Units of dG in J/mol
         l_k = torch.cat([l_kon, l_koff], dim=0)
+
         if self.boolCreation_rxn or self.boolDestruction_rxn:
             num_creat_dest_rxn = len(self.creation_rxn_data) + len(self.destruction_rxn_data)
             new_l_k = l_k[:-num_creat_dest_rxn]

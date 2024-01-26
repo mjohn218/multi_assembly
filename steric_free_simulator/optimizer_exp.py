@@ -20,7 +20,7 @@ class OptimizerExp:
                  sim_runtime: float,
                  optim_iterations: int,
                  learning_rate,
-                 device='cpu',method='Adam',lr_change_step=None,gamma=None,mom=0,random_lr=False,reg_penalty=10):
+                 device='cpu',method='Adam',lr_change_step=None,gamma=None,mom=0,random_lr=False,reg_penalty=10,dG_penalty=10):
         if torch.cuda.is_available() and "cpu" not in device:
             self.dev = torch.device(device)
             print("Using " + device)
@@ -30,7 +30,7 @@ class OptimizerExp:
             print("Using CPU")
         self._dev_name = device
         self.sim_class = VecSim
-        if type(reaction_network) is not VectorizedRxnNet:
+        if not isinstance(reaction_network,VectorizedRxnNet):
             try:
                 self.rn = VectorizedRxnNet(reaction_network, dev=self.dev)
             except Exception:
@@ -43,7 +43,16 @@ class OptimizerExp:
         if method =='Adam':
             self.optimizer = torch.optim.Adam(param_itr, learning_rate)
         elif method =='RMSprop':
-            self.optimizer = torch.optim.RMSprop(param_itr, learning_rate,momentum=mom)
+            if self.rn.homo_rates and self.rn.dG_is_param:
+                param_list=[]
+                for i in range(len(param_itr)):
+                    # print("#####")
+                    # print(param_itr[i])
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
+
+                self.optimizer = torch.optim.RMSprop(param_list)
+            else:
+                self.optimizer = torch.optim.RMSprop(param_itr, learning_rate,momentum=mom)
 
         self.lr = learning_rate
 
@@ -66,6 +75,7 @@ class OptimizerExp:
         self.chap_max=[]
         self.endtimes=[]
         self.reg_penalty=reg_penalty
+        self.dG_penalty=dG_penalty
         if lr_change_step is not None:
             if gamma == None:
                 gamma = 0.5
@@ -502,11 +512,15 @@ class OptimizerExp:
                 init_conc = float(conc_files_range[b])
 
                 new_file = conc_files_pref+str(init_conc)+"uM"
-                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=['Timestep','Conc','c_scale','runtime','A','B','M','S'])
+                sp_names = ['A'+str(j) for j in range(self.rn.num_monomers)]
+                var_names=['Timestep','Conc','c_scale','runtime']
+                rate_data = pd.read_csv(new_file,delimiter='\t',comment='#',names=var_names+sp_names)
                 conc_scale = rate_data['c_scale'][0]
                 conc_thresh=conc_scale
 
-                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data['A'][0],rate_data['B'][0],rate_data['M'][0],rate_data['S'][0]])
+                #TODO: Need a better way to read the conc from a file
+
+                self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data.iloc[0,4:]])
 
                 time_mask = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmax
                 time_indx = time_mask.loc[time_mask==True].index[0]
@@ -557,27 +571,60 @@ class OptimizerExp:
 
 
             if self.rn.coupling or self.rn.homo_rates:
+
+                if self.rn.dG_is_param:
+                    new_params_kon = self.rn.params_k[0].clone()
+                    new_params_koff = self.rn.params_k[1].clone()
+                    new_params = new_params_kon.detach().tolist() + new_params_koff.detach().tolist()
+                    # new_params=self.rn.kon
+
+                    print('current kon: ' + str(new_params_kon.detach()))
+                    print('current koff: ' + str(new_params_koff.detach()))
+                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (new_params_kon - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+
+                    #Calculating current dG
+                    dG = -1*torch.log(self.rn.params_k[0][0]*self.rn._C0/self.rn.params_k[1][0])
+                    min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
+                    max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
+                    dG_penalty = self.dG_penalty*F.relu(-1*(dG-min_dG)) + self.dG_penalty*F.relu(dG-max_dG)
+
+                    cost = mse_mean + physics_penalty + dG_penalty
+                    cost.backward(retain_graph=True)
+                    print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                    print("Reg Penalty: ",physics_penalty)
+                    print("dG_penalty: ",dG_penalty)
+                    # print("Grad: ",self.rn.params_kon.grad)
+                    self.mse_error.append(mse_mean.item())
+
+                    self.yield_per_iter.append(total_yield.item())
+                    self.sim_observables.append(self.rn.observables.copy())
+                    self.sim_observables[-1]['steps'] = np.array(sim.steps)
+
+                    self.parameter_history.append([new_params_kon.detach(),new_params_koff.detach()])
+
+                else:
             # if False:
-                new_params = self.rn.params_kon.clone().detach()
-                # new_params=self.rn.kon
-                k = self.rn.params_kon
+                    new_params = self.rn.params_kon.clone().detach()
+                    # new_params=self.rn.kon
+                    k = self.rn.params_kon
 
-                print('current params: ' + str(new_params))
-                curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                    print('current params: ' + str(new_params))
+                    curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (k - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
-                cost = mse_mean + physics_penalty
-                cost.backward(retain_graph=True)
-                print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
-                print("Reg Penalty: ",physics_penalty)
-                print("Grad: ",self.rn.params_kon.grad)
+                    cost = mse_mean + physics_penalty
+                    cost.backward(retain_graph=True)
+                    print('MSE on sim iteration ' + str(i) + ' was ' + str(mse_mean))
+                    print("Reg Penalty: ",physics_penalty)
+                    print("Grad: ",self.rn.params_kon.grad)
 
-                self.mse_error.append(mse_mean.item())
+                    self.mse_error.append(mse_mean.item())
 
-                self.yield_per_iter.append(total_yield.item())
-                self.sim_observables.append(self.rn.observables.copy())
-                self.sim_observables[-1]['steps'] = np.array(sim.steps)
-                self.parameter_history.append(self.rn.params_kon.clone().detach().numpy())
+                    self.yield_per_iter.append(total_yield.item())
+                    self.sim_observables.append(self.rn.observables.copy())
+                    self.sim_observables[-1]['steps'] = np.array(sim.steps)
+                    self.parameter_history.append(self.rn.params_kon.clone().detach().numpy())
 
             else:
                 # new_params = self.rn.params_kon.clone().detach()
