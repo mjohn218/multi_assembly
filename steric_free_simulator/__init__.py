@@ -13,6 +13,7 @@ from .EqSolver import EquilibriumSolver
 from .reaction_network import gtostr
 from .trap_metric import TrapMetric
 from .optimizer_exp import OptimizerExp
+from .vectorized_rxn_net_exp import VectorizedRxnNet_Exp
 
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "VectorizedRxnNet_KinSim",
     "EquilibriumSolver",
     "TrapMetric",
-    "OptimizerExp"
+    "OptimizerExp",
+    "VectorizedRxnNet_Exp"
 
 ]
