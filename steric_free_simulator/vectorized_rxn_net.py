@@ -170,7 +170,7 @@ class VectorizedRxnNet:
                 self.params_kon[i] = nn.Parameter(self.params_kon[i],requires_grad=True)
             for i in range(len(params_kon)):
                 print("is Leaf: ",self.params_kon[i].is_leaf)
-        elif self.homo_rates == True and not rn.dG_is_param:
+        elif self.homo_rates == True and not self.dG_is_param:
             if self.partial_opt:
                 c_rxn_count=len(self.optim_rates)
                 self.params_kon = torch.zeros([c_rxn_count],requires_grad=True).double()
