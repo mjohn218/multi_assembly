@@ -71,6 +71,8 @@ class VectorizedRxnNet:
         self.max_subunits = rn.max_subunits
         self.homo_rates = rn.homo_rates
         self.bool_rpb=rn.bool_rpb
+        if self.bool_rpb:
+            self.rate_per_bindsite = rn.rate_per_bindsite
 
         self.uid_newbonds_map=rn.uid_newbonds_map
 
@@ -128,7 +130,7 @@ class VectorizedRxnNet:
                 self.params_kon.requires_grad_(True)
                 self.initial_params = Tensor(self.params_kon).clone().detach()
             else:
-                ind_rxn_count = len(rn.rxn_class[(1,1)])
+                ind_rxn_count = len(self.rxn_class[(1,1)])
                 self.params_kon = torch.zeros([ind_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
                 self.params_rxn_score_vec = torch.zeros([ind_rxn_count]).double()
                 #self.kon.requires_grad_(False)
@@ -136,9 +138,9 @@ class VectorizedRxnNet:
                 for i in range(ind_rxn_count):
                     # if i not in cid.keys():
                         ##Independent reactions
-                    self.params_kon[rid] = self.kon.clone().detach()[rn.rxn_class[(1,1)][i]]
-                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[rn.rxn_class[(1,1)][i]]
-                    self.coup_map[rn.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
+                    self.params_kon[rid] = self.kon.clone().detach()[self.rxn_class[(1,1)][i]]
+                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[self.rxn_class[(1,1)][i]]
+                    self.coup_map[self.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
                     rid+=1
                 self.params_kon.requires_grad_(True)
 
@@ -197,7 +199,7 @@ class VectorizedRxnNet:
             #Setting dimerization rate to the user input set from rn.kon
             self.params_kon[0] = self.kon.clone().detach()[0]
             #Setting rate_per_bindsite, which is the second parameter to the user input
-            self.params_kon[1] = rn.rate_per_bindsite
+            self.params_kon[1] = self.rate_per_bindsite
             self.params_kon.requires_grad_(True)
             self.initial_params = Tensor(self.params_kon).clone().detach()
         elif dissoc_is_param:

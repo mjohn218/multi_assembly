@@ -40,7 +40,7 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
 
         self.dG_is_param = rn.dG_is_param
         self.ddG_fluc = rn.ddG_fluc
-        
+
         self.base_dG = self.rxn_score_vec[0].clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
         self.assoc_is_param = assoc_is_param
@@ -64,8 +64,27 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
                     rid+=1
                 self.params_kon.requires_grad_(True)
                 self.initial_params = Tensor(self.params_kon).clone().detach()
+                self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)
+            elif self.dG_is_param:
+                ind_rxn_count = len(self.rxn_class[(1,1)])
+                params_kon = torch.zeros([ind_rxn_count],requires_grad=True).double()
+                params_koff = torch.zeros([ind_rxn_count],requires_grad=True).double()
+                self.initial_params=[]
+                rid=0
+                for i in range(ind_rxn_count):
+                    params_kon[rid] = self.kon.clone().detach()[self.rxn_class[(1,1)][i]]  ##Get the first uid of each class.Set that as the param for that class of rxns
+                    params_koff[rid] = params_kon[rid]*self._C0*torch.exp(self.rxn_score_vec[self.rxn_class[(1,1)][i]])
+                    self.coup_map[self.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
+                    rid+=1
+
+                self.initial_params.append(Tensor(params_kon).clone().detach())
+                self.initial_params.append(Tensor(params_koff).clone().detach())
+                self.params_k = []
+                self.params_k.append(nn.Parameter(params_kon,requires_grad=True))
+                self.params_k.append(nn.Parameter(params_koff,requires_grad=True))
+
             else:
-                ind_rxn_count = len(rn.rxn_class[(1,1)])
+                ind_rxn_count = len(self.rxn_class[(1,1)])
                 self.params_kon = torch.zeros([ind_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
                 self.params_rxn_score_vec = torch.zeros([ind_rxn_count]).double()
                 #self.kon.requires_grad_(False)
@@ -73,15 +92,13 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
                 for i in range(ind_rxn_count):
                     # if i not in cid.keys():
                         ##Independent reactions
-                    self.params_kon[rid] = self.kon.clone().detach()[rn.rxn_class[(1,1)][i]]
-                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[rn.rxn_class[(1,1)][i]]
-                    self.coup_map[rn.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
+                    self.params_kon[rid] = self.kon.clone().detach()[self.rxn_class[(1,1)][i]]
+                    self.params_rxn_score_vec[rid] = self.rxn_score_vec[self.rxn_class[(1,1)][i]]
+                    self.coup_map[self.rxn_class[(1,1)][i]]=rid           #Map reaction index for independent reactions in self.kon to self.params_kon. Used to set the self.kon from self.params_kon
                     rid+=1
                 self.params_kon.requires_grad_(True)
-
                 self.initial_params = Tensor(self.params_kon).clone().detach()
-
-            self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)    #Setting the required kon values to be parameters for ooptimization
+                self.params_kon = nn.Parameter(self.params_kon, requires_grad=True)    #Setting the required kon values to be parameters for ooptimization
         elif self.partial_opt == True:
             c_rxn_count = len(self.optim_rates)
             # self.params_kon = torch.zeros([c_rxn_count], requires_grad=True).double()   #Create param Tensor for only the independant reactions
@@ -173,7 +190,11 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
 
         if reset_params:
             if self.coupling:
-                self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
+                if self.dG_is_param:
+                    self.params_k[0] = nn.Parameter(self.initial_params[0].clone(),requires_grad=True)
+                    self.params_k[1] = nn.Parameter(self.initial_params[1].clone(),requires_grad=True)
+                else:
+                    self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
             elif self.partial_opt:
                 # self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
                 for i in range(len(self.initial_params)):
@@ -192,7 +213,10 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
     def get_params(self):
 
         if self.coupling:
-            return [self.params_kon]
+            if self.dG_is_param:
+                return self.params_k
+            else:
+                return [self.params_kon]
         elif self.partial_opt:
             return self.params_kon
         elif self.homo_rates:
@@ -210,7 +234,11 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
 #        self._T = self._T.to(dev)
 #        self._C0 = self._C0.to(dev)
         if self.coupling:
-            self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
+            if self.dG_is_param:
+                for i in range(len(self.params_k)):
+                    self.params_k[i] = nn.Parameter(self.params_k[i].data.clone().detach().to(dev),requires_grad=True)
+            else:
+                self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
         elif self.partial_opt and self.assoc_is_param:
             # self.params_kon = nn.Parameter(self.params_kon.data.clone().detach().to(dev), requires_grad=True)
             for i in range(len(self.params_kon)):

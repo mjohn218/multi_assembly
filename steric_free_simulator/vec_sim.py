@@ -75,6 +75,7 @@ class VecSim:
         if self.rn.coupling:
             self.coupled_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
+
         if self.rn.bool_rpb:
             self.rpb_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
@@ -154,6 +155,7 @@ class VecSim:
                                 self.coupled_kon[i] = self.rn.kon[i]
                 print("SLow rates: ",self.coupled_kon[self.rn.slow_rates])
                 l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+
 
 
             else:
@@ -665,6 +667,19 @@ class VecSim:
                     l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
 
+                elif self.rn.dG_is_param:
+                    self.coupled_koff = torch.zeros(len(self.rn.kon), requires_grad=True).double()
+                    for i in range(len(self.rn.kon)):
+                        if i in self.rn.rx_cid.keys():
+                            self.coupled_kon[i] = max(self.rn.params_k[0][self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
+                            self.coupled_koff[i] = torch.prod(self.rn.params_k[1][self.rn.rx_cid[i]])/(self.rn._C0*min(self.rn.params_k[0][self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i]))
+
+                        else:
+                            self.coupled_kon[i] = self.rn.params_k[0][self.rn.coup_map[i]]
+                            self.coupled_koff[i] = self.rn.params_k[1][self.rn.coup_map[i]]
+                    l_k = torch.cat([torch.log(self.coupled_kon),torch.log(self.coupled_koff)], dim=0)
+                    # print("Rates: ",torch.exp(l_k))
+
                 else:
                     for i in range(len(self.rn.kon)):
                         # print(i)
@@ -679,7 +694,11 @@ class VecSim:
                             self.coupled_kon[i] = self.rn.params_kon[self.rn.coup_map[i]]
                     l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
             else:
-                l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
+                if self.rn.dG_is_param:
+                    l_k = torch.cat([torch.log(self.coupled_kon),torch.log(self.coupled_koff)], dim=0)
+                    # print("SIm rates: ",torch.exp(l_k))
+                else:
+                    l_k = self.rn.compute_log_constants(self.coupled_kon,self.rn.rxn_score_vec, self._constant)
 
 
         elif self.rn.homo_rates and update_kon_bool:
@@ -692,7 +711,7 @@ class VecSim:
                 for k,rids in self.rn.rxn_class.items():
                     if k==(1,1):
                         dG = -1*torch.log(self.rn.params_k[0][counter]*self.rn._C0/self.rn.params_k[1][counter])
-                        print("Current dG: ",dG)
+
                     for r in rids:
                         self.rn.kon[r] = self.rn.params_k[0][counter].clone()
                         self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG

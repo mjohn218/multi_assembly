@@ -51,6 +51,13 @@ class OptimizerExp:
                     param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
 
                 self.optimizer = torch.optim.RMSprop(param_list)
+            elif self.rn.coupling and self.rn.dG_is_param:
+                param_list=[]
+                for i in range(len(param_itr)):
+                    # print("#####")
+                    # print(param_itr[i])
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
+                self.optimizer = torch.optim.RMSprop(param_list)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate,momentum=mom)
 
@@ -584,10 +591,21 @@ class OptimizerExp:
                     physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (new_params_kon - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                     #Calculating current dG
-                    dG = -1*torch.log(self.rn.params_k[0][0]*self.rn._C0/self.rn.params_k[1][0])
-                    min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
-                    max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
-                    dG_penalty = self.dG_penalty*F.relu(-1*(dG-min_dG)) + self.dG_penalty*F.relu(dG-max_dG)
+                    if self.rn.homo_rates:
+                        dG = -1*torch.log(self.rn.params_k[0][0]*self.rn._C0/self.rn.params_k[1][0])
+                        print("Current dG: ",dG)
+                        min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
+                        max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
+                        dG_penalty = self.dG_penalty*F.relu(-1*(dG-min_dG)) + self.dG_penalty*F.relu(dG-max_dG)
+
+                    elif self.rn.coupling:
+                        dG = -1*torch.log(torch.div(self.rn.params_k[0]*self.rn._C0,self.rn.params_k[1]))
+                        print("Current dG: ",dG)
+                        min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
+                        max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
+                        dG_penalty = torch.sum(self.dG_penalty*F.relu(-1*(dG-min_dG))) + torch.sum(self.dG_penalty*F.relu(dG-max_dG))
+
+
 
                     cost = mse_mean + physics_penalty + dG_penalty
                     cost.backward(retain_graph=True)
@@ -601,7 +619,7 @@ class OptimizerExp:
                     self.sim_observables.append(self.rn.observables.copy())
                     self.sim_observables[-1]['steps'] = np.array(sim.steps)
 
-                    self.parameter_history.append([new_params_kon.detach(),new_params_koff.detach()])
+                    self.parameter_history.append([new_params_kon.detach().tolist(),new_params_koff.detach().tolist()])
 
                 else:
             # if False:
