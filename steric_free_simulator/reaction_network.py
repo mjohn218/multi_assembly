@@ -191,8 +191,10 @@ class ReactionNetwork:
         elif items[0]=='rate_per_bindsite' and self.bool_rpb:
             self.rate_per_bindsite=items[1]
         elif items[0]=='dG_is_param':
-            self.dG_is_param==items[1]
+
+            self.dG_is_param=items[1]
             self.ddG_fluc=0
+
         elif items[0]=='ddG_fluc':
             if self.dG_is_param:
                 self.ddG_fluc=items[1]
