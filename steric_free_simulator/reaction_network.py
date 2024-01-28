@@ -103,7 +103,7 @@ class ReactionNetwork:
         self.homo_rates=False
         self.bool_rpb=False
         self.uid_newbonds_map = dict()
-        self.dG_is_param=True
+        self.dG_is_param=False
         # default observables are monomers and final complex
         self.observables = dict()
         self.flux_vs_time = dict()
