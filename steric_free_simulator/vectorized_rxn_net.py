@@ -536,7 +536,7 @@ class VectorizedRxnNet:
         copies_vec = torch.zeros([num_states]).double()
 
         for n in rn.network.nodes():
-            print(RN.gtostr(rn.network.nodes[n]['struct']))
+            # print(RN.gtostr(rn.network.nodes[n]['struct']))
             copies_vec[n] = rn.network.nodes[n]['copies']
             # print("Reactant Sets:")
 
@@ -552,7 +552,7 @@ class VectorizedRxnNet:
                     M[n,reaction_id]=-1.
             for r_set in rn.get_reactant_sets(n):
                 r_tup = tuple(r_set)
-                print(r_tup)
+                # print(r_tup)
                 data = rn.network.get_edge_data(r_tup[0], n)
                 reaction_id = data['uid']
                 try:
