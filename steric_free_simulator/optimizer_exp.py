@@ -48,7 +48,7 @@ class OptimizerExp:
                 for i in range(len(param_itr)):
                     # print("#####")
                     # print(param_itr[i])
-                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
+                    param_list.append({'params':param_itr[i],'lr':learning_rate[i],'momentum':mom})
 
                 self.optimizer = torch.optim.RMSprop(param_list)
             elif self.rn.coupling and self.rn.dG_is_param:
@@ -588,7 +588,7 @@ class OptimizerExp:
                     print('current kon: ' + str(new_params_kon.detach()))
                     print('current koff: ' + str(new_params_koff.detach()))
                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (new_params_kon - curr_lr * 50))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
+                    physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (new_params_kon - curr_lr * 10))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                     #Calculating current dG
                     if self.rn.homo_rates:

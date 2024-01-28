@@ -538,7 +538,7 @@ class VectorizedRxnNet:
         for n in rn.network.nodes():
             print(RN.gtostr(rn.network.nodes[n]['struct']))
             copies_vec[n] = rn.network.nodes[n]['copies']
-            print("Reactant Sets:")
+            # print("Reactant Sets:")
 
             #First check if there are any zeroth order reactions
             if self.boolCreation_rxn or self.boolDestruction_rxn:
@@ -582,7 +582,7 @@ class VectorizedRxnNet:
         # generate the reverse map explicitly
         # M[0,11]=0
         M[:, rn._rxn_count:] = -1 * M[:, :rn._rxn_count]
-        print("Before: ",M)
+        # print("Before: ",M)
         if self.chaperone:
             for chap,uids in self.chap_uid_map.items():
                 # M[chap,uid] = 0
