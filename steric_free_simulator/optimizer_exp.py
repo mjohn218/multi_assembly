@@ -484,7 +484,7 @@ class OptimizerExp:
 
     def optimize_wrt_conc_beta(self,optim='yield',batch_mode="conc",node_str=None,max_yield=0.5,
     max_thresh=10,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,yield_species=-1,
-    conc_files_pref=None,conc_files_range=[],yield_threshmax=1):
+    conc_files_pref=None,conc_files_range=[],yield_threshmin=0.05,yield_threshmax=1):
 
         """
         This optimization is based on using multiple concentration curves. However it is different from the previous conc based opt
@@ -529,9 +529,12 @@ class OptimizerExp:
 
                 self.rn.initial_copies[0:self.rn.num_monomers] = Tensor([rate_data.iloc[0,4:]])
 
-                time_mask = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmax
-                time_indx = time_mask.loc[time_mask==True].index[0]
-                time_threshmax=rate_data['Timestep'][time_indx]
+                time_mask_max = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmax
+                time_max_min = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmin
+                time_indx_max = time_mask_max.loc[time_mask_mask==True].index[0]
+                time_indx_min = time_mask_min.loc[time_mask_min==True].index[0]
+                time_threshmax=rate_data['Timestep'][time_indx_max]
+                time_threshmin=rate_data['Timestep'][time_indx_min]
 
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
