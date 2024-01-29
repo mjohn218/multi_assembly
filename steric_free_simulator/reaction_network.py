@@ -193,11 +193,16 @@ class ReactionNetwork:
         elif items[0]=='dG_is_param':
 
             self.dG_is_param=items[1]
-            self.ddG_fluc=0
+            self.ddG_fluc_min=0
+            self.ddG_fluc_max=0
 
-        elif items[0]=='ddG_fluc':
+        elif items[0]=='ddG_fluc_min':
             if self.dG_is_param:
-                self.ddG_fluc=items[1]
+                self.ddG_fluc_min=items[1]
+        elif items[0]=='ddG_fluc_max':
+            if self.dG_is_param:
+                self.ddG_fluc_max=items[1]
+
 
         return items
 

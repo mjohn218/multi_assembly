@@ -40,7 +40,8 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
 
         self.dG_is_param = rn.dG_is_param
         if self.dG_is_param:
-            self.ddG_fluc = rn.ddG_fluc
+            self.ddG_fluc_min = rn.ddG_fluc_min
+            self.ddG_fluc_max = rn.ddG_fluc_max
 
         self.base_dG = self.rxn_score_vec[0].clone().detach()
         self.initial_copies = self.copies_vec.clone().detach()
