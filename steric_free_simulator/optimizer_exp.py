@@ -531,7 +531,7 @@ class OptimizerExp:
 
                 time_mask_max = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmax
                 time_max_min = rate_data['Conc']/torch.min(self.rn.initial_copies[0:self.rn.num_monomers])>yield_threshmin
-                time_indx_max = time_mask_max.loc[time_mask_mask==True].index[0]
+                time_indx_max = time_mask_max.loc[time_mask_max==True].index[0]
                 time_indx_min = time_mask_min.loc[time_mask_min==True].index[0]
                 time_threshmax=rate_data['Timestep'][time_indx_max]
                 time_threshmin=rate_data['Timestep'][time_indx_min]
