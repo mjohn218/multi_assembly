@@ -41,7 +41,23 @@ class OptimizerExp:
         param_itr = self.rn.get_params()
 
         if method =='Adam':
-            self.optimizer = torch.optim.Adam(param_itr, learning_rate)
+            if self.rn.homo_rates and self.rn.dG_is_param:
+                param_list=[]
+                for i in range(len(param_itr)):
+                    # print("#####")
+                    # print(param_itr[i])
+                    param_list.append({'params':param_itr[i],'lr':learning_rate[i],'momentum':mom})
+
+                self.optimizer = torch.optim.RMSprop(param_list)
+            elif self.rn.coupling and self.rn.dG_is_param:
+                param_list=[]
+                for i in range(len(param_itr)):
+                    # print("#####")
+                    # print(param_itr[i])
+                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
+                self.optimizer = torch.optim.RMSprop(param_list)
+            else:
+                self.optimizer = torch.optim.RMSprop(param_itr, learning_rate,momentum=mom)
         elif method =='RMSprop':
             if self.rn.homo_rates and self.rn.dG_is_param:
                 param_list=[]
@@ -572,6 +588,7 @@ class OptimizerExp:
 
                     total_time_diff+=time_diff[get_indx]
                     mse = mse+ ((exp_conc[e_indx] - conc_array[get_indx])/init_conc)**2
+                print("SSE at %f :  %f" %(init_conc,mse.item()))
 
                 print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
             #End of running all batches of simulations
