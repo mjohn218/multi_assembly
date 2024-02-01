@@ -11,6 +11,7 @@ from torch.optim.lr_scheduler import MultiplicativeLR
 from torch import DoubleTensor as Tensor
 import random
 import pandas as pd
+from scipy.interpolate import CubicSpline
 
 
 
@@ -552,6 +553,8 @@ class OptimizerExp:
                 time_threshmax=rate_data['Timestep'][time_indx_max]
                 time_threshmin=rate_data['Timestep'][time_indx_min]
 
+
+
                 # self.rn.initial_copies = update_copies_vec
                 self.rn.reset()
                 sim.reset(runtime=time_threshmax)    #Resets the variables of the sim class that are tracked during a simulation.
@@ -577,20 +580,26 @@ class OptimizerExp:
                 mask1 = (rate_data['Timestep']>=time_threshmin) & (rate_data['Timestep']<time_threshmax)
                 exp_time = Tensor(np.array(rate_data['Timestep'][mask1]))
                 exp_conc = Tensor(np.array(rate_data['Conc'][mask1]))
+
+                #Interpolating data between time points
+                cs_inter = CubicSpline(exp_time,exp_conc)
+                time_points = np.geomspace(time_threshmin,time_threshmax,num=10)
+                conc_points = cs_inter(time_points)
+
                 total_time_diff = 0
                 init_conc = torch.min(self.rn.initial_copies[0:self.rn.num_monomers])
 
-                for e_indx in range(len(exp_time)):
-                    curr_time = exp_time[e_indx]
+                for e_indx in range(len(time_points)):
+                    curr_time = time_points[e_indx]
                     time_diff = (np.abs(time_array-curr_time))
 
                     get_indx = time_diff.argmin()
 
                     total_time_diff+=time_diff[get_indx]
-                    mse = mse+ ((exp_conc[e_indx] - conc_array[get_indx])/init_conc)**2
+                    mse = mse+ ((conc_points[e_indx] - conc_array[get_indx])/init_conc)**2
                 print("SSE at %f :  %f" %(init_conc,mse.item()))
 
-                print("Exp Yield: ",exp_conc[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
+                print("Exp Yield: ",conc_points[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
             #End of running all batches of simulations
             #Calculate the avg of mse over all conc ranges
             # mse_mean = mse/n_batches
