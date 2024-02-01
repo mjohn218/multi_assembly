@@ -501,7 +501,7 @@ class OptimizerExp:
 
     def optimize_wrt_conc_beta(self,optim='yield',batch_mode="conc",node_str=None,max_yield=0.5,
     max_thresh=10,conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,verbose=False,yield_species=-1,
-    conc_files_pref=None,conc_files_range=[],yield_threshmin=0.05,yield_threshmax=1):
+    conc_files_pref=None,conc_files_range=[],yield_threshmin=0.05,yield_threshmax=1,sse_mode='square'):
 
         """
         This optimization is based on using multiple concentration curves. However it is different from the previous conc based opt
@@ -596,7 +596,11 @@ class OptimizerExp:
                     get_indx = time_diff.argmin()
 
                     total_time_diff+=time_diff[get_indx]
-                    mse = mse+ ((conc_points[e_indx] - conc_array[get_indx])/init_conc)**2
+                    if sse_mode=='square':
+                        curr_mse = ((conc_points[e_indx] - conc_array[get_indx])/init_conc)**2
+                    elif sse_mode='abs':
+                        curr_mse = torch.abs((conc_points[e_indx] - conc_array[get_indx])/init_conc)
+                    mse = mse+ curr_mse
                 print("SSE at %f :  %f" %(init_conc,mse.item()))
 
                 print("Exp Yield: ",conc_points[e_indx]/init_conc,"Sim Yield: ",conc_array[get_indx]/init_conc, "  at time threshold: ",time_threshmax)
