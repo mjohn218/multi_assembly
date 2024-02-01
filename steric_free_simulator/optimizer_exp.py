@@ -598,7 +598,7 @@ class OptimizerExp:
                     total_time_diff+=time_diff[get_indx]
                     if sse_mode=='square':
                         curr_mse = ((conc_points[e_indx] - conc_array[get_indx])/init_conc)**2
-                    elif sse_mode='abs':
+                    elif sse_mode=='abs':
                         curr_mse = torch.abs((conc_points[e_indx] - conc_array[get_indx])/init_conc)
                     mse = mse+ curr_mse
                 print("SSE at %f :  %f" %(init_conc,mse.item()))
