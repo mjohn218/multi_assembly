@@ -80,6 +80,8 @@ class VecSim:
             self.rpb_kon = torch.zeros(len(self.rn.kon), requires_grad=True).double()
 
 
+
+
     def simulate(self, optim='yield',node_str=None,verbose=False,switch=False,switch_time=0,switch_rates=None,corr_rxns=[[0],[1]],conc_scale=1.0,mod_factor=1.0,conc_thresh=1e-5,mod_bool=True,yield_species=-1,store_interval=-1,change_cscale_tit=False,pred_rates=False):
         """
         modifies reaction network
@@ -702,31 +704,40 @@ class VecSim:
 
 
         elif self.rn.homo_rates and update_kon_bool:
-            if self.rn.dG_is_param:
+            if update_kon_bool:
+                if self.rn.dG_is_param:
 
-                #Need to calculate the current dG from the new kon and koff. CUrrently this assumes we only have 1 variable off rate.
-                #Can be modifed if we have multiple off rates as parameters. Then need to cal dG for every rid
-                #Now only calc dG for a single rxn of class (1,1) mon+mon -> dim
-                counter=0
-                for k,rids in self.rn.rxn_class.items():
-                    if k==(1,1):
-                        dG = -1*torch.log(self.rn.params_k[0][counter]*self.rn._C0/self.rn.params_k[1][counter])
+                    #Need to calculate the current dG from the new kon and koff. CUrrently this assumes we only have 1 variable off rate.
+                    #Can be modifed if we have multiple off rates as parameters. Then need to cal dG for every rid
+                    #Now only calc dG for a single rxn of class (1,1) mon+mon -> dim
+                    counter=0
+                    self.off_rates=torch.zeros(len(self.rn.kon), requires_grad=True).double()
+                    for k,rids in self.rn.rxn_class.items():
+                        if k==(1,1):
+                            dG = -1*torch.log(self.rn.params_k[0][counter]*self.rn._C0/self.rn.params_k[1][counter])
 
-                    for r in rids:
-                        self.rn.kon[r] = self.rn.params_k[0][counter].clone()
-                        self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG
-                    counter+=1
-                l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+                        for r in rids:
+                            self.rn.kon[r] = self.rn.params_k[0][counter].clone()
+                            # self.rn.rxn_score_vec[r] = self.rn.uid_newbonds_map[r]*dG
+                            self.off_rates[r] = self.rn.kon[r]*self.rn._C0*(self.rn.params_k[1]/(self.rn.params_k[0][0]*self.rn._C0))**self.rn.uid_newbonds_map[r]
+                        counter+=1
+                    # l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+                    l_k = torch.cat([torch.log(self.rn.kon),torch.log(self.off_rates)], dim=0)
 
+                else:
+
+                    counter=0
+                    for k,rids in self.rn.rxn_class.items():
+                        for r in rids:
+                            self.rn.kon[r] = self.rn.params_kon[counter].clone()
+                        counter+=1
+                    l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
+                    # print("Simulation rates: ",torch.exp(l_k))
             else:
-
-                counter=0
-                for k,rids in self.rn.rxn_class.items():
-                    for r in rids:
-                        self.rn.kon[r] = self.rn.params_kon[counter].clone()
-                    counter+=1
-                l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
-                # print("Simulation rates: ",torch.exp(l_k))
+                if self.rn.dG_is_param:
+                    l_k = torch.cat([torch.log(self.rn.kon),torch.log(self.off_rates)], dim=0)
+                else:
+                    l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         else:
             l_k = self.rn.compute_log_constants(self.rn.kon, self.rn.rxn_score_vec, self._constant)
         if verbose:

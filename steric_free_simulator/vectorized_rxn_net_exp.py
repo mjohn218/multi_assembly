@@ -157,12 +157,14 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
                     counter+=1
 
                 self.initial_params.append(Tensor(params_kon).clone().detach())
+                # self.initial_params.append(Tensor(params_kon[1:]).clone().detach())
                 for p in range(len(params_koff)):
                     params_koff[p] = params_kon[p]*self._C0*torch.exp(self.params_rxn_score_vec[p])
 
                 self.initial_params.append(Tensor(params_koff).clone().detach())
                 self.params_k = []
                 self.params_k.append(nn.Parameter(params_kon,requires_grad=True))
+                # self.params_k.append(nn.Parameter(params_kon[1:],requires_grad=True))
                 self.params_k.append(nn.Parameter(params_koff,requires_grad=True))
                 print("After parametrixation: ",self.kon)
 
@@ -203,8 +205,9 @@ class VectorizedRxnNet_Exp (VectorizedRxnNet):
                     self.params_kon[i] = nn.Parameter(self.initial_params[i].clone(),requires_grad=True)
             elif self.homo_rates:
                 if self.dG_is_param:
-                    self.params_k[0] = nn.Parameter(self.initial_params[0].clone(),requires_grad=True)
-                    self.params_k[1] = nn.Parameter(self.initial_params[1].clone(),requires_grad=True)
+                    for i in range(len(self.initial_params)):
+                        self.params_k[i] = nn.Parameter(self.initial_params[i].clone(),requires_grad=True)
+
                 else:
                     self.params_kon = nn.Parameter(self.initial_params.clone(), requires_grad=True)
             else:
