@@ -634,9 +634,10 @@ class OptimizerExp:
                     elif self.rn.coupling:
                         dG = -1*torch.log(torch.div(self.rn.params_k[0]*self.rn._C0,self.rn.params_k[1]))
                         print("Current dG: ",dG)
-                        min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
-                        max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
-                        dG_penalty = torch.sum(self.dG_penalty*F.relu(-1*(dG-min_dG))) + torch.sum(self.dG_penalty*F.relu(dG-max_dG))
+                        # min_dG = self.rn.base_dG-self.rn.ddG_fluc   #More stable
+                        # max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
+                        # dG_penalty = torch.sum(self.dG_penalty*F.relu(-1*(dG-min_dG))) + torch.sum(self.dG_penalty*F.relu(dG-max_dG))
+                        dG_penalty = self.dG_penalty*F.relu(-1*(dG-self.rn.ddG_fluc_min)) + self.dG_penalty*F.relu(dG-self.rn.ddG_fluc_max)
 
 
 
