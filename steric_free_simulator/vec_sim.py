@@ -673,9 +673,9 @@ class VecSim:
                     self.coupled_koff = torch.zeros(len(self.rn.kon), requires_grad=True).double()
                     for i in range(len(self.rn.kon)):
                         if i in self.rn.rx_cid.keys():
-                            self.coupled_kon[i] = max(self.rn.params_k[0][self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i])
                             map_rid = [self.rn.coup_map[rate] for rate in self.rn.rx_cid[i]]
-                            self.coupled_koff[i] = torch.prod(self.rn.params_k[1][map_rid])/(self.rn._C0*min(self.rn.params_k[0][self.rn.coup_map[rate]] for rate in self.rn.rx_cid[i]))
+                            self.coupled_kon[i] = torch.max(self.rn.params_k[0][map_rid])
+                            self.coupled_koff[i] = torch.prod(self.rn.params_k[1][map_rid])/(self.rn._C0*torch.min(self.rn.params_k[0][map_rid]))
 
                         else:
                             self.coupled_kon[i] = self.rn.params_k[0][self.rn.coup_map[i]]

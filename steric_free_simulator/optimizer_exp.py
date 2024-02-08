@@ -55,7 +55,7 @@ class OptimizerExp:
                 for i in range(len(param_itr)):
                     # print("#####")
                     # print(param_itr[i])
-                    param_list.append({'params':param_itr[i],'lr':torch.mean(param_itr[i]).item()*learning_rate[i],'momentum':mom})
+                    param_list.append({'params':param_itr[i],'lr':learning_rate[i],'momentum':mom})
                 self.optimizer = torch.optim.RMSprop(param_list)
             else:
                 self.optimizer = torch.optim.RMSprop(param_itr, learning_rate,momentum=mom)
@@ -583,7 +583,7 @@ class OptimizerExp:
 
                 #Interpolating data between time points
                 cs_inter = CubicSpline(exp_time,exp_conc)
-                time_points = np.geomspace(time_threshmin,time_threshmax,num=10)
+                time_points = np.geomspace(time_threshmin,time_threshmax,num=100)
                 conc_points = cs_inter(time_points)
 
                 total_time_diff = 0
