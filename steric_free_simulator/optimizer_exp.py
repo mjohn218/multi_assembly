@@ -621,7 +621,7 @@ class OptimizerExp:
                     print('current kon: ' + str(new_params_kon.detach()))
                     print('current koff: ' + str(new_params_koff.detach()))
                     curr_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
-                    koff_lr = self.optimizer.state_dict()['param_groups'][0]['lr']
+                    koff_lr = self.optimizer.state_dict()['param_groups'][1]['lr']
                     physics_penalty = torch.sum(self.reg_penalty * F.relu(-1 * (new_params_kon - curr_lr * 10))).to(self.dev) #+ torch.sum(10 * F.relu(1 * (k - max_thresh))).to(self.dev)
 
                     #Calculating current dG
