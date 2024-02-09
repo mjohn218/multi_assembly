@@ -638,6 +638,7 @@ class OptimizerExp:
                         # max_dG = self.rn.base_dG+self.rn.ddG_fluc   #Less stable
                         # dG_penalty = torch.sum(self.dG_penalty*F.relu(-1*(dG-min_dG))) + torch.sum(self.dG_penalty*F.relu(dG-max_dG))
                         dG_penalty = torch.sum(self.dG_penalty*F.relu(-1*(dG-self.rn.ddG_fluc_min)) + self.dG_penalty*F.relu(dG-self.rn.ddG_fluc_max))
+                        physics_penalty = physics_penalty + torch.sum(self.reg_penalty * F.relu(-1 * (new_params_koff - curr_lr * 10))).to(self.dev)
 
 
 

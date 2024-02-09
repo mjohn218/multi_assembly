@@ -671,6 +671,7 @@ class VecSim:
 
                 elif self.rn.dG_is_param:
                     self.coupled_koff = torch.zeros(len(self.rn.kon), requires_grad=True).double()
+
                     for i in range(len(self.rn.kon)):
                         if i in self.rn.rx_cid.keys():
                             map_rid = [self.rn.coup_map[rate] for rate in self.rn.rx_cid[i]]
